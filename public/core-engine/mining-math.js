@@ -2,7 +2,7 @@ import { onSnapshot, doc, collection, query, where, orderBy } from "https://www.
 import { signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 // Listen for admin config (Payment numbers, logos, notice)
-export function initAdminConfigListener(db) {
+function initAdminConfigListener(db) {
     onSnapshot(doc(db, 'admin', 'config'), (snap) => {
         if (snap.exists()) {
             window.adminConfig = snap.data();
@@ -49,7 +49,7 @@ let packageFetchTimeout = null;
 }
 
 // Real-time listener for robots config
-export function initRobotsConfigListener(db) {
+function initRobotsConfigListener(db) {
     onSnapshot(query(collection(db, 'robots_config'), orderBy('price', 'asc')), (snap) => {
         const robots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         if (robots.length > 0) {
