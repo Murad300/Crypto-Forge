@@ -4,9 +4,9 @@
 
 [[redirects]]
   from = "/core-engine/*"
-  to = "/core-engine/:splat"
+  to = "/public/core-engine/:splat"
   status = 200
-  force = false
+  force = true
 
 [[redirects]]
   from = "/*"
