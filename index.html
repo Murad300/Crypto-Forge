@@ -1544,6 +1544,98 @@ body.dark-mode {
             bottom: calc(100% - 25px) !important;
         }
     }
+
+    /* Forced Premium Light Mode for Homepage */
+    #homePage {
+        background: #FFFFFF !important;
+        color: #2D3436 !important;
+    }
+    #homePage .card, #homePage .premium-cyber-card, #homePage .total-processing-box {
+        background: #F4F7F6 !important;
+        border: 1px solid #E2E8F0 !important;
+        color: #2D3436 !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04) !important;
+    }
+    #homePage .premium-cyber-card.mining-rig-card {
+        background: #E3F2FD !important;
+        border: 2px solid #BBDEFB !important;
+        box-shadow: 0 10px 30px rgba(9, 132, 227, 0.08) !important;
+    }
+    #homePage h1, #homePage h2, #homePage h3, #homePage h4, #homePage h5, #homePage h6, #homePage strong, #homePage span, #homePage p {
+        color: #2D3436 !important;
+    }
+    #homePage .fa-solid, #homePage .fa-regular, #homePage i {
+        color: #0984E3 !important;
+    }
+    /* Exclude specific buttons, icons or status tags that must retain original styling */
+    #homePage .btn-primary, #homePage .btn-primary i, #homePage .btn-primary * {
+        background: #0984E3 !important;
+        color: #FFFFFF !important;
+    }
+    #homePage .btn-success, #homePage .btn-success i, #homePage .btn-success * {
+        background: #34A853 !important;
+        color: #FFFFFF !important;
+    }
+    #homePage .alert.w, #homePage .alert.w * {
+        background: rgba(251, 188, 5, 0.08) !important;
+        border-color: rgba(251, 188, 5, 0.2) !important;
+    }
+    #homePage #activationNotice .alert.w i {
+        color: #FBBC05 !important;
+    }
+
+    /* Absolute smooth CPU 3D rotation animation */
+    @keyframes absoluteSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .active-spinning {
+        animation: absoluteSpin 3s linear infinite !important;
+    }
+
+    /* Outer body right rotation */
+    @keyframes spinRight {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .spin-right-active {
+        animation: spinRight 4s linear infinite !important;
+    }
+
+    /* Inner core left rotation */
+    @keyframes spinLeft {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(-360deg); }
+    }
+    .spin-left-active {
+        animation: spinLeft 3s linear infinite !important;
+    }
+
+    /* Ironman subtle recoil breathing animation */
+    @keyframes ironmanRecoil {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-3px) scale(1.03); }
+    }
+
+    /* Lightning strike pulsing and lightning strike real keyframes */
+    @keyframes lightningStrike {
+        0%, 100% { stroke-dashoffset: 50; opacity: 0.4; filter: drop-shadow(0 0 2px #00d2ff); }
+        50% { stroke-dashoffset: 0; opacity: 1; filter: drop-shadow(0 0 10px #00d2ff); }
+    }
+
+    /* Animated zigzag electricity spark lightning pulse animation */
+    @keyframes lightningPulse {
+        0%, 100% { stroke-dashoffset: 50; opacity: 0.5; filter: drop-shadow(0 0 2px #00d2ff); }
+        50% { stroke-dashoffset: 0; opacity: 1; filter: drop-shadow(0 0 8px #00d2ff); }
+    }
+    .live-lightning {
+        stroke-dasharray: 12, 6;
+        animation: lightningPulse 0.4s linear infinite !important;
+    }
+    .live-lightning-strike {
+        stroke-dasharray: 10, 5;
+        animation: lightningStrike 0.3s linear infinite !important;
+    }
 </style>
 </head>
 <body>
