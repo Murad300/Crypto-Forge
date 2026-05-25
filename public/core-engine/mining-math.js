@@ -31,7 +31,7 @@ export function initAdminConfigListener(db) {
 
 // Real-time listener for packages
 let packageFetchTimeout = null;
-export function initPackagesListener(db) {
+ function initPackagesListener(db) {
     onSnapshot(query(collection(db, 'packages'), where('status', '==', 'active'), orderBy('price', 'asc')), (snap) => {
         if (!snap.empty) {
             window.availablePackages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
