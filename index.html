@@ -6,6 +6,7 @@
 <title>CryptoForge | Precision Cloud Mining & Infrastructure</title>
 
 <!-- SEO & Social Sharing Meta Tags -->
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 <meta name="description" content="Forge your digital wealth with CryptoForge. The world's most intuitive decentralized cloud mining platform with real-time hardware node transparency and AI-powered automation.">
 <meta name="keywords" content="crypto forge, cloud mining, hardware nodes, blockchain mining, high yield mining, mining automation">
 <meta name="author" content="CryptoForge Infrastructure">
@@ -3171,7 +3172,6 @@ if (location.protocol === 'http:' && location.hostname !== 'localhost' && !locat
     location.href = location.href.replace('http:', 'https:');
 }
 </script>
-<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 <script>
 // Prevent any circular reference serialization crash in the whole document, including Firebase SDK error reports
 (function() {
@@ -8275,7 +8275,7 @@ window.updateAiButtonVisibility = () => {
 };
 
 </script>
-<script src="/core-engine/mining-math.js?v=2.1.0"></script>
+<script type="module" src="/core-engine/mining-math.js?v=2.1.0"></script>
 <!-- AI Chat Modal -->
 <div id="aiChatModal" class="ai-modal">
     <div class="ai-header">
