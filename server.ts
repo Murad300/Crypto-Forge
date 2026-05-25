@@ -260,8 +260,8 @@ async function processDailyMining() {
           let totalProfitForUser = 0;
           const todayIso = new Date().toISOString();
           
-          // Calculate next day's automated start time: 12:00:01 AM Dhaka Time
-          const nextDayStartMs = midnightTimestamp + (24 * 60 * 60 * 1000) + 1000; // Dhaka Midnight + 1s
+          // Calculate next day's automated start time: 12:00:01 AM Dhaka Time (Start of current calendar day's cycle)
+          const nextDayStartMs = midnightTimestamp + 1000; // Dhaka Midnight + 1s (Corrected from adding unneeded 24 hours)
           const nextDayStartISO = new Date(nextDayStartMs).toISOString();
 
           for (const pkgDoc of pkgsSnap.docs) {
@@ -991,8 +991,8 @@ let transporter: any = null;
 
 function getMailTransporter() {
   if (transporter) return transporter;
-  const user = "cryptoforge@zohomail.com";
-  const pass = "g0qtbWru880v";
+  const user = process.env.SMTP_USER || "cryptoforge@zohomail.com";
+  const pass = process.env.SMTP_PASS || "g0qtbWru880v";
   transporter = nodemailer.createTransport({
     host: "smtp.zoho.com",
     port: 465,
