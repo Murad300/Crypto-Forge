@@ -1636,6 +1636,36 @@ body.dark-mode {
         stroke-dasharray: 10, 5;
         animation: lightningStrike 0.3s linear infinite !important;
     }
+
+    /* Optimized Mining Hardware Card - New 3D Styles */
+    /* ব্যাকগ্রাউন্ড প্যাকেজ মনোগ্রামের আল্ট্রা-স্মুথ ঘূর্ণন এবং পালস অ্যানিমেশন */
+    .dynamic-monogram-pulse {
+      transform-origin: center;
+      animation: monogramGlow 6s ease-in-out infinite alternate;
+      display: inline-block;
+      pointer-events: none;
+    }
+    @keyframes monogramGlow {
+      0% { transform: scale(1) rotate(0deg); opacity: 0.03; filter: drop-shadow(0 0 0px transparent); }
+      50% { transform: scale(1.1) rotate(5deg); opacity: 0.08; filter: drop-shadow(0 0 15px #3B82F6); }
+      100% { transform: scale(1) rotate(-5deg); opacity: 0.03; filter: drop-shadow(0 0 0px transparent); }
+    }
+
+    /* ২-মুখী ঘূর্ণায়মান গিয়ার অ্যানিমেশন (কোনো লেআউট কাঁপবে না) */
+    .core-gear-right { transform-origin: 50% 50%; animation: gearRotateR 7s linear infinite !important; }
+    .core-gear-left { transform-origin: 50% 50%; animation: gearRotateL 4s linear infinite !important; }
+    @keyframes gearRotateR { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes gearRotateL { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+
+    /* এনার্জি লেজার রশ্মি পালস */
+    .mining-laser-line { animation: laserFlicker 0.2s ease-in-out infinite alternate !important; }
+    @keyframes laserFlicker { 0% { stroke-width: 5; opacity: 0.7; } 100% { stroke-width: 9; opacity: 1; filter: drop-shadow(0 0 10px #60A5FA); } }
+
+    /* আর্নিং টেক্সটের হালকা গ্লোয়িং ইফেক্ট */
+    .live-earning-glow {
+      font-family: 'Courier New', Courier, monospace;
+      text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
 </style>
 </head>
 <body>
@@ -2489,7 +2519,280 @@ body.dark-mode {
         </div>
     </div>
 
-<!-- Mining Dashboard Card Removed -->
+<!-- Optimized Mining Dashboard Card - No Layout Shaking -->
+<div style="padding: 0 16px; margin-bottom: 24px;">
+    <div id="unified-premium-mining-card" style="background: linear-gradient(145deg, #FFFFFF 0%, #F1F5F9 100%); padding: 28px; border-radius: 28px; border: 1px solid #CBD5E1; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(15,23,42,0.06); min-height: 220px; display: flex; flex-direction: column; justify-content: space-between;">
+      
+      <div style="position: absolute; top: 45%; left: 45%; transform: translate(-50%, -50%); z-index: 0; width: 100%; text-align: center;">
+        <span id="dynamic-package-monogram" class="dynamic-monogram-pulse" style="font-size: 190px; font-weight: 900; color: #3B82F6; font-family: sans-serif;">₳</span>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 2; width: 100%;">
+        
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 13px; font-weight: 800; color: #64748B; letter-spacing: 1.5px; text-transform: uppercase;">LIVE CLOUD MININGSTACK</span>
+          <div style="font-size: 34px; font-weight: 900; color: #0F172A; font-family: 'Courier New', monospace; letter-spacing: -0.5px;">
+            Tk <span id="app-live-earnings">0.0000</span>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; background: #F1F5F9; border: 1px solid #E2E8F0; padding: 4px 10px; border-radius: 12px; width: fit-content;">
+            <span style="font-size: 11px; font-weight: 700; color: #475569;">ROBOT AI CONTROL:</span>
+            <span id="robot-status-text" style="font-size: 11px; font-weight: 800; color: #EF4444;">INACTIVE (MANUAL ONLY)</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+          <div style="background: #FFFFFF; padding: 8px; border-radius: 20px; border: 1px solid #E2E8F0; box-shadow: 0 12px 24px rgba(0,0,0,0.04);">
+            <svg width="70" height="70" viewBox="0 0 100 100" fill="none" style="overflow: visible;">
+              <g class="core-gear-right">
+                <rect x="15" y="15" width="70" height="70" rx="10" fill="#1E293B" stroke="#3B82F6" stroke-width="3"/>
+                <circle cx="50" cy="50" r="28" stroke="#60A5FA" stroke-width="1" stroke-dasharray="4 4"/>
+              </g>
+              <g class="core-gear-left">
+                <rect x="34" y="34" width="32" height="32" rx="6" fill="#0F172A" stroke="#60A5FA" stroke-width="1.5"/>
+                <text x="50" y="56" font-size="16" fill="#60A5FA" text-anchor="middle">⚙️</text>
+              </g>
+            </svg>
+          </div>
+          <span id="mining-live-badge" style="font-size: 10px; font-weight: 900; color: #FFFFFF; background: #EF4444; padding: 3px 12px; border-radius: 30px; letter-spacing: 0.5px;">PAUSED</span>
+        </div>
+      </div>
+
+      <div id="dynamic-laser-channel" style="position: absolute; left: 180px; right: 110px; top: 55px; height: 30px; pointer-events: none; z-index: 1; display: none;">
+        <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 200 100">
+          <line class="mining-laser-line" x1="0" y1="50" x2="200" y2="50" stroke="#3B82F6" stroke-linecap="round" />
+          <line x1="0" y1="50" x2="200" y2="50" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+        </svg>
+      </div>
+
+      <div style="position: relative; z-index: 2; width: 100%; margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #475569; margin-bottom: 6px;">
+          <span style="letter-spacing: 0.5px;">MINING RECOVERY PROGRESS</span>
+          <span id="app-live-progress-txt">0.00%</span>
+        </div>
+        <div style="width: 100%; height: 10px; background: #E2E8F0; border-radius: 20px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+          <div id="app-live-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3B82F6 0%, #60A5FA 100%); border-radius: 20px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+        </div>
+
+        <!-- Extra Telemetry: Expiring/Timer values & Core controller, securely in-routed -->
+        <div id="premium-node-expiry-tracker" style="display: none; justify-content: space-between; align-items: center; margin-top: 14px; padding: 4px 0; font-size: 11px; font-weight: 700; color: #64748B; font-family: monospace;">
+          <span>NODES LIFESPAN:</span>
+          <span id="premium-node-expiry-countdown" style="font-weight: 800; color: #1E293B;">-</span>
+        </div>
+        
+        <!-- Activate Hardware Start Trigger -->
+        <div id="premium-node-action-container" style="display: none; margin-top: 14px;">
+          <button onclick="window.startAllIdleRigs()" style="cursor: pointer; width: 100%; height: 42px; background: linear-gradient(135deg, #3B82F6, #1D4ED8); border: none; border-radius: 14px; box-shadow: 0 8px 18px rgba(59, 130, 246, 0.25); color: #FFFFFF; font-size: 12px; font-weight: 900; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="fa-solid fa-play"></i> START MINING NODES
+          </button>
+        </div>
+      </div>
+
+    </div>
+</div>
+
+<script>
+let premiumCountdownInterval = null;
+
+/**
+ * 📊 ফায়ারবেস/ডাটাবেজের লাইভ স্টেট অনুযায়ী এই ফাংশনটি কল হবে।
+ * আগের কোনো লজিক বা ভেরিয়েবল পরিবর্তন না করে নিরাপদে এলিমেন্ট ভ্যালিডেশন সহ।
+ */
+function syncUnifiedDashboardState(progress, money, isMiningOn, isRobotOn, currentCoinType, anyIdleRigs, closestExpiryTimestamp) {
+  const earningsEl = document.getElementById('app-live-earnings');
+  const progressTxtEl = document.getElementById('app-live-progress-txt');
+  const progressBarEl = document.getElementById('app-live-progress-bar');
+  
+  if (earningsEl) earningsEl.innerText = money.toFixed(4);
+  if (progressTxtEl) progressTxtEl.innerText = progress.toFixed(2) + '%';
+  if (progressBarEl) progressBarEl.style.width = progress + '%';
+
+  // ২. মাইনিং ও লেজার বিম কন্ট্রোল
+  const laser = document.getElementById('dynamic-laser-channel');
+  const badge = document.getElementById('mining-live-badge');
+  if (laser) {
+    laser.style.display = isMiningOn ? 'block' : 'none';
+  }
+  if (badge) {
+    if (isMiningOn) {
+      badge.innerText = "RUNNING";
+      badge.style.background = "#10B981";
+    } else {
+      badge.innerText = "PAUSED";
+      badge.style.background = "#EF4444";
+    }
+  }
+
+  // ৩. রোবট অটোমেশন স্ট্যাটাস কন্ট্রোল (রাত ১২টার অটো-ট্রিগার ট্র্যাকিং)
+  const robotLabel = document.getElementById('robot-status-text');
+  if (robotLabel) {
+    if (isRobotOn) {
+      robotLabel.innerText = "ACTIVE (AUTO-MIDNIGHT)";
+      robotLabel.style.color = "#10B981";
+    } else {
+      robotLabel.innerText = "INACTIVE (MANUAL ONLY)";
+      robotLabel.style.color = "#EF4444";
+    }
+  }
+
+  // ৪. কয়েন অনুযায়ী অ্যানিমেটেড ব্যাকগ্রাউন্ড মনোগ্রাম পরিবর্তন
+  const monogram = document.getElementById('dynamic-package-monogram');
+  if (monogram) {
+    if (currentCoinType) {
+      const lowerType = currentCoinType.toLowerCase();
+      if (lowerType.includes('cardano')) monogram.innerText = '₳';
+      else if (lowerType.includes('usdt') || lowerType.includes('tron')) monogram.innerText = '₮';
+      else monogram.innerText = '₿';
+    } else {
+      monogram.innerText = '₿';
+    }
+  }
+
+  // ৫. এক্সপায়ারি ও কাউন্টডাউন ট্র্যাকার (মিত্রত করা ভেরিয়েবল)
+  const expiryContainer = document.getElementById('premium-node-expiry-tracker');
+  const expiryCountdown = document.getElementById('premium-node-expiry-countdown');
+  
+  if (expiryContainer && expiryCountdown) {
+    if (closestExpiryTimestamp) {
+      expiryContainer.style.display = 'flex';
+      
+      const updateTracker = () => {
+        const now = Date.now();
+        const diff = closestExpiryTimestamp - now;
+        if (diff <= 0) {
+          expiryCountdown.innerText = 'Package Expired';
+          expiryCountdown.style.color = '#EF4444';
+        } else {
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          expiryCountdown.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+          expiryCountdown.style.color = '#1E293B';
+        }
+      };
+      
+      if (premiumCountdownInterval) clearInterval(premiumCountdownInterval);
+      updateTracker();
+      premiumCountdownInterval = setInterval(updateTracker, 1000);
+    } else {
+      expiryContainer.style.display = 'none';
+      if (premiumCountdownInterval) {
+        clearInterval(premiumCountdownInterval);
+        premiumCountdownInterval = null;
+      }
+    }
+  }
+
+  // ৬. ম্যানুয়াল স্টার্ট অ্যাক্টিভেশন ট্রিগার
+  const actionContainer = document.getElementById('premium-node-action-container');
+  if (actionContainer) {
+    if (anyIdleRigs && !isMiningOn) {
+      actionContainer.style.display = 'block';
+    } else {
+      actionContainer.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * ⏰ রাত ১২টার অটোমেটিক মাইনিং এক্সিকিউশন ক্লক
+ */
+function setupMidnightAutoTrigger(isRobotEnabled, databaseStartFunction) {
+  window.isRobotActiveForMidnight = isRobotEnabled;
+  if (!window.midnightAutoMiningInterval) {
+    window.midnightAutoMiningInterval = setInterval(() => {
+      const timeNow = new Date();
+      if (timeNow.getHours() === 0 && timeNow.getMinutes() === 0 && timeNow.getSeconds() === 0) {
+        if (window.isRobotActiveForMidnight) {
+          console.log("Midnight trigger successful via AI Robot Node.");
+          if (typeof databaseStartFunction === 'function') {
+            databaseStartFunction(); // অরিজিনাল মাইনিং স্টার্ট ফাংশন
+          }
+        }
+      }
+    }, 1000);
+  }
+}
+
+// Sync Hardware Dashboard with Firebase State compatible hook
+function syncHardwareDashboard(isMiningRunning, isRobotActive, packageType, avgProgress, sumEarning, anyIdleRigs, closestExpiryTimestamp) {
+    const progressVal = isMiningRunning ? (avgProgress || 0) : 0;
+    const earningVal = isMiningRunning ? (sumEarning || 0) : 0;
+    
+    syncUnifiedDashboardState(progressVal, earningVal, isMiningRunning, isRobotActive, packageType, anyIdleRigs, closestExpiryTimestamp);
+    
+    // Binding existing automateMiningWithRobots sequence as midnight trigger
+    const triggerExistingAutoStart = () => {
+        if (typeof window.automateMiningWithRobots === 'function') {
+            console.log("Triggering scheduled automated robot start...");
+            window.automateMiningWithRobots();
+        }
+    };
+    
+    setupMidnightAutoTrigger(isRobotActive, triggerExistingAutoStart);
+}
+
+// Global start helper for upper premium card activation
+window.startAllIdleRigs = async () => {
+    if (!window.purchasedPackages || window.purchasedPackages.length === 0) {
+        try {
+            showToast('info', 'No Rigs', 'You do not have any purchased active rigs.');
+        } catch(e) {
+            console.log('You do not have any purchased active rigs.');
+        }
+        return;
+    }
+    
+    const now = new Date();
+    const dhakaNow = window.getDhakaDate ? window.getDhakaDate(now) : now;
+    const todayStr = dhakaNow.toDateString();
+    
+    let rigsStarted = 0;
+    
+    for (const item of window.purchasedPackages) {
+        const isRobot = item.id?.includes('robot') || 
+                        item.packageId?.includes('robot') || 
+                        item.productType === 'robot' || 
+                        item.packageName?.toLowerCase().includes('bot') || 
+                        item.name?.toLowerCase().includes('bot');
+        if (isRobot) continue;
+
+        if (item.expiresAt) {
+            const exp = new Date(item.expiresAt);
+            if (exp <= now) continue;
+        }
+
+        const lastClaimDate = item.lastClaim ? new Date(item.lastClaim).toDateString() : null;
+        let isMinedToday = lastClaimDate === todayStr;
+        if (item.miningStatus === 'inactive' || item.miningStatus === 'active') {
+            isMinedToday = false;
+        }
+        
+        const isRobotActive = window.myActiveRobots && window.myActiveRobots.some(r => r.isActivated);
+        const isMining = (item.miningStatus === 'active') || (isRobotActive && !isMinedToday);
+        
+        if (!isMining && !isMinedToday) {
+            await window.startWork(item.id, item.daily, false);
+            rigsStarted++;
+        }
+    }
+    
+    if (rigsStarted > 0) {
+        try {
+            renderWork();
+        } catch(e) {
+            console.log(e);
+        }
+    } else {
+        try {
+            showToast('info', 'All Nodes Active', 'All compatible node endpoints are already active or completed today.');
+        } catch(e) {
+            console.log("All nodes active.");
+        }
+    }
+};
+</script>
 
 <!-- Floating Robot Controller -->
 <div id="homeRobotController" class="home-robot-container">
@@ -2580,12 +2883,8 @@ body.dark-mode {
     </div>
 </div>
 
-<div id="homeMiningSection" style="margin-bottom: 24px; display: none; padding: 0 12px 0 20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding:0 12px">
-        <h3 style="font-size:18px; font-weight:800; color:var(--text); letter-spacing:-0.5px">Active Hardware Nodes</h3>
-    </div>
-    <div id="homeMiningList" style="display:flex; flex-direction:column; gap:16px"></div>
-</div>
+<!-- Fully hidden internal data node stack container -->
+<div id="homeMiningList" style="display:none !important"></div>
 
 
 
@@ -7094,7 +7393,7 @@ function handleLightningEffect(activeRig, isMiningNow) {
         const rectRig = activeRig.getBoundingClientRect();
         if (!rectRig || rectRig.width === 0) return;
         
-        const chipEl = activeRig.querySelector('.rig-icon-cont');
+        const chipEl = activeRig.querySelector('.rig-icon-cont') || activeRig.querySelector('#unified-gear-svg') || activeRig.querySelector('svg');
         let endX, endY;
         if (chipEl) {
             const rectChip = chipEl.getBoundingClientRect();
@@ -7215,7 +7514,7 @@ function updateRobotUI(targetPageId) {
 
     if (currentPage !== 'homePage' || !isEnabled || !window.myActiveRobots || window.myActiveRobots.length === 0) {
         // Cancel sparks & animation cycle immediately
-        const activeRig = document.querySelector('#homeMiningList .mining-rig-card');
+        let activeRig = document.querySelector('#homeMiningList .mining-rig-card') || document.getElementById('unified-premium-mining-card');
         handleLightningEffect(activeRig, false); // Cancel sparks & animation cycle immediately
 
         const homeController = document.getElementById('homeRobotController');
@@ -7325,7 +7624,7 @@ function updateRobotUI(targetPageId) {
     }
 
     // Handle lightning effect depending on active mining
-    const activeRig = document.querySelector('#homeMiningList .mining-rig-card');
+    let activeRig = document.querySelector('#homeMiningList .mining-rig-card') || document.getElementById('unified-premium-mining-card');
     const isMiningNow = window.myActivePkgs && window.myActivePkgs.some(p => p.miningStatus === 'active');
     handleLightningEffect(activeRig, isMiningNow);
 
