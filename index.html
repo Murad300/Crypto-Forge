@@ -6212,9 +6212,9 @@ function renderPackages() {
         'bnb': 'https://cryptologos.cc/logos/bnb-bnb-logo.svg',
         'tron': 'https://cryptologos.cc/logos/tron-trx-logo.svg',
         'cardano': 'https://cryptologos.cc/logos/cardano-ada-logo.svg',
-        'dogecoin': 'https://ik.imagekit.io/91980rkbfg/ChatGPT_Image_May_6__2026__02_31_43_PM-removebg-preview.png?updatedAt=1778057226661',
-        'doge': 'https://ik.imagekit.io/91980rkbfg/ChatGPT_Image_May_6__2026__02_31_43_PM-removebg-preview.png?updatedAt=1778057226661',
-        'doggy': 'https://ik.imagekit.io/91980rkbfg/ChatGPT_Image_May_6__2026__02_31_43_PM-removebg-preview.png?updatedAt=1778057226661'
+        'dogecoin': 'https://cryptologos.cc/logos/dogecoin-doge-logo.svg',
+        'doge': 'https://cryptologos.cc/logos/dogecoin-doge-logo.svg',
+        'doggy': 'https://cryptologos.cc/logos/dogecoin-doge-logo.svg'
     };
     const coinLogosArr = Object.values(coinLogosMap);
 
@@ -6231,7 +6231,7 @@ function renderPackages() {
                 const lowerName = p.name.toLowerCase();
                 const pkgIdHash = p.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                 let logo = coinLogosArr[pkgIdHash % coinLogosArr.length];
-                let isDoge = logo && logo.includes('ChatGPT_Image_May_6');
+                let isDoge = logo && (logo.includes('doge') || logo.includes('ChatGPT_Image_May_6'));
                 
                 for (const key in coinLogosMap) {
                     if (lowerName.includes(key)) {
@@ -6390,11 +6390,11 @@ async function renderWork() {
                 'bnb': 'https://cryptologos.cc/logos/bnb-bnb-logo.svg',
                 'tron': 'https://cryptologos.cc/logos/tron-trx-logo.svg',
                 'cardano': 'https://cryptologos.cc/logos/cardano-ada-logo.svg',
-                'dogecoin': 'https://ik.imagekit.io/91980rkbfg/ChatGPT_Image_May_6__2026__02_31_43_PM-removebg-preview.png?updatedAt=1778057226661'
+                'dogecoin': 'https://cryptologos.cc/logos/dogecoin-doge-logo.svg'
             };
             const coinLogosArr = Object.values(coinLogosMap);
             let logo = coinLogosArr[pkgIdHash % coinLogosArr.length];
-            let isDoge = logo && logo.includes('ChatGPT_Image_May_6');
+            let isDoge = logo && (logo.includes('doge') || logo.includes('ChatGPT_Image_May_6'));
             
             if (item.packageName) {
                 const lowerName = item.packageName.toLowerCase();
