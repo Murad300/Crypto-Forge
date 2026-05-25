@@ -1916,7 +1916,7 @@ body.dark-mode {
         </div>
         
         <div style="text-align:right; margin-bottom:24px">
-            <a href="#" onclick="showAuth('forgot')" style="color:var(--primary); text-decoration:none; font-size:14px; font-weight:600">Forgot Password?</a>
+            <a href="#" id="forgotPassLink" onclick="showAuth('forgot')" style="color:var(--primary); text-decoration:none; font-size:14px; font-weight:600">Forgot Password?</a>
         </div>
         
         <button type="submit" class="btn btn-primary" style="width:100%; padding:14px; border-radius:14px; font-weight:700">Login to Account</button>
@@ -4645,6 +4645,9 @@ window.transferBalance = async (type) => {
     const isFirstDay = dhakaNow.getDate() === 1;
 
     if (!isFirstDay) {
+        if (type === 'mining' || type === 'referral') {
+            return showToast('error', 'Offer Closed', 'Referral commission can only be transferred to main balance on the 1st of the month.');
+        }
         return showToast('warning', 'Transfer Restricted', 'Balances can only be transferred to the Main Balance on the 1st day of each month.');
     }
 
@@ -8272,7 +8275,7 @@ window.updateAiButtonVisibility = () => {
 };
 
 </script>
-<script type="module" src="/core-engine/mining-math.js"></script>
+<script type="module" src="/core-engine/mining-math.js?v=2.1.0"></script>
 <!-- AI Chat Modal -->
 <div id="aiChatModal" class="ai-modal">
     <div class="ai-header">
