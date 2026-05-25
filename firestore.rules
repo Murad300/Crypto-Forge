@@ -1,0 +1,138 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow read: if true; // Required for login-by-UID/Phone feature before Auth
+      allow write: if isOwner(userId) || isSignedIn(); 
+    }
+
+    // --- Admins ---
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Allow managing admins if signed in for now
+    }
+
+    // --- Packages & Configs ---
+    match /packages/{docId} {
+      allow read: if true; 
+      allow write: if isSignedIn(); 
+    }
+    match /robots_config/{docId} {
+      allow read: if true; 
+      allow write: if isSignedIn();
+    }
+    match /config/{docId} {
+      allow read: if true; 
+      allow write: if isSignedIn();
+    }
+    match /admin/{docId} {
+      allow read: if true; // Allow public read for connection test
+      allow write: if isSignedIn();
+    }
+
+    // --- User Assets ---
+    match /user_packages/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+    match /user_robots/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+
+    // --- Mining & Work ---
+    match /mining_states/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /work_history/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // --- Financials ---
+    match /deposits/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /withdraws/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /transactions/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // --- Support & Communication ---
+    match /support/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /landing_chats/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /messages/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /chats/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // --- Others ---
+    match /notifications/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /tasks/{docId} {
+      allow read: if true; 
+      allow write: if isSignedIn();
+    }
+    match /homepage_tasks/{docId} {
+      allow read: if true; 
+      allow write: if isSignedIn();
+    }
+    match /completed_tasks/{docId} {
+      allow read: if isSignedIn(); 
+      allow write: if isSignedIn();
+    }
+    match /user_tasks/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /referral_earnings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /landing_support/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /support_chats/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Catch-all for other collections used in admin or app
+    match /{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+  }
+}

@@ -1,0 +1,2975 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="same-origin">
+<title>CryptoForge | Secure Access Management</title>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231a73e8%22/><path d=%22M30 70 L50 30 L70 70 Z%22 fill=%22white%22 opacity=%220.9%22/><path d=%22M45 50 L55 50 L55 75 L45 75 Z%22 fill=%22%2334a853%22/></svg>">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --primary:#1a73e8;
+  --success:#34a853;
+  --danger:#ea4335;
+  --warning:#fbbc05;
+  --bg:#f8f9fa;
+  --card:#ffffff;
+  --text:#202124;
+  --muted:#5f6368;
+  --border:#e0e0e0;
+  --header-h:60px;
+  --nav-h:55px;
+  --card-shadow:0 4px 12px rgba(0,0,0,0.05);
+}
+
+body.dark-mode {
+  --bg:#121212;
+  --card:#1e1e1e;
+  --text:#e8eaed;
+  --muted:#9aa0a6;
+  --border:#3c4043;
+  --card-shadow:0 10px 20px rgba(0,0,0,0.4);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;-webkit-tap-highlight-color:transparent}
+ body{background:#ffffff;color:var(--text);transition:background 0.3s, color 0.3s}
+.admin-wrapper{max-width:480px;margin:20px auto;background:var(--bg);min-height:90vh;position:relative;box-shadow:var(--card-shadow);padding-top:calc(var(--header-h) + 140px);padding-bottom:30px;border:1px solid var(--border);border-radius:24px;overflow:hidden}
+.login-view{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px;background:var(--card);max-width:480px;margin:0 auto;position:relative;z-index:2000;border:none}
+.login-view.hidden{display:none}
+.login-card{width:100%;max-width:360px;text-align:center}
+.login-card h2{font-size:24px;margin-bottom:30px;color:var(--primary)}
+.form-group{margin-bottom:20px;text-align:left}
+.form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--muted)}
+.form-group input{width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;font-size:16px;outline:none;transition:border-color .2s;background:var(--card);color:var(--text)}
+.form-group input:focus{border-color:var(--primary)}
+.btn-login{width:100%;padding:14px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:16px;font-weight:600;cursor:pointer}
+
+/* App Layout */
+.admin-header{position:fixed;top:10px;left:50%;transform:translateX(-50%);width:calc(100% - 20px);max-width:460px;height:var(--header-h);background:var(--card);display:flex;align-items:center;justify-content:center;padding:0 20px;z-index:1100;border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 15px rgba(0,0,0,0.05)}
+.admin-header .branding{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.admin-header h1{font-size:16px;font-weight:800;color:var(--primary);text-align:center;letter-spacing:-0.5px;margin:0}
+.admin-header #adminUserEmail{font-size:9px;color:var(--muted);font-weight:600}
+.admin-header .logout{position:absolute;right:20px;color:var(--danger);font-size:18px;cursor:pointer}
+.admin-header .refresh-btn{position:absolute;left:20px;color:var(--primary);cursor:pointer;font-size:18px}
+.admin-header .theme-toggle{position:absolute;right:60px;color:var(--text);cursor:pointer;font-size:16px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+
+.admin-container{padding:16px}
+.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+.stat-box{background:var(--card);padding:16px;border-radius:16px;box-shadow:0 2px 4px rgba(0,0,0,0.02);border:1px solid var(--border)}
+.stat-box .val{font-size:18px;font-weight:700;display:block;margin-bottom:2px}
+.stat-box .lab{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap}
+
+/* Top Nav (Modified to Two Rows) */
+.top-nav{position:fixed;top:calc(var(--header-h) + 20px);left:50%;transform:translateX(-50%);width:calc(100% - 20px);max-width:460px;height:115px;background:var(--card);display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(2,1fr);border:1px solid var(--border);border-radius:16px;z-index:1000;box-shadow:0 4px 15px rgba(0,0,0,0.05);overflow:hidden}
+.nav-item{display:flex;flex-direction:column;align-items:center;color:var(--muted);text-decoration:none;font-size:8px;font-weight:700;gap:2px;cursor:pointer;padding:4px 2px;justify-content:center;transition:all 0.3s;border:none;margin:2px;border-radius:10px}
+.nav-item i { font-size: 14px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.3s; background: rgba(0,0,0,0.03); }
+
+.nav-item#tab-dashboard.active { background: rgba(26,115,232,0.08); color: #1a73e8; }
+.nav-item#tab-dashboard.active i { background: rgba(26,115,232,0.1); color: #1a73e8; }
+
+.nav-item#tab-deposits.active { background: rgba(52,168,83,0.08); color: #34a853; }
+.nav-item#tab-deposits.active i { background: rgba(52,168,83,0.1); color: #34a853; }
+
+.nav-item#tab-withdrawals.active { background: rgba(234,67,53,0.08); color: #ea4335; }
+.nav-item#tab-withdrawals.active i { background: rgba(234,67,53,0.1); color: #ea4335; }
+
+.nav-item#tab-users.active { background: rgba(142,36,170,0.08); color: #8e24aa; }
+.nav-item#tab-users.active i { background: rgba(142,36,170,0.1); color: #8e24aa; }
+
+.nav-item#tab-referrals.active { background: rgba(251,188,5,0.08); color: #fb8c00; }
+.nav-item#tab-referrals.active i { background: rgba(251,188,5,0.1); color: #fb8c00; }
+
+/* Adding missing active styles for other tabs */
+.nav-item[data-tab="chat"].active { background: rgba(0,136,204,0.08); color: #0088cc; }
+.nav-item[data-tab="chat"].active i { background: rgba(0,136,204,0.1); color: #0088cc; }
+
+.nav-item[data-tab="notifications"].active { background: rgba(255,152,0,0.08); color: #f57c00; }
+.nav-item[data-tab="notifications"].active i { background: rgba(255,152,0,0.1); color: #f57c00; }
+
+.nav-item[data-tab="packages"].active { background: rgba(103,58,183,0.08); color: #673ab7; }
+.nav-item[data-tab="packages"].active i { background: rgba(103,58,183,0.1); color: #673ab7; }
+
+.nav-item[data-tab="gateway"].active { background: rgba(96,125,139,0.08); color: #607d8b; }
+.nav-item[data-tab="gateway"].active i { background: rgba(96,125,139,0.1); color: #607d8b; }
+
+.nav-item[data-tab="homepage"].active { background: rgba(0,150,136,0.08); color: #009688; }
+.nav-item[data-tab="homepage"].active i { background: rgba(0,150,136,0.1); color: #009688; }
+.nav-item[data-tab="system"].active { background: rgba(234,67,53,0.08); color: #ea4335; }
+.nav-item[data-tab="system"].active i { background: rgba(234,67,53,0.1); color: #ea4335; }
+
+.sub-tabs-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: var(--card);
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+}
+.sub-tab {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+}
+.sub-tab.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(26,115,232,0.2);
+}
+
+.nav-item.active::after{display:none}
+
+/* Tab Contents */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Lists */
+.list-card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);border:1px solid var(--border)}
+.list-top{display:flex;justify-content:space-between;align-items:flex-start}
+.list-info{display:flex;flex-direction:column}
+.list-info b{font-size:15px}
+.list-info span{font-size:12px;color:var(--muted)}
+.list-amount{font-size:16px;font-weight:700;color:var(--primary)}
+.list-actions{display:flex;gap:10px;margin-top:4px}
+.btn-sm{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-appr{background:var(--success);color:#fff}
+.btn-reje{background:var(--danger);color:#fff}
+.btn-view{background:var(--bg);color:var(--text)}
+
+/* Custom Confirm Modal */
+.confirm-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);animation:fadeInAnim 0.2s ease}
+.confirm-card{background:var(--card);padding:32px;border-radius:24px;width:90%;max-width:340px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.2);transform:scale(0.9);animation:scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;border:1px solid var(--border)}
+.confirm-card i{font-size:42px;color:var(--warning);margin-bottom:20px;display:block}
+.confirm-card h3{font-size:20px;margin-bottom:12px;color:var(--text);font-weight:700}
+.confirm-card p{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.5}
+.confirm-btns{display:flex;gap:12px}
+.confirm-btn{flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s}
+.confirm-btn.no{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.confirm-btn.yes{background:var(--primary);color:#fff;box-shadow:0 4px 10px rgba(0,0,0,0.1)}
+.confirm-btn:active{transform:scale(0.95)}
+.btn-see-more{background:transparent;color:var(--primary);border:1px solid var(--primary);padding:8px 24px;border-radius:30px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:block;margin:20px auto;border: 1.5px solid var(--primary)}
+.btn-see-more:hover{background:var(--primary);color:#fff;box-shadow:0 4px 10px rgba(0,0,0,0.1)}
+
+@keyframes fadeInAnim{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.8)}to{opacity:1;transform:scale(1)}}
+
+.status-pill{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;text-transform:uppercase}
+.status-pill.pending{background:#fff3cd;color:#856404}
+.status-pill.approved{background:#d4edda;color:#155724}
+.status-pill.rejected{background:#f8d7da;color:#721c24}
+
+.search-bar{margin-bottom:16px;position:relative}
+.search-bar input{width:100%;padding:12px 16px;border-radius:12px;border:1px solid var(--border);font-size:14px;outline:none}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:flex-end;z-index:2000;justify-content:center}
+.modal.show{display:flex}
+.modal-content{background:#fff;width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:24px;max-height:85vh;overflow-y:auto;animation:slideUp 0.3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.tab-content.active{display:block;animation:fadeIn 0.4s ease-out}
+.chat-filter.active{background:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.1);color:var(--primary)}
+.badge{position:absolute;top:10px;right:25%;background:var(--danger);color:#fff;font-size:9px;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;font-weight:700;border:2px solid var(--primary)}
+.avatar-big{width:80px;height:80px;border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;background:var(--primary);color:#fff;font-size:32px;font-weight:700;object-fit:cover;border:4px solid var(--primary);box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.trx-item{padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.trx-item:last-child{border-bottom:none}
+.list-card { position: relative; overflow: hidden; background: white; padding: 16px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px; }
+.pkg-bg-logo { 
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); 
+    width: 160px; 
+    height: 160px; 
+    opacity: 0.35; 
+    pointer-events: none; 
+    z-index: 0; 
+    transition: all 0.5s ease;
+    filter: brightness(1.2) contrast(1.2);
+    animation: rotateFloatAdmin 10s linear infinite;
+}
+.pkg-bg-logo.is-doge {
+    width: 300px;
+    height: 300px;
+    opacity: 0.5;
+}
+@keyframes rotateFloatAdmin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.list-card:hover .pkg-bg-logo { 
+    opacity: 0.55; 
+    transform: translate(-50%, -50%) scale(1.1); 
+}
+</style>
+</head>
+<body>
+<div class="admin-wrapper">
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Custom Confirm Modal -->
+<div id="confirmModal" class="confirm-modal">
+    <div class="confirm-card">
+        <i class="fa-solid fa-circle-question"></i>
+        <h3 id="confirmTitle">Confirm Action</h3>
+        <p id="confirmMessage">Are you sure you want to proceed?</p>
+        <div class="confirm-btns">
+            <button class="confirm-btn no" id="confirmNoBtn">No</button>
+            <button class="confirm-btn yes" id="confirmYesBtn">Yes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Prompt Modal -->
+<div id="promptModal" class="confirm-modal">
+    <div class="confirm-card">
+        <i class="fa-solid fa-keyboard" style="color:var(--primary)"></i>
+        <h3 id="promptTitle">Input Required</h3>
+        <p id="promptMessage">Please enter the required information.</p>
+        <div class="form-group" style="margin-top:15px">
+            <input type="text" id="promptInput" style="text-align:center" placeholder="Type here...">
+        </div>
+        <div class="confirm-btns">
+            <button class="confirm-btn no" id="promptCancelBtn">Cancel</button>
+            <button class="confirm-btn yes" id="promptSubmitBtn">Submit</button>
+        </div>
+    </div>
+</div>
+
+<div id="loginView" class="login-view">
+<div class="login-card">
+    <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:20px">
+        <div style="width:40px; height:40px; background:var(--primary); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-size:20px">
+            <i class="fa-solid fa-fire-burner"></i>
+        </div>
+        <h2 style="font-size:28px; font-weight:800; color:var(--primary); margin:0">CryptoForge Admin</h2>
+    </div>
+<form id="loginForm">
+<div class="form-group"><label>Email</label><input type="email" id="adminEmail" required></div>
+<div class="form-group"><label>Password</label><input type="password" id="adminPassword" required></div>
+<button type="submit" class="btn-login">Login Now</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminView" class="admin-view" style="display:none">
+        <div id="adminPanelLoading" style="position:fixed;inset:0;background:rgba(255,255,255,0.7);z-index:10000;display:none;align-items:center;justify-content:center">
+            <div style="width:40px;height:40px;border:3px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        </div>
+        <header class="admin-header">
+            <i class="fa-solid fa-rotate refresh-btn" onclick="location.reload()"></i>
+            <div class="branding">
+                <div style="display:flex; align-items:center; gap:8px">
+                    <div style="width:28px; height:28px; background:var(--primary); border-radius:6px; display:flex; align-items:center; justify-content:center; color:white; font-size:14px">
+                        <i class="fa-solid fa-fire-burner"></i>
+                    </div>
+                    <h1 style="font-size:18px; font-weight:800; color:var(--primary); margin:0">CryptoForge Admin</h1>
+                </div>
+                <span id="adminUserEmail"></span>
+            </div>
+            <div class="theme-toggle" id="adminThemeToggle">
+                <i class="fa-solid fa-moon"></i>
+            </div>
+            <div class="logout" id="logoutBtn" title="Logout"><i class="fa-solid fa-power-off"></i></div>
+        </header>
+
+    <nav class="top-nav">
+        <div class="nav-item active" id="tab-dashboard" data-tab="dashboard"><i class="fa-solid fa-chart-line"></i>Dashboard</div>
+        <div class="nav-item" id="tab-deposits" data-tab="deposits"><i class="fa-solid fa-wallet"></i>Deposits<span class="badge" id="depBadge" style="display:none">0</span></div>
+        <div class="nav-item" id="tab-withdrawals" data-tab="withdraws"><i class="fa-solid fa-money-bill-transfer"></i>Withdraws<span class="badge" id="witBadge" style="display:none">0</span></div>
+        <div class="nav-item" id="tab-users" data-tab="users"><i class="fa-solid fa-users"></i>Users<span class="badge" id="userBadge" style="display:none">0</span></div>
+        <div class="nav-item" id="tab-history" data-tab="history"><i class="fa-solid fa-list-check"></i>History</div>
+        <div class="nav-item" data-tab="chat" id="nav_chat"><i class="fa-solid fa-comments"></i>Support<span class="badge" id="chatBadge" style="display:none">0</span></div>
+        <div class="nav-item" data-tab="notifications" id="tab-notifications"><i class="fa-solid fa-bell"></i>Notice</div>
+        <div class="nav-item" data-tab="landing_support" id="tab-landing-support"><i class="fa-solid fa-address-book"></i>Leads<span class="badge" id="leadBadge" style="display:none">0</span></div>
+        <div class="nav-item" data-tab="packages" id="tab-packages"><i class="fa-solid fa-box-open"></i>Packages</div>
+        <div class="nav-item" data-tab="cleardata" id="tab-cleardata"><i class="fa-solid fa-trash-can"></i>Clear Data</div>
+        <div class="nav-item" data-tab="gateway" id="tab-gateway"><i class="fa-solid fa-gears"></i>Config</div>
+        <div class="nav-item" data-tab="homepage" id="tab-homepage"><i class="fa-solid fa-wand-magic-sparkles"></i>Earning Tasks</div>
+        <div class="nav-item" data-tab="system" id="tab-system"><i class="fa-solid fa-screwdriver-wrench"></i>System</div>
+    </nav>
+
+    <div class="admin-container">
+        <div id="mainAdminContent">
+            <div class="tab-content active" id="dashboardTab">
+                <div class="stats-row">
+                    <div class="stat-box"><span class="val" id="totalUsers">0</span><span class="lab">Total Users</span></div>
+                    <div class="stat-box"><span class="val" style="color:var(--success)">৳<span id="totalBalance">0</span></span><span class="lab">User Wallets</span></div>
+                    <div class="stat-box"><span class="val" style="color:var(--primary)" id="pendingDeposits">0</span><span class="lab">Pending Depo</span></div>
+                    <div class="stat-box"><span class="val" style="color:var(--danger)" id="pendingWithdraws">0</span><span class="lab">Pending Withd</span></div>
+                    <div class="stat-box" style="background:rgba(52,168,83,0.05)"><span class="val" style="color:var(--success)" id="totalApprovedDepo">৳0</span><span class="lab">Net Inflow</span></div>
+                    <div class="stat-box" style="background:rgba(234,67,53,0.05)"><span class="val" style="color:var(--danger)" id="totalApprovedWithd">৳0</span><span class="lab">Net Outflow</span></div>
+                    <div class="stat-box" style="background:rgba(26,115,232,0.05)"><span class="val" style="color:var(--primary)" id="dashTotalMining">৳0</span><span class="lab">Total Mined</span></div>
+                    <div class="stat-box" style="background:rgba(251,188,5,0.05)"><span class="val" style="color:var(--warning)" id="dashSuspendedUsers">0</span><span class="lab">Suspended</span></div>
+                    <div class="stat-box" style="background:rgba(103,58,183,0.05)"><span class="val" style="color:#673ab7" id="dashActiveRigs">0</span><span class="lab">Active Rigs</span></div>
+                    <div class="stat-box" style="background:rgba(156,39,176,0.05)"><span class="val" style="color:#9c27b0" id="dashActiveRobots">0</span><span class="lab">Active Robots</span></div>
+                </div>
+
+                <div style="margin-top:20px">
+                    <h4 style="font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:8px">
+                        <i class="fa-solid fa-clock-rotate-left" style="color:var(--primary)"></i> 
+                        Recent Global Activity
+                    </h4>
+                    <div id="recentActivityList" style="display:flex; flex-direction:column; gap:8px">
+                        <p style="text-align:center; padding:20px; color:var(--muted); font-size:12px">Gathering latest logs...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="depositsTab">
+                <h3 style="margin-bottom:16px;font-size:16px">Deposit Requests</h3>
+                <div id="depositsList">Loading...</div>
+            </div>
+
+            <div class="tab-content" id="withdrawsTab">
+                <h3 style="margin-bottom:16px;font-size:16px">Withdraw Requests</h3>
+                <div id="withdrawsList">Loading...</div>
+            </div>
+
+            <div class="tab-content" id="usersTab">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+                    <h3 style="font-size:16px; margin:0">User List</h3>
+                    <button class="btn-sm btn-view" style="width:auto; height:32px; font-size:11px" onclick="bulkAdjustBalances()">Bulk Adjust All ৳</button>
+                </div>
+                <div class="search-bar"><input type="text" id="userSearch" placeholder="Enter UID or Name..."></div>
+                <div id="usersList">Loading...</div>
+            </div>
+
+            <div class="tab-content" id="referralsTab">
+                <h3 style="margin-bottom:16px;font-size:16px">Referral Earnings Log</h3>
+                <div id="referralsList">Loading...</div>
+            </div>
+
+            <div class="tab-content" id="notificationsTab">
+                <div style="border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 20px; background: #fff">
+                    <h4 style="font-size:13px; color:var(--primary); margin-bottom:10px"><i class="fa-solid fa-bullhorn"></i> Live UI Notice (Banner)</h4>
+                    <form id="systemNoticeForm">
+                        <div class="form-group">
+                            <label>Notice Text (Empty to hide banner)</label>
+                            <input type="text" id="liveNoticeInput" placeholder="Maintenance notice or important info...">
+                        </div>
+                        <button type="submit" class="btn-sm btn-appr" style="width:auto; padding:8px 15px">Update Banner</button>
+                    </form>
+                </div>
+                
+                <h3 style="font-size:14px; margin-bottom:10px">Sent Notifications Logs</h3>
+                <div id="sentNotifList" style="display:flex; flex-direction:column; gap:8px">Loading...</div>
+            </div>
+
+            <div class="tab-content" id="packagesTab">
+                <div class="sub-tabs-container">
+                    <div class="sub-tab active" id="subTabRigs" onclick="switchPackageSubTab('rigs')">Rigs</div>
+                    <div class="sub-tab" id="subTabRobots" onclick="switchPackageSubTab('robots')">Robots</div>
+                </div>
+
+                <!-- Rigs Section -->
+                <div id="rigsManagementView">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap">
+                        <h3 style="font-size:16px">Mining Rig Packages</h3>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn-sm btn-prio" style="width:auto;padding:8px 15px;background:#f39c12;color:#fff" onclick="window.resetToCryptoPackages()"><i class="fa-solid fa-rotate"></i> Reset Defaults</button>
+                            <button class="btn-sm btn-appr" style="width:auto;padding:8px 15px" onclick="openPackageModal()"><i class="fa-solid fa-plus"></i> New Rig</button>
+                        </div>
+                    </div>
+                    <div id="packagesList">Loading rigs...</div>
+                </div>
+
+                <!-- Robots Section -->
+                <div id="robotsManagementView" style="display:none">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap">
+                        <h3 style="font-size:16px">Auto Robot Assistant Options</h3>
+                        <button class="btn-sm btn-appr" style="width:auto;padding:8px 15px" onclick="openRobotModal()"><i class="fa-solid fa-robot"></i> Create Robot</button>
+                    </div>
+                    <div id="robotsList">Loading robots...</div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="cleardataTab">
+                <div style="background:rgba(234,67,53,0.05); padding:20px; border-radius:16px; border:1px solid var(--danger); margin-bottom:20px">
+                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--danger)">Master Reset Control</h3>
+                    <p style="font-size:12px; color:var(--muted); line-height:1.4">Toggle this switch to reset all user balances and wipe transaction history. Use with extreme caution.</p>
+                </div>
+
+                <div class="stat-box" style="margin-bottom:15px; border-color:var(--danger)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+                        <div>
+                            <h4 style="font-size:14px; color:var(--danger)"><i class="fa-solid fa-trash-can"></i> Global Wipe Toggle</h4>
+                            <p style="font-size:11px; color:var(--muted)">Turn this on to clear all data and zero user balances.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="masterResetToggle" onclick="window.handleMasterResetToggle(this)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p style="font-size:10px; color:var(--danger); font-weight:600">Note: Accounts will be kept, but all activity will be lost.</p>
+                </div>
+            </div>
+
+            <div class="tab-content" id="gatewayTab">
+                <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1.5px solid var(--border); padding-bottom:10px">
+                    <button class="gateway-sub-tab active" data-gate="deposit" style="background:none; border:none; padding:8px 16px; font-weight:600; cursor:pointer; color:var(--primary); border-bottom:2px solid var(--primary)">Deposit Gateway</button>
+                    <button class="gateway-sub-tab" data-gate="withdraw" style="background:none; border:none; padding:8px 16px; font-weight:600; cursor:pointer; color:var(--muted)">Withdraw Gateway</button>
+                </div>
+
+                <div id="depositGateSub" class="gate-section active">
+                    <h3 style="margin-bottom:16px;font-size:15px">Deposit Gateway Settings</h3>
+                    <div style="background:#fff; padding:15px; border-radius:16px; border:1px solid var(--border); margin-bottom:20px">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                            <div>
+                                <h4 style="font-size:13px; margin-bottom:2px">Deposit Maintenance Mode</h4>
+                                <p style="font-size:11px; color:var(--muted)">When active, users cannot submit deposit requests.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="confDepositMaintenance">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0">
+                            <label>Maintenance Message</label>
+                            <input type="text" id="confDepositMaintenanceMsg" placeholder="e.g. Deposit is temporarily closed.">
+                        </div>
+                    </div>
+                    <form id="configForm">
+                        <div style="border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 15px; background: rgba(0,0,0,0.01)">
+                            <h4 style="font-size:12px; color:var(--muted); margin-bottom:10px; text-transform:uppercase"><img src="https://logodownload.org/wp-content/uploads/2021/02/bkash-logo.png" style="height:15px; vertical-align:middle; margin-right:5px"> bKash Deposit</h4>
+                            <div class="form-group">
+                                <label>Deposit Wallet Number</label>
+                                <input type="text" id="confBkash" placeholder="017xxxxxxxx">
+                            </div>
+                            <div class="form-group">
+                                <label>Logo URL</label>
+                                <input type="text" id="confBkashLogo" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Copyable Link (Optional)</label>
+                                <input type="text" id="confBkashLink" placeholder="https://pay.bkash.com/...">
+                            </div>
+                            <div class="form-group">
+                                <label>Instructions</label>
+                                <input type="text" id="confBkashDesc" placeholder="e.g. Please use Send Money.">
+                            </div>
+                        </div>
+
+                        <div style="border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 15px; background: rgba(0,0,0,0.01)">
+                            <h4 style="font-size:12px; color:var(--muted); margin-bottom:10px; text-transform:uppercase"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Nagad_Logo.svg/1200px-Nagad_Logo.svg.png" style="height:15px; vertical-align:middle; margin-right:5px"> Nagad Deposit</h4>
+                            <div class="form-group">
+                                <label>Deposit Wallet Number</label>
+                                <input type="text" id="confNagad" placeholder="017xxxxxxxx">
+                            </div>
+                            <div class="form-group">
+                                <label>Logo URL</label>
+                                <input type="text" id="confNagadLogo" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Instructions</label>
+                                <input type="text" id="confNagadDesc" placeholder="e.g. Personal Nagad.">
+                            </div>
+                        </div>
+
+                        <div style="border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 15px; background: rgba(0,0,0,0.01)">
+                            <h4 style="font-size:12px; color:var(--muted); margin-bottom:10px; text-transform:uppercase"><img src="https://getlogo.net/wp-content/uploads/2021/01/dutch-bangla-bank-rocket-logo-vector.png" style="height:15px; vertical-align:middle; margin-right:5px"> Rocket Deposit</h4>
+                            <div class="form-group">
+                                <label>Deposit Wallet Number</label>
+                                <input type="text" id="confRocket" placeholder="017xxxxxxxx">
+                            </div>
+                            <div class="form-group">
+                                <label>Logo URL</label>
+                                <input type="text" id="confRocketLogo" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Instructions</label>
+                                <input type="text" id="confRocketDesc" placeholder="e.g. Rocket Payment.">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-login" style="margin-top:10px">Save Deposit Settings</button>
+                    </form>
+                </div>
+
+                <div id="withdrawGateSub" class="gate-section" style="display:none">
+                    <h3 style="margin-bottom:16px;font-size:15px">Withdrawal Gateway Control</h3>
+                    <div style="background:#fff; padding:20px; border-radius:16px; border:1px solid var(--border); margin-bottom:20px">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+                            <div>
+                                <h4 style="font-size:14px; margin-bottom:4px">Withdrawal Maintenance Mode</h4>
+                                <p style="font-size:12px; color:var(--muted)">When active, users cannot submit withdrawal requests.</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="confWithdrawMaintenance">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Maintenance Message (Shown to users)</label>
+                            <input type="text" id="confWithdrawMaintenanceMsg" placeholder="e.g. Withdrawal is temporarily closed for server maintenance.">
+                        </div>
+                        <button onclick="window.saveWithdrawConfig()" class="btn-sm btn-appr" style="width:auto; padding:10px 20px">Save Withdrawal Settings</button>
+                    </div>
+
+                    <div style="border: 1px dashed var(--border); padding: 20px; text-align:center; border-radius:16px; color:var(--muted); font-size:12px">
+                        Withdrawal methods currently use the same branding as deposit methods. You can toggle the entire system above.
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="historyTab">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+                    <h3 style="font-size:16px">Overall History</h3>
+                    <select id="historyFilterType" style="padding:6px; border-radius:8px; border:1px solid var(--border); font-size:11px">
+                        <option value="all">All Records</option>
+                        <option value="deposit">Deposits</option>
+                        <option value="withdraw">Withdraws</option>
+                        <option value="mining">Mining History</option>
+                        <option value="referral">Referral History</option>
+                    </select>
+                </div>
+                <div id="globalHistoryList">Loading activity...</div>
+            </div>
+
+            <div class="tab-content" id="chatTab">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h3 style="font-size:16px">Support Conversations</h3>
+                    <div style="display:flex;background:#eee;border-radius:20px;padding:2px">
+                        <div class="chat-filter active" id="filterActive" onclick="window.setChatFilter(false)" style="padding:6px 12px;border-radius:18px;font-size:10px;font-weight:600;cursor:pointer">Active</div>
+                        <div class="chat-filter" id="filterArchived" onclick="window.setChatFilter(true)" style="padding:6px 12px;border-radius:18px;font-size:10px;font-weight:600;cursor:pointer">Archived</div>
+                    </div>
+                </div>
+                <div id="supportList">Loading...</div>
+            </div>
+
+            <div class="tab-content" id="landing_supportTab">
+                <h3 style="margin-bottom:16px;font-size:16px">Landing Page Leads (Guest Chats)</h3>
+                <div id="landingChatsList">Loading...</div>
+            </div>
+
+            <div class="tab-content" id="homepageTab">
+                <div style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); margin-bottom:20px">
+                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--primary)">Homepage Personalization</h3>
+                    <p style="font-size:12px; color:var(--muted)">Use this section to manage the content your users see first. You can add earning tasks, promotional banners, or community announcements.</p>
+                </div>
+                
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <h3 style="font-size:14px; font-weight:600">Home Tasks / Posts</h3>
+                    <button class="btn-sm btn-appr" style="width:auto;padding:8px 15px" onclick="openModal('taskModal')"><i class="fa-solid fa-square-plus"></i> Create Post</button>
+                </div>
+                <div id="tasksList">Loading tasks...</div>
+            </div>
+
+            <div class="tab-content" id="systemTab">
+                <div style="background:rgba(234,67,53,0.05); padding:20px; border-radius:16px; border:1px solid var(--danger); margin-bottom:20px">
+                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--danger)">Danger Zone (Testing Only)</h3>
+                    <p style="font-size:12px; color:var(--muted); line-height:1.4">These tools are for development testing. Actions here are IRREVERSIBLE and will clear production data.</p>
+                </div>
+
+                <div class="stat-box" style="margin-bottom:15px; border-color:var(--danger)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+                        <div>
+                            <h4 style="font-size:14px; color:var(--danger)"><i class="fa-solid fa-trash-can"></i> Global Wipe Toggle</h4>
+                            <p style="font-size:11px; color:var(--muted)">Turn this on to clear all transactional data and zero user balances (accounts remain).</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="masterResetToggleSystem" onclick="window.handleMasterResetToggle(this)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="stat-box">
+                    <h4 style="font-size:14px; margin-bottom:12px"><i class="fa-solid fa-user-shield"></i> All User Balances</h4>
+                    <div id="allBalancesList" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:8px">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Package Modal -->
+    <div id="packageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="packageModalTitle">Create Package</h3>
+                <i class="fa-solid fa-xmark modal-close" onclick="closeModal('packageModal')"></i>
+            </div>
+            <form id="packageForm">
+                <input type="hidden" id="pkgId">
+                <div class="form-group"><label>Package Name</label><input type="text" id="pkgName" placeholder="e.g. Bronze" required></div>
+                <div class="form-group"><label>Price (৳)</label><input type="number" id="pkgPrice" placeholder="500" required></div>
+                <div class="form-group"><label>Daily Reward (৳)</label><input type="number" id="pkgDaily" placeholder="20" required></div>
+                <div class="form-group"><label>Duration (Days)</label><input type="number" id="pkgDuration" value="30" required></div>
+                <div class="form-group"><label>Theme Color (Hex/Name)</label><input type="text" id="pkgColor" value="var(--primary)"></div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="pkgStatus" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;font-size:16px;outline:none">
+                        <option value="active">Active (Visible)</option>
+                        <option value="hidden">Hidden</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-login">Save Package</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="userModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>User Details</h3><i class="fa-solid fa-xmark modal-close" onclick="closeModal('userModal')"></i></div><div id="userModalBody"></div></div></div>
+    
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Design Homepage Post</h3>
+                <i class="fa-solid fa-xmark modal-close" onclick="closeModal('taskModal')"></i>
+            </div>
+            <form id="taskForm">
+                <div class="form-group"><label>Post Name / Title</label><input type="text" id="taskTitle" placeholder="e.g. Daily Bonus" required></div>
+                <div class="form-group"><label>Visual Image URL</label><input type="text" id="taskImageUrl" placeholder="https://..." required></div>
+                <div class="form-group"><label>Campaign Description</label><input type="text" id="taskDesc" placeholder="What should the user do?" required></div>
+                <div class="form-group"><label>Task Reward (৳)</label><input type="number" id="taskReward" value="0"></div>
+                <div class="form-group"><label>Action Hyperlink</label><input type="text" id="taskLink" placeholder="https://..."></div>
+                <button type="submit" class="btn-login">Publish to Homepage</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Robot Modal -->
+    <div id="robotModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="robotModalTitle">Create Robot</h3>
+                <i class="fa-solid fa-xmark modal-close" onclick="closeModal('robotModal')"></i>
+            </div>
+            <form id="robotForm">
+                <input type="hidden" id="robotId_fs">
+                <div class="form-group"><label>Robot Name</label><input type="text" id="robotName" placeholder="e.g. Smart Matrix Bot" required></div>
+                <div class="form-group"><label>Display Price (৳)</label><input type="number" id="robotPrice" placeholder="500" required></div>
+                <div class="form-group"><label>Service Duration (Days)</label><input type="number" id="robotDuration" value="30" required></div>
+                <div class="form-group"><label>Robot Details / Benefits</label><textarea id="robotDesc" placeholder="e.g. Automates Level 1-3 Miners, Instant Activation, etc." style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;min-height:80px;background:var(--bg)"></textarea></div>
+                <div class="form-group"><label>Color Theme (Hex)</label><input type="color" id="robotColor" value="#1a73e8" style="height:45px"></div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="robotStatus" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;font-size:16px;outline:none">
+                        <option value="active">Active (Visible)</option>
+                        <option value="hidden">Hidden</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-login">Save Robot Configuration</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="chatModal" class="modal">
+        <div class="modal-content" style="display:flex;flex-direction:column">
+            <div class="modal-header">
+                <h3 id="chatTitle">Chat</h3>
+                <i class="fa-solid fa-xmark modal-close" onclick="closeModal('chatModal')"></i>
+            </div>
+            <div id="chatHistory" style="flex:1;overflow-y:auto;min-height:300px;display:flex;flex-direction:column;gap:8px;padding:10px;background:#f9f9f9;border-radius:12px"></div>
+            <form id="replyForm" style="margin-top:16px;display:flex;gap:8px;align-items:center">
+                <input type="hidden" id="replyUserId">
+                <input type="file" id="adminChatFileInput" style="display:none" accept="image/*,video/*">
+                <button type="button" id="chatAttachBtn" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--primary);cursor:pointer"><i class="fa-solid fa-paperclip"></i></button>
+                <input type="text" id="replyMsg" placeholder="Type reply..." required style="flex:1;padding:12px;border-radius:24px;border:1px solid var(--border)">
+                <button type="submit" class="btn-appr" style="width:40px;height:40px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Prevent any circular reference serialization crash in the whole document, including Firebase SDK error reports
+(function() {
+    const originalStringify = JSON.stringify;
+    JSON.stringify = function(value, replacer, space) {
+        const seen = new WeakSet();
+        const safeReplacer = function(key, val) {
+            if (typeof val === 'object' && val !== null) {
+                if (seen.has(val)) {
+                    return '[Circular]';
+                }
+                seen.add(val);
+            }
+            if (typeof replacer === 'function') {
+                return replacer(key, val);
+            } else if (Array.isArray(replacer)) {
+                return replacer.includes(key) ? val : undefined;
+            }
+            return val;
+        };
+        try {
+            return originalStringify(value, safeReplacer, space);
+        } catch (err) {
+            return '"[Circular/Error]"';
+        }
+    };
+})();
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, addDoc, increment, onSnapshot, orderBy, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// Dark Mode Initialization
+const initAdminDarkMode = () => {
+    const isDark = localStorage.getItem('adminDarkMode') === 'true';
+    if (isDark) {
+        document.body.classList.add('dark-mode');
+        const themeBtn = document.getElementById('adminThemeToggle');
+        if(themeBtn) themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+    }
+};
+initAdminDarkMode();
+
+window.toggleAdminDarkMode = () => {
+    const isDark = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('adminDarkMode', isDark);
+    const themeBtn = document.getElementById('adminThemeToggle');
+    if (themeBtn) {
+        themeBtn.innerHTML = isDark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+    }
+};
+const adminThemeBtn = document.getElementById('adminThemeToggle');
+if(adminThemeBtn) adminThemeBtn.onclick = window.toggleAdminDarkMode;
+
+window.customPrompt = function(message, title = "Input Required", placeholder = "Type here...") {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('promptModal');
+        const titleEl = document.getElementById('promptTitle');
+        const msgEl = document.getElementById('promptMessage');
+        const inputEl = document.getElementById('promptInput');
+        const submitBtn = document.getElementById('promptSubmitBtn');
+        const cancelBtn = document.getElementById('promptCancelBtn');
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+        inputEl.value = "";
+        inputEl.placeholder = placeholder;
+        modal.style.display = 'flex';
+        inputEl.focus();
+
+        const handleResponse = (val) => {
+            modal.style.display = 'none';
+            submitBtn.onclick = null;
+            cancelBtn.onclick = null;
+            resolve(val);
+        };
+
+        submitBtn.onclick = () => handleResponse(inputEl.value);
+        cancelBtn.onclick = () => handleResponse(null);
+        modal.onclick = (e) => { if(e.target === modal) handleResponse(null); };
+        inputEl.onkeypress = (e) => { if(e.key === 'Enter') handleResponse(inputEl.value); };
+    });
+};
+
+window.customConfirm = function(message, title = "Are you sure?") {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmTitle');
+        const msgEl = document.getElementById('confirmMessage');
+        const yesBtn = document.getElementById('confirmYesBtn');
+        const noBtn = document.getElementById('confirmNoBtn');
+
+        titleEl.innerText = title;
+        msgEl.innerText = message;
+        modal.style.display = 'flex';
+
+        const handleResponse = (res) => {
+            modal.style.display = 'none';
+            yesBtn.onclick = null;
+            noBtn.onclick = null;
+            resolve(res);
+        };
+
+        yesBtn.onclick = () => handleResponse(true);
+        noBtn.onclick = () => handleResponse(false);
+        modal.onclick = (e) => { if(e.target === modal) handleResponse(false); };
+    });
+};
+
+const firebaseConfig = {
+    apiKey: "AIzaSyD4K1as0o0WUb51nL6WGK5KAknG5oOpBwI",
+    authDomain: "smart-bd365.firebaseapp.com",
+    projectId: "smart-bd365",
+    storageBucket: "smart-bd365.firebasestorage.app",
+    messagingSenderId: "547646649024",
+    appId: "1:547646649024:web:26888ba9bf7a70fce97325",
+    firestoreDatabaseId: "ai-studio-c29a04c5-e49f-4a2e-b317-b1db3c318d65" 
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Test Connection
+(async () => {
+    try {
+        await getDoc(doc(db, 'admin', 'test_connection'));
+    } catch (e) {
+        console.error("Admin Firestore initialization failed:", e);
+    }
+})();
+
+// Browser Notification Helper
+function sendBrowserNotify(title, body) {
+    if (Notification.permission === 'granted') {
+        new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/3119/3119338.png' });
+    }
+}
+
+function showToast(typeOrMessage, titleOrType, message, existingId = null) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return null;
+    
+    let type = 'info';
+    let title = 'Notification';
+    let msg = '';
+    let targetId = existingId;
+    
+    // Normal client signatures:
+    // 1. showToast(type, title, message)
+    // 2. showToast(type, title, message, existingId)
+    // Admin signatures:
+    // 1. showToast(message, type)
+    const knownTypes = ['success', 'error', 'info', 'warning', 'loading', 'primary'];
+    
+    if (knownTypes.includes(typeOrMessage)) {
+        type = typeOrMessage;
+        title = titleOrType || '';
+        msg = message || '';
+    } else {
+        msg = typeOrMessage;
+        type = knownTypes.includes(titleOrType) ? titleOrType : 'success';
+        title = type.charAt(0).toUpperCase() + type.slice(1);
+        if (typeof message === 'string' && message.startsWith('toast_')) {
+            targetId = message;
+        }
+    }
+    
+    let toast;
+    let isCreated = false;
+    
+    if (targetId) {
+        toast = document.getElementById(targetId);
+    }
+    
+    if (!toast) {
+        toast = document.createElement('div');
+        targetId = 'toast_' + Math.random().toString(36).substr(2, 9);
+        toast.id = targetId;
+        isCreated = true;
+    }
+    
+    if (toast._dismissTimeout) {
+        clearTimeout(toast._dismissTimeout);
+    }
+    
+    toast.className = `toast ${type}`;
+    
+    let iconHTML = '';
+    const isProcessing = type === 'loading' || 
+                         msg.toLowerCase().includes('processing') || 
+                         msg.toLowerCase().includes('submitting') || 
+                         msg.toLowerCase().includes('validating') ||
+                         title.toLowerCase().includes('processing') || 
+                         title.toLowerCase().includes('validating');
+                         
+    if (isProcessing) {
+        iconHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:var(--primary); font-size: 24px; flex-shrink: 0;"></i>`;
+    } else {
+        let icon = 'circle-info';
+        if (type === 'success') icon = 'circle-check';
+        if (type === 'error') icon = 'circle-xmark';
+        if (type === 'warning') icon = 'triangle-exclamation';
+        
+        const iconColor = type === 'info' ? 'var(--primary)' : 
+                          type === 'success' ? 'var(--success)' : 
+                          type === 'error' ? 'var(--danger)' : 'var(--warning)';
+                          
+        iconHTML = `<i class="fa-solid fa-${icon}" style="color:${iconColor}; font-size: 24px; flex-shrink: 0;"></i>`;
+    }
+    
+    toast.innerHTML = `
+        ${iconHTML}
+        <div class="toast-content" style="flex:1">
+            <strong style="display:block; font-size:14px; font-weight:600; margin-bottom:2px">${title}</strong>
+            <span style="font-size:12px; color:var(--muted)">${msg}</span>
+        </div>
+    `;
+    
+    if (isCreated) {
+        container.appendChild(toast);
+    } else {
+        // Smooth hardware-accelerated transition pulse on update
+        toast.style.animation = 'none';
+        void toast.offsetWidth; // force reflow/repaint
+        toast.style.animation = 'toastIn 0.3s forwards';
+    }
+    
+    // Auto-Dismiss after exactly 3 seconds (3000ms)
+    toast._dismissTimeout = setTimeout(() => {
+        toast.style.animation = 'toastOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+    
+    return targetId;
+}
+window.appToast = showToast;
+try {
+    Object.defineProperty(window, 'showToast', {
+        value: showToast,
+        writable: true,
+        configurable: true
+    });
+} catch (e) {
+    console.warn("Could not redefine window.showToast, using window.appToast fallback", e);
+}
+
+document.getElementById('loginForm').onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+        const cred = await signInWithEmailAndPassword(auth, document.getElementById('adminEmail').value, document.getElementById('adminPassword').value);
+        const uEmail = (cred.user.email || '').toLowerCase().trim();
+        const isSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com'; 
+        const adminDoc = await getDoc(doc(db, 'admins', cred.user.uid));
+        
+        if (!adminDoc.exists() && !isSuperAdmin) { 
+            await signOut(auth); 
+            showToast('Authorization Failed: Your account is not an admin (' + uEmail + ')', 'error'); 
+            return; 
+        }
+        showToast('Login Successful');
+    } catch (err) { 
+        let msg = err.message;
+        if (err.code === 'auth/unauthorized-domain') {
+            const hostname = window.location.hostname;
+            msg = `ডোমেইন অনুমোদিত নয় (${hostname})। দয়া করে Firebase Console (Auth > Settings > Authorized Domains) এ গিয়ে ডোমেইনটি যোগ করুন।`;
+        }
+        showToast('Login Error: ' + msg, 'error'); 
+    }
+};
+
+let isUserSuperAdmin = false;
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        const uEmail = (user.email || '').toLowerCase().trim();
+        // Force superadmin status for authorized admin emails
+        isUserSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com';
+        console.log("Logged in as:", uEmail, "Is SuperAdmin:", isUserSuperAdmin);
+        
+        const emailEl = document.getElementById('adminUserEmail');
+        if(emailEl) emailEl.innerText = uEmail + (isUserSuperAdmin ? ' (SuperAdmin)' : '');
+        
+        // Show view immediately for SuperAdmin
+        if (isUserSuperAdmin) {
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('adminView').style.display = 'block';
+            loadData();
+            
+            // Background update of admin record
+            try {
+                await setDoc(doc(db, 'admins', user.uid), { 
+                    email: user.email, 
+                    role: 'superadmin', 
+                    lastActive: new Date().toISOString() 
+                }, { merge: true });
+            } catch(e) { console.warn("Admin record update failed, but session continues"); }
+            
+            return;
+        }
+
+        try {
+            const d = await getDoc(doc(db, 'admins', user.uid));
+            if (d.exists()) {
+                document.getElementById('loginView').classList.add('hidden');
+                document.getElementById('adminView').style.display = 'block';
+                loadData();
+            } else {
+                await signOut(auth);
+                showToast('Access Denied: Not an authorized admin (' + uEmail + ')', 'error');
+            }
+        } catch(err) {
+            await signOut(auth);
+            showToast('Authorization Failed: ' + err.message, 'error');
+        }
+    } else { 
+        document.getElementById('loginView').classList.remove('hidden');
+        document.getElementById('adminView').style.display = 'none';
+    }
+});
+
+document.getElementById('logoutBtn').onclick = () => signOut(auth);
+
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.onclick = () => {
+        const tabId = item.dataset.tab;
+        const loader = document.getElementById('adminPanelLoading');
+        if(loader) loader.style.display = 'flex';
+        
+        setTimeout(() => {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            item.classList.add('active');
+            const targetTab = document.getElementById(tabId + 'Tab');
+            if (targetTab) targetTab.classList.add('active');
+            
+            if(tabId === 'users') loadUsers();
+            if(tabId === 'chat') loadSupport();
+            if(tabId === 'landing_support') loadLandingChats();
+            if(tabId === 'cleardata') { /* No extra load needed, just reset btn */ }
+            if(tabId === 'gateway') loadGatewayConfig();
+            if(tabId === 'packages') {
+                switchPackageSubTab('rigs');
+            }
+            if(tabId === 'homepage') loadTasks();
+            if(tabId === 'dashboard') { loadStats(); listenRecentActivity(); }
+            if(tabId === 'deposits') listenDeposits();
+            if(tabId === 'withdraws') listenWithdraws();
+            if(tabId === 'history') listenGlobalHistory();
+            if(tabId === 'notifications') loadSentNotifications();
+            if(tabId === 'system') loadAllBalances();
+            
+            if(loader) loader.style.display = 'none';
+        }, 150);
+    };
+});
+
+window.switchPackageSubTab = (type) => {
+    const rigsBtn = document.getElementById('subTabRigs');
+    const robotsBtn = document.getElementById('subTabRobots');
+    const rigsView = document.getElementById('rigsManagementView');
+    const robotsView = document.getElementById('robotsManagementView');
+    
+    if(!rigsBtn || !robotsBtn || !rigsView || !robotsView) return;
+    
+    if(type === 'rigs') {
+        rigsBtn.classList.add('active');
+        robotsBtn.classList.remove('active');
+        rigsView.style.display = 'block';
+        robotsView.style.display = 'none';
+        loadPackages();
+    } else {
+        rigsBtn.classList.remove('active');
+        robotsBtn.classList.add('active');
+        rigsView.style.display = 'none';
+        robotsView.style.display = 'block';
+        loadRobots();
+    }
+};
+
+window.openRobotModal = (data = null) => {
+    const modal = document.getElementById('robotModal');
+    const form = document.getElementById('robotForm');
+    document.getElementById('robotModalTitle').innerText = data ? 'Edit Robot' : 'Create Auto Robot';
+    
+    if(data) {
+        document.getElementById('robotId_fs').value = data.id;
+        document.getElementById('robotName').value = data.name;
+        document.getElementById('robotPrice').value = data.price;
+        document.getElementById('robotDuration').value = data.duration || 30;
+        document.getElementById('robotColor').value = data.color || '#1a73e8';
+    } else {
+        form.reset();
+        document.getElementById('robotId_fs').value = '';
+        document.getElementById('robotDuration').value = 30;
+    }
+    modal.classList.add('show');
+};
+
+// Global Registry for complex objects to avoid circular JSON stringification in HTML attributes
+window._robotRegistry = {};
+window._packageRegistry = {};
+
+async function loadRobots() {
+    const list = document.getElementById('robotsList');
+    if(!list) return;
+    list.innerHTML = '<p style="text-align:center;padding:20px">Loading robots...</p>';
+    
+    try {
+        const snap = await getDocs(query(collection(db, 'robots_config'), orderBy('price', 'asc')));
+        list.innerHTML = '';
+        if(snap.empty) {
+            list.innerHTML = `
+                <div style="text-align:center;padding:20px;color:var(--muted)">
+                    <p>No robots configured yet.</p>
+                    <button class="btn-sm btn-appr" style="width:auto;margin-top:10px" onclick="window.seedDefaultRobots()"><i class="fa-solid fa-magic"></i> Seed Default Robots</button>
+                </div>
+            `;
+            return;
+        }
+
+        snap.forEach(dDoc => {
+            const d = dDoc.data();
+            const isActive = d.status !== 'hidden';
+            const card = document.createElement('div');
+            
+            // Register object
+            window._robotRegistry[dDoc.id] = {id: dDoc.id, ...d};
+            
+            card.className = 'list-card';
+            card.style = `border-left: 4px solid ${d.color || 'var(--primary)'}`;
+            card.innerHTML = `
+                <div class="list-top" style="position:relative; z-index:1">
+                    <div class="list-info">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <b style="color:${d.color || 'var(--primary)'}"><i class="fa-solid fa-robot"></i> ${d.name}</b>
+                            <span class="badge" style="background:${isActive ? 'rgba(52,168,83,0.1)' : 'rgba(234,67,53,0.1)'}; color:${isActive ? '#34a853' : '#ea4335'}; font-size:10px; padding:2px 8px; border-radius:10px; border:1px solid ${isActive ? '#34a853' : '#ea4335'}">${isActive ? 'Active' : 'Hidden'}</span>
+                        </div>
+                        <span style="display:block;margin:4px 0">Price: ৳${d.price} | Duration: ${d.duration || 30} Days</span>
+                        <p style="font-size:11px;color:var(--muted);background:rgba(0,0,0,0.03);padding:6px;border-radius:6px;margin:5px 0">${d.desc || 'No description provided.'}</p>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                    <button class="btn-sm btn-view" style="max-width:80px" onclick="window.openRobotModal(window._robotRegistry['${dDoc.id}'])">Edit</button>
+                    <button class="btn-sm btn-reje" style="max-width:80px" onclick="deleteRobot('${dDoc.id}')">Delete</button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    } catch(err) {
+        list.innerHTML = `<p style="padding:20px;color:var(--danger)">Error: ${err.message}</p>`;
+    }
+}
+
+window.seedDefaultRobots = async () => {
+    const defaults = [
+        { name: 'Smart Bot (7 Days)', price: 150, duration: 7, color: '#4285F4', desc: 'Automates reward collection for 7 days.', status: 'active', createdAt: new Date().toISOString() },
+        { name: 'Pro Bot (15 Days)', price: 300, duration: 15, color: '#9C27B0', desc: 'Automates reward collection for 15 days.', status: 'active', createdAt: new Date().toISOString() },
+        { name: 'Ultra Bot (30 Days)', price: 500, duration: 30, color: '#FF9800', desc: 'Automates reward collection for 30 days.', status: 'active', createdAt: new Date().toISOString() }
+    ];
+    
+    try {
+        showToast('Seeding robots...');
+        for(const bot of defaults) {
+            await addDoc(collection(db, 'robots_config'), bot);
+        }
+        showToast('Default Robots Added');
+        loadRobots();
+    } catch(err) { showToast(err.message, 'error'); }
+};
+
+window.openRobotModal = (data = null) => {
+    document.getElementById('robotModalTitle').innerText = data ? 'Edit Robot' : 'Create Robot';
+    document.getElementById('robotId_fs').value = data ? data.id : '';
+    document.getElementById('robotName').value = data ? data.name : '';
+    document.getElementById('robotPrice').value = data ? data.price : '';
+    document.getElementById('robotDuration').value = data ? data.duration : '30';
+    document.getElementById('robotDesc').value = data ? (data.desc || '') : '';
+    document.getElementById('robotColor').value = data ? (data.color || '#1a73e8') : '#1a73e8';
+    document.getElementById('robotStatus').value = data ? (data.status || 'active') : 'active';
+    openModal('robotModal');
+};
+
+window.deleteRobot = async (id) => {
+    if(!await window.customConfirm('Delete this robot option? (Existing users keep their active robots)', 'Delete Robot')) return;
+    try {
+        await deleteDoc(doc(db, 'robots_config', id));
+        showToast('Robot Config Deleted');
+        loadRobots();
+    } catch(err) { showToast(err.message, 'error'); }
+};
+
+document.getElementById('robotForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('robotId_fs').value;
+    const data = {
+        name: document.getElementById('robotName').value,
+        price: parseFloat(document.getElementById('robotPrice').value),
+        duration: parseInt(document.getElementById('robotDuration').value),
+        desc: document.getElementById('robotDesc').value,
+        color: document.getElementById('robotColor').value,
+        status: document.getElementById('robotStatus').value,
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        if(id) {
+            await updateDoc(doc(db, 'robots_config', id), data);
+            showToast('Robot Updated');
+        } else {
+            await addDoc(collection(db, 'robots_config'), data);
+            showToast('Robot Created');
+        }
+        closeModal('robotModal');
+        loadRobots();
+    } catch(err) { showToast(err.message, 'error'); }
+};
+
+function loadData() {
+    listenCounts();
+    loadStats();
+    listenDeposits();
+    listenWithdraws();
+    loadUsers();
+}
+
+async function loadStats() {
+    try {
+        // Individual listeners for various stats
+        onSnapshot(collection(db, 'users'), (snap) => {
+            document.getElementById('totalUsers').innerText = snap.size;
+            let bal = 0; 
+            let suspended = 0;
+            snap.forEach(d => {
+                bal += (d.data().balance || 0);
+                if(d.data().isSuspended) suspended++;
+            });
+            const totalBalEl = document.getElementById('totalBalance');
+            if(totalBalEl) totalBalEl.innerText = bal.toFixed(0);
+            const suspendedEl = document.getElementById('dashSuspendedUsers');
+            if(suspendedEl) suspendedEl.innerText = suspended;
+        });
+
+        onSnapshot(query(collection(db, 'deposits'), where('status', '==', 'approved')), (snap) => {
+            let total = 0; snap.forEach(d => total += (d.data().amount || 0));
+            const el = document.getElementById('totalApprovedDepo');
+            if(el) el.innerText = '৳' + total.toFixed(0);
+        });
+
+        onSnapshot(query(collection(db, 'withdraws'), where('status', '==', 'approved')), (snap) => {
+            let total = 0; snap.forEach(d => total += (d.data().amount || 0));
+            const el = document.getElementById('totalApprovedWithd');
+            if(el) el.innerText = '৳' + total.toFixed(0);
+        });
+
+        onSnapshot(collection(db, 'work_history'), (snap) => {
+            let total = 0;
+            snap.forEach(d => total += (d.data().earnings || 0));
+            const el = document.getElementById('dashTotalMining');
+            if(el) el.innerText = '৳' + total.toFixed(0);
+        });
+
+        onSnapshot(query(collection(db, 'user_packages'), where('status', '==', 'active')), (snap) => {
+            const el = document.getElementById('dashActiveRigs');
+            if(el) el.innerText = snap.size;
+        });
+
+        onSnapshot(query(collection(db, 'user_robots'), where('status', '==', 'active')), (snap) => {
+            const el = document.getElementById('dashActiveRobots');
+            if(el) el.innerText = snap.size;
+        });
+        
+        onSnapshot(collection(db, 'chats'), (snap) => {
+            const activeChats = snap.docs.filter(d => !d.data().archived).length;
+            const el = document.getElementById('dashActiveChats');
+            if(el) el.innerText = activeChats;
+        }, (err) => {
+            console.warn("Chats stat load failed (maybe collection missing?):", err.message);
+            const el = document.getElementById('dashActiveChats');
+            if(el) el.innerText = "0";
+        });
+        
+    } catch(err) { console.error("Stats Load error:", err); }
+}
+
+// Notification badges and counts logic
+let pendingDepCount = 0;
+let pendingWitCount = 0;
+let pendingSupportCount = 0;
+let pendingUserCount = 0;
+let pendingLeadCount = 0;
+
+function listenCounts() {
+    onSnapshot(query(collection(db, 'deposits'), where('status', '==', 'pending')), (snap) => {
+        const newCount = snap.size;
+        if (newCount > pendingDepCount && pendingDepCount !== 0) {
+            sendBrowserNotify('New Deposit!', 'A new deposit request has arrived.');
+            showToast('New Deposit Request Received', 'info');
+        }
+        pendingDepCount = newCount;
+        const depCounter = document.getElementById('pendingDeposits');
+        const depBadge = document.getElementById('depBadge');
+        if (depCounter) depCounter.innerText = pendingDepCount;
+        if (depBadge) {
+            depBadge.innerText = pendingDepCount;
+            depBadge.style.display = pendingDepCount > 0 ? 'flex' : 'none';
+        }
+    });
+
+    onSnapshot(query(collection(db, 'withdraws'), where('status', '==', 'pending')), (snap) => {
+        const newCount = snap.size;
+        if (newCount > pendingWitCount && pendingWitCount !== 0) {
+            sendBrowserNotify('New Withdraw!', 'A new withdraw request has arrived.');
+            showToast('New Withdrawal Request Received', 'warning');
+        }
+        pendingWitCount = newCount;
+        
+        const witCounter = document.getElementById('pendingWithdraws');
+        const witBadge = document.getElementById('witBadge');
+        if (witCounter) witCounter.innerText = pendingWitCount;
+        if (witBadge) {
+            witBadge.innerText = pendingWitCount;
+            witBadge.style.display = pendingWitCount > 0 ? 'flex' : 'none';
+        }
+    });
+
+    onSnapshot(query(collection(db, 'landing_chats'), where('status', '==', 'unread')), (snap) => {
+        const newCount = snap.size;
+        if (newCount > pendingLeadCount && pendingLeadCount !== 0) {
+            showToast('New Landing Page Lead!', 'success');
+        }
+        pendingLeadCount = newCount;
+        const badge = document.getElementById('leadBadge');
+        if (badge) {
+            badge.innerText = pendingLeadCount;
+            badge.style.display = pendingLeadCount > 0 ? 'flex' : 'none';
+        }
+    });
+
+    // Support Unread Messages
+    onSnapshot(query(collection(db, 'support'), where('read', '==', false), where('sender', '==', 'user')), (snap) => {
+        const newCount = snap.size;
+        if (newCount > pendingSupportCount && pendingSupportCount !== 0) {
+            showToast('New Support Message', 'primary');
+        }
+        pendingSupportCount = newCount;
+        const badge = document.getElementById('chatBadge');
+        if (badge) {
+            badge.innerText = pendingSupportCount;
+            badge.style.display = pendingSupportCount > 0 ? 'flex' : 'none';
+        }
+    });
+
+    // Unapproved Users (Profile completed but status not active/suspended)
+    onSnapshot(query(collection(db, 'users'), where('status', '==', 'inactive')), (snap) => {
+        const newCount = snap.docs.filter(d => d.data().profileCompleted).length;
+        if (newCount > pendingUserCount && pendingUserCount !== 0) {
+            showToast('New User Waiting for Approval', 'info');
+        }
+        pendingUserCount = newCount;
+        const badge = document.getElementById('userBadge');
+        if (badge) {
+            badge.innerText = pendingUserCount;
+            badge.style.display = pendingUserCount > 0 ? 'flex' : 'none';
+        }
+    });
+}
+
+window.loadLandingChats = () => {
+    const listEl = document.getElementById('landingChatsList');
+    onSnapshot(query(collection(db, 'landing_chats'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
+        if (snap.empty) {
+            listEl.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted)">No messages yet.</p>';
+            return;
+        }
+        
+        listEl.innerHTML = '';
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+            const date = new Date(data.createdAt).toLocaleString();
+            const isUnread = data.status === 'unread';
+            
+            const card = document.createElement('div');
+            card.className = 'list-card';
+            card.style.border = isUnread ? '2px solid var(--primary)' : '1px solid var(--border)';
+            
+            card.innerHTML = `
+                <div class="list-top">
+                    <div class="list-info">
+                        <b>${data.userName || 'Guest'}</b>
+                        <span>${data.userPhone || 'No Phone'}</span>
+                        <div style="font-size:10px; color:var(--muted); margin-top:4px">${date}</div>
+                    </div>
+                    ${isUnread ? '<span class="status-pill pending">New</span>' : '<span class="status-pill approved">Read</span>'}
+                </div>
+                <div style="background:var(--bg); border-radius:12px; padding:12px; font-size:13px; border:1px solid var(--border)">
+                    ${data.message}
+                </div>
+                <div class="list-actions">
+                    <button class="btn-sm btn-view" onclick="window.markLeadRead('${id}')">Mark Read</button>
+                    <button class="btn-sm btn-appr" onclick="window.open('tel:${data.userPhone}')">Call Now</button>
+                </div>
+            `;
+            listEl.appendChild(card);
+        });
+    });
+};
+
+window.markLeadRead = async (id) => {
+    try {
+        await updateDoc(doc(db, 'landing_chats', id), { status: 'read' });
+    } catch (err) {
+        console.error("Error marking as read:", err);
+    }
+};
+
+let depositsLimit = 10;
+let depositsListener = null;
+
+// Helper to format dates correctly from both Strings and Firestore Timestamps
+function formatDate(date) {
+    if (!date) return 'No Date';
+    try {
+        if (typeof date === 'string') return new Date(date).toLocaleString();
+        if (date.toDate && typeof date.toDate === 'function') return date.toDate().toLocaleString();
+        if (date.seconds) return new Date(date.seconds * 1000).toLocaleString();
+        return new Date(date).toLocaleString();
+    } catch(e) {
+        return 'Invalid Date';
+    }
+}
+
+function listenDeposits() {
+    const list = document.getElementById('depositsList');
+    if (!list) return;
+    if (depositsListener) depositsListener();
+    
+    // Safety clear before starting
+    if (list.innerHTML === 'Loading...') list.innerHTML = '<p style="text-align:center;padding:20px;color:var(--muted)">Connecting to server...</p>';
+
+    depositsListener = onSnapshot(query(collection(db, 'deposits'), orderBy('createdAt', 'desc'), limit(depositsLimit)), (snap) => {
+        list.innerHTML = '';
+        if(snap.empty) {
+            list.innerHTML = `<p style="text-align:center;color:var(--muted);padding:20px">No deposit requests found yet.</p>`;
+            return;
+        }
+        
+        try {
+            const docs = snap.docs.map(d => ({id: d.id, ...d.data()}))
+                .sort((a, b) => {
+                    if (a.status === 'pending' && b.status !== 'pending') return -1;
+                    if (a.status !== 'pending' && b.status === 'pending') return 1;
+                    const dateA = a.createdAt?.toDate ? a.createdAt.toDate().toISOString() : (String(a.createdAt) || '');
+                    const dateB = b.createdAt?.toDate ? b.createdAt.toDate().toISOString() : (String(b.createdAt) || '');
+                    return dateB.localeCompare(dateA);
+                });
+
+            docs.forEach(d => {
+                const card = document.createElement('div');
+                card.className = 'list-card';
+                const method = (d.method || 'Unknown').toUpperCase();
+                card.innerHTML = `
+                    <div class="list-top">
+                        <div class="list-info">
+                            <div style="font-weight:700; color:var(--text)">UID: ${d.uid || 'N/A'}</div>
+                            <div style="font-size:11px; color:var(--muted)">${method} • ${d.number || 'N/A'}</div>
+                        </div>
+                        <div class="list-amount" style="font-size:18px; color:var(--primary)">৳${d.amount || 0}</div>
+                    </div>
+                    <div style="font-size:11px; color:var(--muted); margin:4px 0">${formatDate(d.createdAt)}</div>
+                    <div style="font-size:12px; color:var(--muted); margin:8px 0; background:var(--bg); padding:6px; border-radius:6px">TrxID: <b style="color:var(--text); word-break:break-all">${d.trxId || 'N/A'}</b></div>
+                    <div class="list-top" style="align-items:center">
+                        <span class="status-pill ${(d.status || 'pending').toLowerCase()}" style="text-transform:capitalize">${d.status || 'pending'}</span>
+                        ${d.status === 'pending' ? `
+                            <div class="list-actions">
+                                <button class="btn-sm btn-reje" onclick="handleDeposit('${d.id}', 'rejected', '${d.userId}', ${d.amount})">Reject</button>
+                                <button class="btn-sm btn-appr" onclick="handleDeposit('${d.id}', 'approved', '${d.userId}', ${d.amount})">Approve</button>
+                            </div>` : ''}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            if (snap.size >= depositsLimit) {
+                const btn = document.createElement('button');
+                btn.className = 'btn-see-more';
+                btn.innerText = 'See More';
+                btn.onclick = () => { depositsLimit += 15; listenDeposits(); };
+                list.appendChild(btn);
+            }
+        } catch (renderErr) {
+            console.error("Render error in Deposits:", renderErr);
+            list.innerHTML = `<div style="padding:20px; color:var(--danger); text-align:center">Display Error: ${renderErr.message}</div>`;
+        }
+    }, (err) => {
+        console.error("Deposits listener failed:", err);
+        list.innerHTML = `<div style="padding:20px; color:var(--danger); text-align:center">Load Error: ${err.message}</div>`;
+        showToast("Permission Denied for Deposits List", "error");
+    });
+}
+
+window.handleDeposit = async (id, status, userId, amount) => {
+    if(!await window.customConfirm('Are you sure you want to ' + status + ' this deposit?', 'Deposit Action')) return;
+    try {
+        const depositRef = doc(db, 'deposits', id);
+        const userRef = doc(db, 'users', userId);
+        
+        if (status === 'approved') {
+            // Priority: Update balance first
+            await updateDoc(userRef, { 
+                balance: increment(amount),
+                mainBalance: increment(amount),
+                hasDeposit: true 
+            });
+
+            await updateDoc(depositRef, { status: 'approved' });
+
+            await addDoc(collection(db, 'notifications'), {
+                userId,
+                title: 'Deposit Approved',
+                message: `Your deposit of ৳${amount} has been approved.`,
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+
+            await addDoc(collection(db, 'transactions'), {
+                userId,
+                type: 'deposit',
+                amount,
+                source: 'Admin Approved',
+                createdAt: new Date().toISOString()
+            });
+
+        } else {
+            await updateDoc(depositRef, { status: 'rejected' });
+            await addDoc(collection(db, 'notifications'), {
+                userId,
+                title: 'Deposit Rejected',
+                message: `Your deposit of ৳${amount} was rejected.`,
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        }
+        
+        showToast('Operation Successful', 'success');
+        loadStats();
+    } catch(err) { 
+        console.error("Deposit Processing Error:", err);
+        showToast('Error: ' + err.message, 'error');
+    }
+};
+
+let withdrawsLimit = 10;
+let withdrawsListener = null;
+
+function listenWithdraws() {
+    const list = document.getElementById('withdrawsList');
+    if (!list) return;
+    if (withdrawsListener) withdrawsListener();
+    
+    // Safety clear before starting
+    if (list.innerHTML === 'Loading...') list.innerHTML = '<p style="text-align:center;padding:20px;color:var(--muted)">Connecting to server...</p>';
+
+    withdrawsListener = onSnapshot(query(collection(db, 'withdraws'), orderBy('createdAt', 'desc'), limit(withdrawsLimit)), (snap) => {
+        list.innerHTML = '';
+        if(snap.empty) {
+            list.innerHTML = `<p style="text-align:center;color:var(--muted);padding:20px">No requests found</p>`;
+            return;
+        }
+        
+        try {
+            const docs = snap.docs.map(d => ({id: d.id, ...d.data()}))
+                .sort((a,b) => {
+                    if (a.status === 'pending' && b.status !== 'pending') return -1;
+                    if (a.status !== 'pending' && b.status === 'pending') return 1;
+                    const dateA = a.createdAt?.toDate ? a.createdAt.toDate().toISOString() : (String(a.createdAt) || '');
+                    const dateB = b.createdAt?.toDate ? b.createdAt.toDate().toISOString() : (String(b.createdAt) || '');
+                    return dateB.localeCompare(dateA);
+                });
+
+            docs.forEach(d => {
+                const card = document.createElement('div');
+                card.className = 'list-card';
+                const method = (d.method || 'Unknown').toUpperCase();
+                card.innerHTML = `
+                    <div class="list-top">
+                        <div class="list-info">
+                            <div style="font-weight:700; color:var(--text)">UID: ${d.uid || 'Unknown'}</div>
+                            <div style="font-size:11px; color:var(--muted)">${method} • ${d.number || 'N/A'}</div>
+                        </div>
+                        <div class="list-amount" style="font-size:18px; color:var(--danger)">৳${d.amount || 0}</div>
+                    </div>
+                    <div style="font-size:11px; color:var(--muted); margin:4px 0">${formatDate(d.createdAt)}</div>
+                    <div class="list-top" style="align-items:center">
+                        <span class="status-pill ${d.status || 'pending'}" style="text-transform:capitalize">${d.status || 'pending'}</span>
+                        ${d.status === 'pending' ? `
+                            <div class="list-actions">
+                                <button class="btn-sm btn-reje" onclick="handleWithdraw('${d.id}', 'rejected', '${d.userId}', ${d.amount})">Reject</button>
+                                <button class="btn-sm btn-appr" onclick="handleWithdraw('${d.id}', 'approved', '${d.userId}', ${d.amount})">Complete</button>
+                            </div>` : ''}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            if (snap.size >= withdrawsLimit) {
+                const btn = document.createElement('button');
+                btn.className = 'btn-see-more';
+                btn.innerText = 'See More';
+                btn.onclick = () => { withdrawsLimit += 15; listenWithdraws(); };
+                list.appendChild(btn);
+            }
+        } catch (renderErr) {
+            console.error("Render error in Withdraws:", renderErr);
+            list.innerHTML = `<div style="padding:20px; color:var(--danger); text-align:center">Display Error: ${renderErr.message}</div>`;
+        }
+    }, (err) => {
+        console.error("Withdraws listener failed:", err);
+        list.innerHTML = `<div style="padding:20px; color:var(--danger); text-align:center">Load Error: ${err.message}</div>`;
+        showToast("Permission Denied for Withdraws List", "error");
+    });
+}
+
+window.handleWithdraw = async (id, status, userId, amount) => {
+    if(!await window.customConfirm('Are you sure?', 'Withdraw Action')) return;
+    try {
+        const withdrawRef = doc(db, 'withdraws', id);
+        const userRef = doc(db, 'users', userId);
+
+        if(status === 'rejected') {
+            await updateDoc(userRef, { 
+                balance: increment(amount),
+                mainBalance: increment(amount)
+            });
+            await updateDoc(withdrawRef, { status: 'rejected' });
+            await addDoc(collection(db, 'notifications'), {
+                userId,
+                title: 'Withdraw Rejected',
+                message: `Your ৳${amount} withdraw was rejected. Amount returned to wallet.`,
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        }
+        if(status === 'approved') {
+            await updateDoc(withdrawRef, { status: 'approved' });
+            await addDoc(collection(db, 'notifications'), {
+                userId,
+                title: 'Withdraw Completed',
+                message: `Congratulations! Your ৳${amount} withdraw request was successful.`,
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        }
+        showToast('Operation Successful', 'success');
+        loadStats();
+    } catch(err) { 
+        console.error("Withdraw Update Error:", err);
+        showToast('Withdraw Error: ' + err.message, 'error'); 
+    }
+};
+
+function loadUsers() {
+    const list = document.getElementById('usersList');
+    if (!list) return;
+
+    onSnapshot(collection(db, 'users'), (snap) => {
+        list.innerHTML = '';
+        if (snap.empty) {
+            list.innerHTML = '<p style="text-align:center;padding:20px;color:var(--muted)">No users found in database.</p>';
+            return;
+        }
+        snap.forEach(dDoc => {
+            const d = dDoc.data();
+            const card = document.createElement('div');
+            card.className = 'list-card';
+            card.innerHTML = `
+                <div class="list-top">
+                    <div class="list-info"><b>${d.fullName || 'No Name'}</b><span>UID: ${d.uid || 'N/A'}</span></div>
+                    <div class="list-amount">৳${(d.balance || 0).toFixed(1)}</div>
+                </div>
+                <div class="list-top" style="align-items:center;margin-top:5px;gap:8px">
+                    <span class="status-pill ${(d.status || 'inactive')}">${(d.status || 'inactive')}</span>
+                    <span style="font-size:10px; color:${d.profileCompleted ? 'var(--success)' : 'var(--muted)'}">${d.profileCompleted ? '✓Profile' : '✗Profile'}</span>
+                    <span style="font-size:10px; color:${d.hasDeposit ? 'var(--success)' : 'var(--muted)'}">${d.hasDeposit ? '✓Deposit' : '✗Deposit'}</span>
+                    ${d.isSuspended ? '<span class="status-pill rejected" style="margin-left:0">Suspended</span>' : ''}
+                    <div style="display:flex; gap:5px; margin-left:auto">
+                        <button class="btn-sm btn-view" style="width:auto; padding:4px 10px" onclick="viewUser('${dDoc.id}')">Details</button>
+                        <button class="btn-sm btn-reje" style="width:auto; padding:4px 10px" onclick="deleteUser('${dDoc.id}', '${d.fullName}')">Delete</button>
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+        
+        // Update dashboard total users if on dashboard
+        const totalUsersEl = document.getElementById('totalUsers');
+        if (totalUsersEl) totalUsersEl.innerText = snap.size;
+    }, (err) => {
+        console.error("Users Listener Error:", err);
+        list.innerHTML = `<p style="text-align:center;padding:20px;color:var(--danger)">Error: ${err.message}</p>`;
+    });
+}
+
+window.viewUser = async (id) => {
+    const userDoc = await getDoc(doc(db, 'users', id));
+    const d = userDoc.data();
+    const avatar = d.avatarUrl ? `<img src="${d.avatarUrl}" class="avatar-big">` : `<div class="avatar-big">${d.fullName.charAt(0)}</div>`;
+    
+    // Count referrals
+    const refSnap = await getDocs(query(collection(db, 'users'), where('referredByUID', '==', d.uid)));
+    const totalRefs = refSnap.size;
+
+    document.getElementById('userModalBody').innerHTML = `
+        ${avatar}
+        <div style="text-align:center;margin-bottom:20px"><h3>${d.fullName}</h3><p style="color:var(--muted);font-size:13px">UID: ${d.uid}</p></div>
+        
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px">
+            <div class="stat-box" style="padding:10px;text-align:center">
+                <span style="font-size:11px;font-weight:700;color:var(--success)">৳${(d.balance || 0).toFixed(1)}</span>
+                <span class="lab" style="font-size:7px">Balance</span>
+            </div>
+            <div class="stat-box" style="padding:10px;text-align:center">
+                <span style="font-size:11px;font-weight:700;color:#fb8c00">৳${(d.earningBalance || 0).toFixed(1)}</span>
+                <span class="lab" style="font-size:7px">Earning</span>
+            </div>
+            <div class="stat-box" style="padding:10px;text-align:center">
+                <span style="font-size:11px;font-weight:700;color:#8e24aa">৳${(d.referralBalance || 0).toFixed(1)}</span>
+                <span class="lab" style="font-size:7px">Ref Bal</span>
+            </div>
+            <div class="stat-box" style="padding:10px;text-align:center">
+                <span style="font-size:11px;font-weight:700;color:var(--primary)">${totalRefs}</span>
+                <span class="lab" style="font-size:7px">Refs</span>
+            </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin:20px 0">
+            <button class="btn-sm btn-reje" onclick="toggleStatus('${id}', '${d.status}')">${d.status === 'active' ? 'Deactivate' : 'Activate'}</button>
+            <button class="btn-sm" style="background:var(--primary);color:#fff" onclick="promptNotif('${id}', '${d.fullName}')">Notify</button>
+            <button class="btn-sm" style="background:${d.isSuspended ? 'var(--success)' : '#7f8c8d'};color:#fff" onclick="toggleSuspend('${id}', ${d.isSuspended || false})">
+                ${d.isSuspended ? 'Unsuspend' : 'Suspend'}
+            </button>
+            <button class="btn-sm btn-view" onclick="adjustBalances('${id}')">Adjust ৳</button>
+            <button class="btn-sm btn-reje" style="background:#000" onclick="deleteUser('${id}', '${d.fullName}')">Delete Account</button>
+        </div>
+
+        <div class="list-card">
+            <b>Customer Statistics & Profile</b>
+            <div style="font-size:13px;margin-top:8px;display:flex;flex-direction:column;gap:5px">
+                <div style="display:flex;justify-content:space-between"><span>Registered:</span> <b style="color:var(--text)">${d.createdAt ? new Date(d.createdAt).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : 'N/A'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Email:</span> <b style="color:var(--text)">${d.email}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Phone:</span> <b style="color:var(--text)">${d.phone || 'N/A'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Withdraw PIN:</span> <b style="color:var(--primary)">${d.withdrawPin || 'Not Set'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Referral Code:</span> <b style="color:#fb8c00">${d.referralCode || 'N/A'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Direct Referrer:</span> <b style="color:var(--primary)">${d.referredByUID || 'Organic User'}</b></div>
+            </div>
+        </div>
+
+        <div class="list-card" style="padding:0">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+                <b>Active Subscriptions</b>
+                <span id="subCountBadge" style="background:var(--primary);color:white;font-size:10px;padding:2px 8px;border-radius:10px">...</span>
+            </div>
+            <div id="userActiveSubs" style="max-height:200px;overflow-y:auto;padding:10px">
+                <div style="text-align:center;padding:15px"><div style="width:20px;height:20px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin:0 auto"></div></div>
+            </div>
+        </div>
+
+        <div class="list-card" style="padding:0">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border)"><b>Transaction Audit Log</b></div>
+            <div id="userTrxHistory" style="max-height:250px;overflow-y:auto">
+                <div style="text-align:center;padding:20px"><div style="width:20px;height:20px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin:0 auto"></div></div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('userModal').classList.add('show');
+
+    // Load History and Subs
+    try {
+        const [depSnap, witSnap, workSnap, globalRefSnap, activePkgsSnap, activeRobotsSnap, trxSnap] = await Promise.all([
+            getDocs(query(collection(db, 'deposits'), where('userId', '==', id))),
+            getDocs(query(collection(db, 'withdraws'), where('userId', '==', id))),
+            getDocs(query(collection(db, 'work_history'), where('userId', '==', id), limit(20))),
+            getDocs(collection(db, 'referral_earnings')),
+            getDocs(query(collection(db, 'user_packages'), where('userId', '==', id), where('status', '==', 'active'))),
+            getDocs(query(collection(db, 'user_robots'), where('userId', '==', id))),
+            getDocs(query(collection(db, 'transactions'), where('userId', '==', id), limit(30)))
+        ]);
+
+        // Render Active Subs
+        const subsEl = document.getElementById('userActiveSubs');
+        const totalSubs = activePkgsSnap.size + activeRobotsSnap.size;
+        document.getElementById('subCountBadge').innerText = totalSubs;
+        
+        if (totalSubs === 0) {
+            subsEl.innerHTML = '<p style="text-align:center;padding:10px;color:var(--muted);font-size:11px">No active hardware or robots</p>';
+        } else {
+            let subsHTML = '';
+            activePkgsSnap.forEach(pDoc => {
+                const p = pDoc.data();
+                subsHTML += `
+                    <div style="display:flex;justify-content:space-between;padding:8px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:6px;background:rgba(26,115,232,0.02)">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <i class="fa-solid fa-microchip" style="color:var(--primary)"></i>
+                            <div style="display:flex;flex-direction:column">
+                                <b style="font-size:12px">${p.packageName}</b>
+                                <small style="font-size:9px;color:var(--muted)">Exp: ${p.expiresAt ? new Date(p.expiresAt).toLocaleDateString() : 'N/A'}</small>
+                            </div>
+                        </div>
+                        <span style="font-size:11px;font-weight:700">৳${p.daily}/d</span>
+                    </div>
+                `;
+            });
+            activeRobotsSnap.forEach(rDoc => {
+                const r = rDoc.data();
+                subsHTML += `
+                    <div style="display:flex;justify-content:space-between;padding:8px;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:6px;background:rgba(103,58,183,0.02)">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <i class="fa-solid fa-robot" style="color:#673ab7"></i>
+                            <div style="display:flex;flex-direction:column">
+                                <b style="font-size:12px">${r.name}</b>
+                                <small style="font-size:9px;color:var(--muted)">Expires: ${r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : 'N/A'}</small>
+                            </div>
+                        </div>
+                        <span style="font-size:10px;color:#673ab7;font-weight:700">AUTO-MODE</span>
+                    </div>
+                `;
+            });
+            subsEl.innerHTML = subsHTML;
+        }
+
+        const filteredRefs = globalRefSnap.docs.filter(doc => doc.data().referrerId === id).map(doc => ({...doc.data(), type: 'Referral'}));
+
+        const all = [
+            ...depSnap.docs.map(doc => ({ ...doc.data(), type: 'Deposit' })),
+            ...witSnap.docs.map(doc => ({ ...doc.data(), type: 'Withdraw' })),
+            ...workSnap.docs.map(doc => ({ ...doc.data(), type: 'Mining', amount: doc.data().earnings })),
+            ...trxSnap.docs.map(doc => ({ ...doc.data(), type: doc.data().type.charAt(0).toUpperCase() + doc.data().type.slice(1) })),
+            ...filteredRefs
+        ].sort((a, b) => {
+            const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt).getTime();
+            const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt).getTime();
+            return dateB - dateA;
+        });
+
+        const historyEl = document.getElementById('userTrxHistory');
+        if (all.length === 0) {
+            historyEl.innerHTML = '<p style="text-align:center;padding:15px;color:var(--muted);font-size:12px">No history records found</p>';
+        } else {
+            historyEl.innerHTML = all.map(t => `
+                <div class="trx-item">
+                    <div style="display:flex;flex-direction:column">
+                        <span style="font-size:12px;font-weight:600;color:${
+                            t.type === 'Deposit' ? 'var(--success)' : 
+                            (t.type === 'Withdraw' ? 'var(--danger)' : 
+                            (t.type === 'Mining' ? 'var(--primary)' : 'var(--warning)'))
+                        }">${t.type} ${t.source ? `(${t.source})` : (t.productName || t.packageName || '')}</span>
+                        <small style="font-size:9px;color:var(--muted)">${formatDate(t.createdAt)}</small>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:13px;font-weight:700">৳${(t.amount || t.earnings || 0).toFixed(2)}</div>
+                        <span class="status-pill ${t.status || 'approved'}" style="font-size:8px;padding:2px 6px">${t.status || 'success'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+    } catch (err) {
+        console.error("User history load failed:", err);
+        document.getElementById('userTrxHistory').innerHTML = '<p style="text-align:center;padding:15px;color:var(--danger);font-size:12px">Error loading history</p>';
+    }
+};
+
+window.deleteUser = async (id, name) => {
+    const conf = await window.customConfirm(`Are you ABSOLUTELY sure you want to delete user "${name}"? This will wipe their balance, history, hardware, and account PERMANENTLY.`, 'DELETE CUSTOMER');
+    if (!conf) return;
+
+    const final = await window.customPrompt(`To confirm deletion, type the User ID (${id.substring(0,6)}...) below:`, 'FINAL VERIFICATION', '');
+    if (!final || !id.startsWith(final)) {
+        showToast('Verification failed. Account not deleted.', 'warning');
+        return;
+    }
+
+    const loader = document.getElementById('adminPanelLoading');
+    if(loader) loader.style.display = 'flex';
+
+    try {
+        showToast('Wiping user activity...');
+        const userCollections = [
+            'deposits', 'withdraws', 'work_history', 'user_packages', 
+            'user_robots', 'transactions', 'notifications', 'referral_earnings',
+            'completed_tasks', 'support', 'mining_states'
+        ];
+
+        for (const col of userCollections) {
+            const snap = await getDocs(query(collection(db, col), where('userId', '==', id)));
+            for (const d of snap.docs) {
+                await deleteDoc(d.ref);
+            }
+        }
+
+        await deleteDoc(doc(db, 'users', id));
+        showToast('User Deleted Successfully', 'success');
+        closeModal('userModal');
+        loadUsers();
+    } catch (err) {
+        showToast('Delete Error: ' + err.message, 'error');
+    } finally {
+        if(loader) loader.style.display = 'none';
+    }
+};
+
+window.adjustBalances = async (uid) => {
+    const val = await window.customPrompt("Enter amount to adjust (Positive for DEPOSIT, Negative for WITHDRAWAL):", "Manual Deposit / Withdrawal", "0.00");
+    if (val === null || isNaN(parseFloat(val))) return;
+    const amount = parseFloat(val);
+
+    const typeMsg = "Choose target account balance:\n1 - Main Balance (Deposits/Withdrawals)\n2 - Earning Balance\n3 - Referral Balance\n4 - ALL THREE";
+    const type = await window.customPrompt(typeMsg, "Select Balance Type", "1");
+    let keys = [];
+    let displayType = "Adjustment";
+    if (type === "1") { keys = ["balance", "mainBalance"]; displayType = "Main Balance"; }
+    else if (type === "2") { keys = ["earningBalance"]; displayType = "Earning Balance"; }
+    else if (type === "3") { keys = ["referralBalance"]; displayType = "Referral Balance"; }
+    else if (type === "4") { keys = ["balance", "mainBalance", "earningBalance", "referralBalance"]; displayType = "All Balances"; }
+    else return;
+
+    // New Note/Reason Prompt
+    const defaultNote = amount >= 0 ? "manual deposit" : "manual withdrawal";
+    const note = await window.customPrompt("Enter a note/reason for this adjustment (e.g. adjustment, manual deposit, manual withdrawal):", "Adjustment Note", defaultNote);
+    if (note === null) return;
+
+    if (!await window.customConfirm(`Adjust ${displayType} by ${amount} with note: "${note}"?`, 'PROCESS ADJUSTMENT')) return;
+
+    const loader = document.getElementById('adminPanelLoading');
+    if(loader) loader.style.display = 'flex';
+
+    try {
+        const updateData = {};
+        keys.forEach(k => updateData[k] = increment(amount));
+        await updateDoc(doc(db, 'users', uid), updateData);
+
+        // Add Transaction Record
+        await addDoc(collection(db, 'transactions'), {
+            userId: uid,
+            amount: Math.abs(amount),
+            type: amount >= 0 ? "manual_deposit" : "manual_withdrawal",
+            status: "completed",
+            description: note,
+            timestamp: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        });
+
+        showToast("Balance(s) updated and transaction recorded successfully", "success");
+        viewUser(uid); // Refresh details
+    } catch (err) {
+        showToast(err.message, "error");
+    } finally {
+        if(loader) loader.style.display = 'none';
+    }
+};
+
+window.bulkAdjustBalances = async () => {
+    const val = await window.customPrompt("Enter amount to adjust for ALL users (e.g., 100 for bonus, -50 for penalty):", "Bulk Adjust", "0.00");
+    if (val === null || isNaN(parseFloat(val))) return;
+    const amount = parseFloat(val);
+
+    const typeMsg = "Choose balance type to adjust for EVERYONE:\n1 - Main Balance\n2 - Earning Balance\n3 - Referral Balance\n4 - ALL THREE";
+    const type = await window.customPrompt(typeMsg, "Select Balance Type", "1");
+    let keys = [];
+    if (type === "1") keys = ["balance"];
+    else if (type === "2") keys = ["earningBalance"];
+    else if (type === "3") keys = ["referralBalance"];
+    else if (type === "4") keys = ["balance", "earningBalance", "referralBalance"];
+    else return;
+
+    if (!await window.customConfirm(`Are you SURE you want to adjust ${keys.join(", ")} by ${amount} for ALL users in the system? This cannot be undone.`, 'MASSIVE ACTION WARNING')) return;
+
+    try {
+        showToast("Processing bulk adjustment...");
+        const usersSnap = await getDocs(collection(db, 'users'));
+        let count = 0;
+        for (const userDoc of usersSnap.docs) {
+            const updateData = {};
+            keys.forEach(k => updateData[k] = increment(amount));
+            await updateDoc(userDoc.ref, updateData);
+            count++;
+        }
+        showToast(`Successfully adjusted ${count} users.`);
+    } catch (err) {
+        showToast(err.message, "error");
+    }
+};
+
+window.promptNotif = async (userId, name) => {
+    const title = await window.customPrompt(`Title for ${name}:`, 'Notification Title', 'Update from CryptoForge');
+    if(!title) return;
+    const msg = await window.customPrompt(`Message for ${name}:`, 'Notification Message', 'Type message here...');
+    if(!msg) return;
+    
+    try {
+        await addDoc(collection(db, 'notifications'), {
+            userId,
+            title,
+            message: msg,
+            createdAt: new Date().toISOString(),
+            read: false
+        });
+        showToast('Notification Sent');
+    } catch(err) { 
+        console.error(err);
+        showToast('Permission Error: ' + err.message, 'error'); 
+    }
+};
+
+window.toggleVerify = async (id, current) => {
+    const newV = !current;
+    await updateDoc(doc(db, 'users', id), { status: newV ? 'active' : 'inactive' });
+    showToast('Verification Updated');
+    closeModal('userModal');
+    loadUsers();
+};
+
+window.toggleStatus = async (id, current) => {
+    const newS = current === 'active' ? 'inactive' : 'active';
+    await updateDoc(doc(db, 'users', id), { status: newS });
+    showToast('Status Updated');
+    closeModal('userModal');
+    loadUsers();
+};
+
+window.toggleSuspend = async (id, current) => {
+    const next = !current;
+    if(next && !await window.customConfirm('Are you sure you want to suspend this user? They will lose access to most features.', 'Suspend User')) return;
+    await updateDoc(doc(db, 'users', id), { isSuspended: next });
+    showToast(next ? 'User Suspended' : 'User Unsuspended');
+    closeModal('userModal');
+    loadUsers();
+};
+
+window.closeModal = (id) => {
+    const modal = document.getElementById(id);
+    if(modal) modal.classList.remove('show');
+};
+window.openModal = (id) => {
+    const modal = document.getElementById(id);
+    if(modal) modal.classList.add('show');
+};
+
+// === Packages Section ===
+window.openPackageModal = (pkgData = null) => {
+    const form = document.getElementById('packageForm');
+    form.reset();
+    document.getElementById('pkgId').value = '';
+    document.getElementById('packageModalTitle').innerText = 'Create Package';
+    
+    if(pkgData) {
+        document.getElementById('pkgId').value = pkgData.id;
+        document.getElementById('pkgName').value = pkgData.name;
+        document.getElementById('pkgPrice').value = pkgData.price;
+        document.getElementById('pkgDaily').value = pkgData.daily;
+        document.getElementById('pkgDuration').value = pkgData.duration;
+        document.getElementById('pkgColor').value = pkgData.color || 'var(--primary)';
+        document.getElementById('pkgStatus').value = pkgData.status || 'active';
+        document.getElementById('packageModalTitle').innerText = 'Edit Package';
+    }
+    
+    document.getElementById('packageModal').classList.add('show');
+};
+
+document.getElementById('packageForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('pkgId').value;
+    const data = {
+        name: document.getElementById('pkgName').value,
+        price: parseFloat(document.getElementById('pkgPrice').value),
+        daily: parseFloat(document.getElementById('pkgDaily').value),
+        duration: parseInt(document.getElementById('pkgDuration').value),
+        color: document.getElementById('pkgColor').value,
+        status: document.getElementById('pkgStatus').value,
+        createdAt: new Date().toISOString()
+    };
+    
+    try {
+        if(id) {
+            await updateDoc(doc(db, 'packages', id), data);
+            showToast('Package Updated');
+        } else {
+            await addDoc(collection(db, 'packages'), data);
+            showToast('Package Created');
+        }
+        document.getElementById('packageModal').classList.remove('show');
+        loadPackages();
+    } catch(err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+};
+
+async function loadPackages() {
+    const list = document.getElementById('packagesList');
+    list.innerHTML = '<p style="text-align:center;padding:20px">Loading packages...</p>';
+    
+    try {
+        const snap = await getDocs(query(collection(db, 'packages'), orderBy('createdAt', 'desc')));
+        list.innerHTML = '';
+        if(snap.empty) {
+            list.innerHTML = '<p style="text-align:center;padding:20px;color:var(--muted)">No packages found. Create one above.</p>';
+            return;
+        }
+
+        const coinLogosMap = {
+            'bitcoin': 'https://cryptologos.cc/logos/bitcoin-btc-logo.svg',
+            'ethereum': 'https://cryptologos.cc/logos/ethereum-eth-logo.svg',
+            'bnb': 'https://cryptologos.cc/logos/bnb-bnb-logo.svg',
+            'tron': 'https://cryptologos.cc/logos/tron-trx-logo.svg',
+            'cardano': 'https://cryptologos.cc/logos/cardano-ada-logo.svg',
+            'dogecoin': 'https://ik.imagekit.io/91980rkbfg/ChatGPT_Image_May_6__2026__02_31_43_PM-removebg-preview.png?updatedAt=1778057226661',
+            'doge': 'https://ik.imagekit.io/91980rkbfg/ChatGPT_Image_May_6__2026__02_31_43_PM-removebg-preview.png?updatedAt=1778057226661'
+        };
+        const coinLogosArr = Object.values(coinLogosMap);
+        
+        snap.forEach((dDoc, index) => {
+            const d = dDoc.data();
+            
+            // Register object
+            window._packageRegistry[dDoc.id] = {id: dDoc.id, ...d};
+            
+            let logo = coinLogosArr[index % coinLogosArr.length];
+            const lowerName = d.name.toLowerCase();
+            let isDoge = false;
+            for (const key in coinLogosMap) {
+                if (lowerName.includes(key)) {
+                    logo = coinLogosMap[key];
+                    if (key === 'doge' || key === 'dogecoin') isDoge = true;
+                    break;
+                }
+            }
+            const card = document.createElement('div');
+            card.className = 'list-card';
+            card.innerHTML = `
+                <img src="${logo}" class="pkg-bg-logo ${isDoge ? 'is-doge' : ''}" alt="logo">
+                <div class="list-top" style="position:relative; z-index:1">
+                    <div class="list-info">
+                        <b style="color:${d.color}">${d.name}</b>
+                        <span>Price: ৳${d.price} | Daily: ৳${d.daily}</span>
+                    </div>
+                    <div class="list-amount" style="font-size:12px;color:var(--muted)">${d.duration} Days</div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                    <span class="status-pill ${d.status === 'active' ? 'approved' : 'pending'}">${d.status}</span>
+                    <button class="btn-sm btn-view" style="max-width:80px" onclick="window.openPackageModal(window._packageRegistry['${dDoc.id}'])">Edit</button>
+                    <button class="btn-sm btn-reje" style="max-width:80px" onclick="deletePackage('${dDoc.id}')">Delete</button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    } catch(err) {
+        list.innerHTML = `<p style="padding:20px;color:var(--danger)">Error: ${err.message}</p>`;
+    }
+}
+
+window.deletePackage = async (id) => {
+    if(!await window.customConfirm('Are you sure you want to delete this package? This will not affect existing users who already bought it.', 'Delete Package')) return;
+    try {
+        await deleteDoc(doc(db, 'packages', id));
+        showToast('Package Deleted');
+        loadPackages();
+    } catch(err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+};
+
+window.resetToCryptoPackages = async () => {
+    const confirmation = await window.customConfirm('This will delete all current packages and replace them with the new Crypto Packages (Dogecoin, Tron, etc.). Proceed?', 'Reset Packages');
+    if (!confirmation) return;
+
+    try {
+        showToast('Resetting packages...');
+        const snap = await getDocs(collection(db, 'packages'));
+        
+        // Delete all
+        const deletePromises = snap.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(deletePromises);
+
+        const newPkgs = [
+            { name: 'Dogecoin Package', price: 1500, daily: 75, duration: 30, color: '#BA9F33' },
+            { name: 'Tron Package', price: 3000, daily: 150, duration: 30, color: '#FF0013' },
+            { name: 'Cardano Package', price: 5000, daily: 250, duration: 30, color: '#0033AD' },
+            { name: 'Ethereum Package', price: 10000, daily: 500, duration: 30, color: '#3C3C3D' },
+            { name: 'BNB Package', price: 20000, daily: 1000, duration: 30, color: '#F3BA2F' },
+            { name: 'Bitcoin Package', price: 30000, daily: 1500, duration: 30, color: '#F7931A' }
+        ];
+
+        for (const pkg of newPkgs) {
+            await addDoc(collection(db, 'packages'), {
+                ...pkg,
+                status: 'active',
+                createdAt: new Date().toISOString()
+            });
+        }
+
+        showToast('Crypto Packages Created Successfully');
+        loadPackages();
+    } catch (err) {
+        console.error(err);
+        showToast('Error resetting packages: ' + err.message, 'error');
+    }
+};
+
+// Gateway Sub-tabs
+document.querySelectorAll('.gateway-sub-tab').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.gateway-sub-tab').forEach(b => {
+            b.classList.remove('active');
+            b.style.color = 'var(--muted)';
+            b.style.borderBottom = 'none';
+        });
+        btn.classList.add('active');
+        btn.style.color = 'var(--primary)';
+        btn.style.borderBottom = '2px solid var(--primary)';
+        
+        const gate = btn.dataset.gate;
+        document.getElementById('depositGateSub').style.display = gate === 'deposit' ? 'block' : 'none';
+        document.getElementById('withdrawGateSub').style.display = gate === 'withdraw' ? 'block' : 'none';
+    };
+});
+
+window.saveWithdrawConfig = async () => {
+    const maintenance = document.getElementById('confWithdrawMaintenance').checked;
+    const maintenanceMsg = document.getElementById('confWithdrawMaintenanceMsg').value;
+    try {
+        await setDoc(doc(db, 'admin', 'config'), { 
+            withdrawMaintenance: maintenance,
+            withdrawMaintenanceMsg: maintenanceMsg,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+        showToast('Withdrawal Mode Updated');
+    } catch(err) { showToast(err.message, 'error'); }
+};
+
+window.loadGatewayConfig = async () => {
+    const configDoc = await getDoc(doc(db, 'admin', 'config'));
+    if(configDoc.exists()) {
+        const d = configDoc.data();
+        document.getElementById('confBkash').value = d.bkashNumber || "";
+        document.getElementById('confBkashLogo').value = d.bkashLogo || "";
+        document.getElementById('confBkashDesc').value = d.bkashDesc || "";
+        if(document.getElementById('confBkashLink')) document.getElementById('confBkashLink').value = d.bkashLink || "";
+        
+        document.getElementById('confNagad').value = d.nagadNumber || "";
+        document.getElementById('confNagadLogo').value = d.nagadLogo || "";
+        document.getElementById('confNagadDesc').value = d.nagadDesc || "";
+        
+        document.getElementById('confRocket').value = d.rocketNumber || "";
+        document.getElementById('confRocketLogo').value = d.rocketLogo || "";
+        document.getElementById('confRocketDesc').value = d.rocketDesc || "";
+        
+        document.getElementById('confWithdrawMaintenance').checked = d.withdrawMaintenance || false;
+        document.getElementById('confWithdrawMaintenanceMsg').value = d.withdrawMaintenanceMsg || "";
+        
+        if(document.getElementById('confDepositMaintenance')) document.getElementById('confDepositMaintenance').checked = d.depositMaintenance || false;
+        if(document.getElementById('confDepositMaintenanceMsg')) document.getElementById('confDepositMaintenanceMsg').value = d.depositMaintenanceMsg || "";
+
+        const liveInput = document.getElementById('liveNoticeInput');
+        if(liveInput) liveInput.value = d.notice || "";
+    }
+};
+
+document.getElementById('systemNoticeForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const notice = document.getElementById('liveNoticeInput').value;
+    try {
+        await setDoc(doc(db, 'admin', 'config'), { notice }, { merge: true });
+        showToast('Banner Notice Updated');
+    } catch(err) { showToast(err.message, 'error'); }
+};
+
+document.getElementById('configForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const bkash = document.getElementById('confBkash').value;
+    const bkashLogo = document.getElementById('confBkashLogo').value;
+    const bkashDesc = document.getElementById('confBkashDesc').value;
+    const bkashLink = document.getElementById('confBkashLink') ? document.getElementById('confBkashLink').value : "";
+    
+    const nagad = document.getElementById('confNagad').value;
+    const nagadLogo = document.getElementById('confNagadLogo').value;
+    const nagadDesc = document.getElementById('confNagadDesc').value;
+    
+    const rocket = document.getElementById('confRocket').value;
+    const rocketLogo = document.getElementById('confRocketLogo').value;
+    const rocketDesc = document.getElementById('confRocketDesc').value;
+    
+    const depositMaintInput = document.getElementById('confDepositMaintenance');
+    const depositMaint = depositMaintInput ? depositMaintInput.checked : false;
+    const depositMaintMsg = document.getElementById('confDepositMaintenanceMsg') ? document.getElementById('confDepositMaintenanceMsg').value : "";
+    
+    try {
+        await setDoc(doc(db, 'admin', 'config'), { 
+            bkashNumber: bkash, bkashLogo, bkashDesc, bkashLink,
+            nagadNumber: nagad, nagadLogo, nagadDesc,
+            rocketNumber: rocket, rocketLogo, rocketDesc,
+            depositMaintenance: depositMaint,
+            depositMaintenanceMsg: depositMaintMsg,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+        showToast('Gateway Config Updated');
+    } catch(err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+};
+
+// === System Management ===
+window.loadAllBalances = async () => {
+    const list = document.getElementById('allBalancesList');
+    if(!list) return;
+    list.innerHTML = '<p style="text-align:center;padding:20px;font-size:12px">Loading balances...</p>';
+    
+    try {
+        const snap = await getDocs(query(collection(db, 'users'), orderBy('balance', 'desc')));
+        list.innerHTML = '';
+        if(snap.empty) {
+            list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px">No users found.</p>';
+            return;
+        }
+
+        snap.forEach(dDoc => {
+            const d = dDoc.data();
+            const div = document.createElement('div');
+            div.style = 'display:flex; justify-content:space-between; align-items:center; background:var(--bg); padding:10px; border-radius:10px; border:1px solid var(--border)';
+            div.innerHTML = `
+                <div style="font-size:12px">
+                    <b style="display:block">${d.fullName}</b>
+                    <span style="color:var(--muted); font-size:10px">${d.uid}</span>
+                </div>
+                <div style="font-weight:700; color:var(--success)">৳${(d.balance || 0).toFixed(2)}</div>
+            `;
+            list.appendChild(div);
+        });
+    } catch(err) {
+        list.innerHTML = `<p style="padding:20px; color:var(--danger)">Error: ${err.message}</p>`;
+    }
+};
+
+window.loadSentNotifications = async () => {
+    const list = document.getElementById('sentNotifList');
+    if(!list) return;
+    list.innerHTML = '<p style="text-align:center;padding:20px;font-size:12px">Loading logs...</p>';
+
+    try {
+        const snap = await getDocs(query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(100)));
+        list.innerHTML = '';
+        if(snap.empty) {
+            list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px">No notifications sent matches yet.</p>';
+            return;
+        }
+
+        snap.forEach(dDoc => {
+            const d = dDoc.data();
+            const div = document.createElement('div');
+            div.className = 'list-card';
+            div.style.padding = '12px';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px">
+                    <b style="font-size:13px">${d.title}</b>
+                    <small style="font-size:9px; color:var(--muted)">${new Date(d.createdAt).toLocaleString()}</small>
+                </div>
+                <p style="font-size:11px; color:var(--muted); margin-bottom:5px">${d.message}</p>
+                <div style="font-size:10px; color:var(--primary); font-weight:600">To User ID: ${d.userId}</div>
+            `;
+            list.appendChild(div);
+        });
+    } catch(err) {
+        list.innerHTML = `<p style="padding:20px; color:var(--danger)">Error: ${err.message}</p>`;
+    }
+};
+
+window.handleMasterResetToggle = async (el) => {
+    if (!el.checked) return;
+    
+    // Auto uncheck if they cancel
+    const cancel = () => { el.checked = false; };
+
+    const conf = await window.customConfirm('WARNING: Activating this toggle will wipe ALL history and zero out all user wallets. Accounts will remain. Continue?', 'MASTER RESET');
+    if (!conf) {
+        cancel();
+        return;
+    }
+
+    // Call the existing reset function but with a smaller confirmation flow since we already did one
+    await window.resetSystemData(true);
+    cancel();
+};
+
+window.resetSystemData = async (skipPrompt = false) => {
+    const loader = document.getElementById('adminPanelLoading');
+    if(loader) loader.style.display = 'flex';
+    
+    try {
+        const COLLECTIONS_TO_WIPE = [
+            'deposits', 'withdraws', 'work_history', 'referral_earnings', 
+            'notifications', 'user_earnings', 'referrals', 
+            'user_packages', 'user_robots', 'transactions', 
+            'support', 'landing_chats', 'completed_tasks', 'earnings',
+            'mining_states', 'chat_messages', 'support_chats', 
+            'landing_support', 'chats', 'messages', 'user_tasks'
+        ];
+        
+        showToast('Starting system reset...', 'info');
+        
+        for (const colName of COLLECTIONS_TO_WIPE) {
+            try {
+                const snap = await getDocs(collection(db, colName));
+                let count = 0;
+                for (const d of snap.docs) {
+                    await deleteDoc(d.ref);
+                    count++;
+                }
+                console.log(`Cleared ${count} docs from ${colName}`);
+            } catch (colErr) {
+                console.warn(`Could not clear ${colName}:`, colErr);
+            }
+        }
+
+        // Reset User Balances & Stats
+        const userSnap = await getDocs(collection(db, 'users'));
+        for (const u of userSnap.docs) {
+            await updateDoc(u.ref, {
+                balance: 0,
+                mainBalance: 0,
+                earningBalance: 0,
+                referralBalance: 0,
+                purchaseCommissionBalance: 0,
+                miningCommissionBalance: 0,
+                totalReferralEarned: 0,
+                referralEarned: 0,
+                totalMined: 0,
+                hasDeposit: false,
+                hasBoughtPackage: false,
+                status: 'inactive',
+                isSuspended: false,
+                miningStartedAt: null,
+                lastClaim: null,
+                activeRigsCount: 0,
+                robotActivated: false,
+                hasActiveRobot: false
+            });
+        }
+        
+        showToast('System Reset Complete.', 'success');
+        setTimeout(() => location.reload(), 1500);
+
+    } catch (err) {
+        console.error("System Wipe Error:", err);
+        showToast('Wipe Failed: ' + err.message, 'error');
+    } finally {
+        if(loader) loader.style.display = 'none';
+    }
+};
+
+
+const OperationType = {
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+  LIST: 'list',
+  GET: 'get',
+  WRITE: 'write',
+};
+
+// Robust JSON stringifier that handles circular patterns
+function safeJSONStringify(obj, space = 2) {
+    const cache = new WeakSet();
+    return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+            if (cache.has(value)) {
+                return '[Circular]';
+            }
+            cache.add(value);
+        }
+        return value;
+    }, space);
+}
+
+function handleFirestoreError(error, operationType, path) {
+  let errMessage = 'Unknown Error';
+  try {
+    if (error instanceof Error) errMessage = error.message;
+    else if (typeof error === 'string') errMessage = error;
+    else errMessage = String(error);
+  } catch (e) {
+    errMessage = 'Error extracting message';
+  }
+
+  const safeOp = String(operationType || 'unknown');
+  const safePath = String(path || 'unknown');
+
+  const errInfo = {
+    error: errMessage,
+    authInfo: {
+      userId: (auth.currentUser && typeof auth.currentUser.uid === 'string') ? auth.currentUser.uid : 'anonymous',
+      email: (auth.currentUser && typeof auth.currentUser.email === 'string') ? auth.currentUser.email : null,
+      emailVerified: auth.currentUser ? !!auth.currentUser.emailVerified : null,
+      isAnonymous: auth.currentUser ? !!auth.currentUser.isAnonymous : null,
+    },
+    operationType: safeOp,
+    path: safePath
+  };
+  
+  let stringifiedInfo = '';
+  try {
+    stringifiedInfo = safeJSONStringify(errInfo);
+  } catch (e) {
+    // Ultimate fallback - absolutely no circularity possible, manually constructed JSON string
+    const escapedMsg = String(errMessage).replace(/["\\\b\f\n\r\t]/g, char => {
+        const map = {'"': '\\"', '\\': '\\\\', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t'};
+        return map[char];
+    });
+    stringifiedInfo = `{"error":"${escapedMsg}","operationType":"${safeOp}","path":"${safePath}","isFallback":true}`;
+  }
+
+  console.error('Firestore Error Detailed: ', stringifiedInfo);
+  
+  // Important: Throw as JSON string for system diagnostics
+  throw new Error(stringifiedInfo);
+}
+
+// Tasks Management
+function loadTasks() {
+    const list = document.getElementById('tasksList');
+    if(!list) return;
+    const path = 'homepage_tasks';
+    try {
+        const snap = onSnapshot(collection(db, path), (snap) => {
+            list.innerHTML = '';
+            if(snap.empty) {
+                list.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px">No simple tasks added yet.</p>';
+                return;
+            }
+            
+            const allTasks = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            allTasks.sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+            allTasks.forEach(task => {
+                const card = document.createElement('div');
+                card.className = 'list-card';
+                card.innerHTML = `
+                    <div style="display:flex; gap:12px; align-items:center">
+                        <img src="${task.imageUrl || 'https://via.placeholder.com/150'}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; border:1px solid var(--border)">
+                        <div style="flex:1">
+                            <div style="font-weight:700">${task.title}</div>
+                            <div style="font-size:11px; color:var(--muted)">${task.description || task.desc}</div>
+                            <div style="font-size:10px; color:var(--primary); font-weight:600; margin-top:2px">Reward: ৳${task.reward || 0}</div>
+                        </div>
+                        <button class="btn-sm btn-reje" style="flex:0; padding:8px 12px" onclick="window.deleteTask('${task.id}')"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        });
+    } catch(err) {
+        console.error("Load Tasks Error:", err);
+        list.innerHTML = `<div style="padding:20px; color:var(--danger); text-align:center">Load Error: ${err.message}</div>`;
+    }
+}
+
+document.getElementById('taskForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    try {
+        const taskData = {
+            title: document.getElementById('taskTitle').value,
+            imageUrl: document.getElementById('taskImageUrl').value || 'https://via.placeholder.com/150',
+            desc: document.getElementById('taskDesc').value,
+            reward: parseFloat(document.getElementById('taskReward').value) || 0,
+            link: document.getElementById('taskLink').value || '#',
+            createdAt: new Date().toISOString()
+        };
+        if(btn) btn.disabled = true;
+        
+        await addDoc(collection(db, 'homepage_tasks'), taskData);
+        showToast('Simple Task Published Successfully');
+        e.target.reset();
+        closeModal('taskModal');
+    } catch(err) {
+        console.error("Publish Task Error:", err);
+        handleFirestoreError(err, OperationType.CREATE, 'homepage_tasks');
+    } finally {
+        if(btn) btn.disabled = false;
+    }
+}
+
+
+window.deleteTask = async (id) => {
+    if(!await window.customConfirm('Delete this task?', 'Confirm Delete')) return;
+    try {
+        await deleteDoc(doc(db, 'homepage_tasks', id));
+        showToast('Task Deleted');
+    } catch(err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+}
+
+// User search logic
+document.getElementById('userSearch').oninput = async (e) => {
+    const qTerm = e.target.value.toLowerCase();
+    const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+    const list = document.getElementById('usersList');
+    list.innerHTML = '';
+    snap.forEach(dDoc => {
+        const d = dDoc.data();
+        if (d.fullName.toLowerCase().includes(qTerm) || d.uid.toLowerCase().includes(qTerm)) {
+            const card = document.createElement('div');
+            card.className = 'list-card';
+            card.innerHTML = `
+                <div class="list-top">
+                    <div class="list-info"><b>${d.fullName}</b><span>UID: ${d.uid}</span></div>
+                    <div class="list-amount">৳${(d.balance || 0).toFixed(1)}</div>
+                </div>
+                <div class="list-top" style="align-items:center;margin-top:5px;gap:8px">
+                    <span class="status-pill ${(d.status || 'inactive')}">${(d.status || 'inactive')}</span>
+                    <span style="font-size:10px; color:${d.profileCompleted ? 'var(--success)' : 'var(--muted)'}">${d.profileCompleted ? '✓Profile' : '✗Profile'}</span>
+                    <span style="font-size:10px; color:${d.hasDeposit ? 'var(--success)' : 'var(--muted)'}">${d.hasDeposit ? '✓Deposit' : '✗Deposit'}</span>
+                    <div style="display:flex; gap:5px; margin-left:auto">
+                        <button class="btn-sm btn-view" style="width:auto; padding:4px 10px" onclick="viewUser('${dDoc.id}')">Details</button>
+                        <button class="btn-sm btn-reje" style="width:auto; padding:4px 10px" onclick="deleteUser('${dDoc.id}', '${d.fullName}')">Delete</button>
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        }
+    });
+};
+
+window.chatArchivedFilter = false;
+window.setChatFilter = (isArchived) => {
+    window.chatArchivedFilter = isArchived;
+    document.getElementById('filterActive').classList.toggle('active', !isArchived);
+    document.getElementById('filterArchived').classList.toggle('active', isArchived);
+    renderSupportList();
+};
+
+async function loadSupport() {
+    onSnapshot(collection(db, 'chats'), (snap) => {
+        window.archivedUsersList = snap.docs.filter(d => d.data().archived).map(d => d.id);
+        renderSupportList();
+    });
+
+    onSnapshot(query(collection(db, 'support'), orderBy('createdAt', 'desc'), limit(300)), (snap) => {
+        const users = {};
+        snap.forEach(d => {
+            const data = d.data();
+            if(!users[data.userId]) {
+                users[data.userId] = { 
+                    uid: data.uid, 
+                    userName: data.userName || 'Guest',
+                    userPhone: data.userPhone || '',
+                    lastMsg: data.message, 
+                    time: data.createdAt, 
+                    unread: data.read === false && data.sender === 'user' 
+                };
+            } else if (data.read === false && data.sender === 'user') {
+                users[data.userId].unread = true;
+            }
+        });
+        window.currentSupportUsers = users;
+        renderSupportList();
+    }, (err) => {
+        console.error("Support List Listener Error:", err);
+        showToast('Support list error: ' + err.message, 'error');
+    });
+}
+
+function renderSupportList() {
+    const list = document.getElementById('supportList');
+    if(!list || !window.currentSupportUsers) return;
+    list.innerHTML = '';
+    
+    const users = window.currentSupportUsers;
+    const archivedUsers = window.archivedUsersList || [];
+    
+    Object.keys(users).forEach(uid_fs => {
+        const isArchived = archivedUsers.includes(uid_fs);
+        if (isArchived !== window.chatArchivedFilter) return;
+
+        const u = users[uid_fs];
+        const card = document.createElement('div');
+        card.className = 'list-card';
+        card.style.flexDirection = 'row';
+        card.style.alignItems = 'center';
+        card.style.gap = '15px';
+        if(u.unread) card.style.borderLeft = "4px solid var(--primary)";
+        
+        card.innerHTML = `
+            <div style="flex:1; cursor:pointer" onclick="openChat('${uid_fs}', '${u.uid}', '${u.userName}', '${u.userPhone}')">
+                <div style="display:flex;justify-content:space-between">
+                    <b>${u.userName} (${u.uid}) ${u.unread ? '<span style="color:var(--primary)">●</span>' : ''}</b>
+                    <small style="font-size:9px;color:var(--muted)">${new Date(u.time).toLocaleTimeString()}</small>
+                </div>
+                <div style="font-size:11px; color:var(--muted); margin-bottom:4px">${u.userPhone}</div>
+                <div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${u.lastMsg}</div>
+            </div>
+            <button class="btn-sm" style="flex:none;width:auto;padding:6px 10px;background:${isArchived ? 'var(--success)' : '#eee'};color:${isArchived ? '#fff' : '#666'};font-size:10px" onclick="archiveChat('${uid_fs}', ${!isArchived})">
+                ${isArchived ? 'Restore' : 'Archive'}
+            </button>
+        `;
+        list.appendChild(card);
+    });
+}
+
+window.archiveChat = async (userId, status) => {
+    if(!await window.customConfirm(status ? 'Archive this chat?' : 'Restore this chat?', 'Chat Management')) return;
+    await setDoc(doc(db, 'chats', userId), { archived: status }, { merge: true });
+    showToast(status ? 'Archived' : 'Restored');
+};
+
+window.openChat = async (userId, uid, name = '', phone = '') => {
+    const modal = document.getElementById('chatModal');
+    document.getElementById('chatTitle').innerText = (name || 'Guest') + ' (' + uid + ')';
+    document.getElementById('replyUserId').value = userId;
+    document.getElementById('chatHistory').innerHTML = 'Loading Chat...';
+    modal.classList.add('show');
+    
+    // Mark as read
+    const qUnread = query(collection(db, 'support'), where('userId', '==', userId), where('read', '==', false), where('sender', '==', 'user'));
+    getDocs(qUnread).then(snap => {
+        snap.forEach(d => updateDoc(doc(db, 'support', d.id), { read: true }));
+    }).catch(e => console.warn("Failed to mark read:", e));
+
+    if (window.activeAdminChatListener) window.activeAdminChatListener();
+    window.activeAdminChatListener = onSnapshot(query(collection(db, 'support'), where('userId', '==', userId), orderBy('createdAt', 'asc')), (snap) => {
+        const history = document.getElementById('chatHistory');
+        history.innerHTML = '';
+        snap.forEach(d => {
+            const m = d.data();
+            const isAdmin = m.sender === 'admin';
+            const msg = document.createElement('div');
+            msg.style = `padding:8px 12px; margin-bottom:8px; border-radius:12px; max-width:85%; background:${isAdmin ? '#e3f2fd' : '#fefefe'}; border: 1px solid ${isAdmin ? '#bbdefb' : '#eee'}; align-self:${isAdmin ? 'flex-end' : 'flex-start'}; margin-${isAdmin ? 'left' : 'right'}:auto; box-shadow: 0 2px 4px rgba(0,0,0,0.03)`;
+            
+            let content = `<div>${m.message}</div>`;
+            if (m.mediaUrl) {
+                if (m.mediaType === 'video' || m.mediaUrl.match(/\.(mp4|webm|ogg)/i)) {
+                    content = `<video src="${m.mediaUrl}" controls style="max-width:100%; border-radius:8px; margin-bottom:5px"></video><div>${m.message}</div>`;
+                } else {
+                    content = `<img src="${m.mediaUrl}" style="max-width:100%; border-radius:8px; margin-bottom:5px; cursor:pointer" onclick="window.open('${m.mediaUrl}')"><div>${m.message}</div>`;
+                }
+            }
+            
+            msg.innerHTML = `${content}<small style="font-size:9px;opacity:0.6;display:block;text-align:right">${new Date(m.createdAt).toLocaleTimeString()}</small>`;
+            history.appendChild(msg);
+        });
+        history.scrollTop = history.scrollHeight;
+    }, (err) => {
+        console.error("Admin Chat Listener Error:", err);
+        showToast('Chat listener error: ' + err.message, 'error');
+    });
+};
+
+document.getElementById('replyForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const userId = document.getElementById('replyUserId').value;
+    const input = document.getElementById('replyMsg');
+    const msg = input.value.trim();
+    if (!msg || !userId) return;
+    
+    const chatTitle = document.getElementById('chatTitle').innerText;
+    const uidMatch = chatTitle.match(/\(([^)]+)\)/);
+    const uid = uidMatch ? uidMatch[1] : 'User';
+    
+    try {
+        await addDoc(collection(db, 'support'), {
+            userId,
+            uid,
+            message: msg,
+            sender: 'admin',
+            read: true,
+            createdAt: new Date().toISOString()
+        });
+        e.target.reset();
+    } catch (err) {
+        console.error("Admin Chat Send Error:", err);
+        showToast('error', 'Error', 'Failed to send message: ' + err.message);
+    }
+};
+
+let referralsLimit = 50;
+let referralsListener = null;
+
+function listenReferrals() {
+    const list = document.getElementById('referralsList');
+    if (!list) return;
+    if (referralsListener) referralsListener();
+
+    list.innerHTML = '<p style="text-align:center;padding:20px;color:var(--muted)">Loading referral logs...</p>';
+
+    referralsListener = onSnapshot(query(collection(db, 'referral_earnings'), orderBy('createdAt', 'desc'), limit(referralsLimit)), (snap) => {
+        list.innerHTML = '';
+        if (snap.empty) {
+            list.innerHTML = '<div style="padding:40px; text-align:center; color:var(--muted)">No referral earnings recorded yet.</div>';
+            return;
+        }
+
+        snap.forEach(docSnap => {
+            const d = docSnap.data();
+            const date = formatDate(d.createdAt);
+            const card = document.createElement('div');
+            card.className = 'list-card';
+            card.innerHTML = `
+                <div class="list-top">
+                    <div class="list-info">
+                        <div style="font-weight:700; color:var(--text)">Referrer: ${d.referrerId || 'N/A'}</div>
+                        <div style="font-size:11px; color:var(--muted)">Level ${d.level} • ${d.type || 'Commission'}</div>
+                    </div>
+                    <div class="list-amount" style="font-size:18px; color:var(--success)">৳${(d.amount || 0).toFixed(2)}</div>
+                </div>
+                <div style="font-size:12px; color:var(--muted); margin:8px 0; background:var(--bg); padding:10px; border-radius:10px">
+                    <div style="display:flex; justify-content:space-between"><span>User:</span> <b>${d.referredName || 'Unknown'}</b></div>
+                    <div style="display:flex; justify-content:space-between"><span>Source:</span> <b>${d.packageName || 'Bonus'}</b></div>
+                    <div style="display:flex; justify-content:space-between"><span>Date:</span> <b>${date}</b></div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+
+        if (snap.size >= referralsLimit) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-see-more';
+            btn.innerText = 'See More';
+            btn.onclick = () => { referralsLimit += 50; listenReferrals(); };
+            list.appendChild(btn);
+        }
+    }, (err) => {
+        console.error("Referrals listener error:", err);
+        list.innerHTML = `<div style="padding:20px; color:var(--danger)">Listener Error: ${err.message}</div>`;
+    });
+}
+
+document.getElementById('chatAttachBtn').onclick = () => document.getElementById('adminChatFileInput').click();
+
+document.getElementById('adminChatFileInput').onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const MAX_SIZE = 1.5 * 1024 * 1024; // 1.5MB
+    if (file.size > MAX_SIZE) {
+        showToast('File too large (Max 1.5MB)', 'error');
+        return;
+    }
+    
+    showToast('Uploading file...');
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+        const base64 = ev.target.result;
+        const userId = document.getElementById('replyUserId').value;
+        const uid = document.getElementById('chatTitle').innerText.replace('UID: ', '');
+        const msg = await window.customPrompt('Message for this file?', 'Attachment Message', 'Admin shared an attachment');
+        const finalMsg = msg || 'Admin shared an attachment';
+        
+        try {
+            await addDoc(collection(db, 'support'), {
+                userId,
+                uid,
+                message: msg,
+                mediaUrl: base64,
+                mediaType: file.type.startsWith('video') ? 'video' : 'image',
+                sender: 'admin',
+                createdAt: new Date().toISOString()
+            });
+            showToast('File Sent');
+        } catch (err) {
+            showToast('Upload Error: ' + err.message, 'error');
+        }
+    };
+    reader.readAsDataURL(file);
+};
+// === History & Activity Listeners ===
+let historyLimit = 25;
+let globalHistoryListener = null;
+
+window.listenGlobalHistory = function() {
+    const list = document.getElementById('globalHistoryList');
+    const filter = document.getElementById('historyFilterType').value;
+    if (!list) return;
+    if (globalHistoryListener) globalHistoryListener();
+
+    list.innerHTML = '<p style="text-align:center;padding:20px">Loading history...</p>';
+
+    let collectionsToWatch = ['deposits', 'withdraws', 'work_history', 'referral_earnings'];
+    if (filter !== 'all') {
+        if (filter === 'deposit') collectionsToWatch = ['deposits'];
+        if (filter === 'withdraw') collectionsToWatch = ['withdraws'];
+        if (filter === 'mining') collectionsToWatch = ['work_history'];
+        if (filter === 'referral') collectionsToWatch = ['referral_earnings'];
+    }
+
+    const unsubscribes = [];
+    let combinedData = [];
+
+    collectionsToWatch.forEach(colName => {
+        const q = query(collection(db, colName), orderBy('createdAt', 'desc'), limit(historyLimit));
+        const unsub = onSnapshot(q, (snap) => {
+            const colData = snap.docs.map(d => {
+                const data = d.data();
+                let type = colName.replace('work_', '').replace('_earnings', '').replace('s', '');
+                if (colName === 'work_history') type = 'mining';
+                return { ...data, id: d.id, _type: type };
+            });
+            
+            combinedData = combinedData.filter(d => d._type !== colData[0]?._type || colData.length === 0);
+            combinedData = [...combinedData, ...colData].sort((a,b) => {
+                const dA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt).getTime();
+                const dB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt).getTime();
+                return dB - dA;
+            }).slice(0, historyLimit);
+
+            renderHistory(list, combinedData);
+        });
+        unsubscribes.push(unsub);
+    });
+
+    globalHistoryListener = () => unsubscribes.forEach(u => u());
+};
+
+const historyFilter = document.getElementById('historyFilterType');
+if(historyFilter) historyFilter.onchange = () => listenGlobalHistory();
+
+function renderHistory(container, data) {
+    if (data.length === 0) {
+        container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">No records found</p>';
+        return;
+    }
+    container.innerHTML = data.map(item => {
+        const type = item._type.toUpperCase();
+        const amt = item.amount || item.earnings || 0;
+        const color = type === 'DEPOSIT' ? 'var(--success)' : (type === 'WITHDRAW' ? 'var(--danger)' : (type === 'MINING' ? 'var(--primary)' : 'var(--warning)'));
+        const icon = type === 'DEPOSIT' ? 'arrow-down' : (type === 'WITHDRAW' ? 'arrow-up' : (type === 'MINING' ? 'microchip' : 'users'));
+        
+        return `
+            <div class="list-card" style="padding:12px">
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <div style="display:flex; align-items:center; gap:10px">
+                        <div style="width:36px; height:36px; border-radius:10px; background:${color}15; color:${color}; display:flex; align-items:center; justify-content:center">
+                            <i class="fa-solid fa-${icon}"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px; font-weight:700">${type} ${item.rigName ? `- ${item.rigName}` : ''}</div>
+                            <div style="font-size:10px; color:var(--muted)">UID/User: ${item.uid || item.userId || 'System'} • ${formatDate(item.createdAt)}</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:15px; font-weight:800; color:${color}">৳${amt.toFixed(2)}</div>
+                        <div style="font-size:8px; text-transform:uppercase; font-weight:700; color:var(--muted)">${item.status || 'completed'}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.listenRecentActivity = function() {
+    const list = document.getElementById('recentActivityList');
+    if (!list) return;
+
+    onSnapshot(query(collection(db, 'work_history'), orderBy('createdAt', 'desc'), limit(5)), (snap) => {
+        list.innerHTML = '';
+        if (snap.empty) {
+            list.innerHTML = '<p style="text-align:center; padding:15px; color:var(--muted); font-size:11px">No recent mining activity.</p>';
+        }
+        snap.forEach(doc => {
+            const d = doc.data();
+            const item = document.createElement('div');
+            item.style = "background:var(--card); padding:10px 14px; border-radius:12px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; animation:fadeIn 0.3s ease";
+            item.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px">
+                    <i class="fa-solid fa-microchip" style="color:var(--primary); font-size:14px"></i>
+                    <div>
+                        <div style="font-size:12px; font-weight:700">Mining Payout</div>
+                        <div style="font-size:9px; color:var(--muted)">User: ${d.userId?.substring(0,6)}... | ${new Date(d.createdAt).toLocaleTimeString()}</div>
+                    </div>
+                </div>
+                <div style="font-size:13px; font-weight:800; color:var(--success)">+৳${(d.earnings || 0).toFixed(2)}</div>
+            `;
+            list.appendChild(item);
+        });
+    });
+};
+
+</script>
+</body>
+</html>
