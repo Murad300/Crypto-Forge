@@ -386,6 +386,9 @@ window.updateMiningUI = () => {
     });
 
     if (activePkgs.length === 0) {
+        if (typeof window.syncHardwareDashboard === 'function') {
+            window.syncHardwareDashboard(false, false, 'default');
+        }
         homeMiningList.innerHTML = `
             <div style="text-align:center; padding:32px 16px; color:var(--muted); background:var(--card); border-radius:16px;">
                 <i class="fa-solid fa-server" style="font-size:32px; opacity:0.2; margin-bottom:12px; display:block"></i>
@@ -398,6 +401,14 @@ window.updateMiningUI = () => {
     }
 
     homeMiningList.innerHTML = '';
+    let anyMiningActive = false;
+    let totalEstEarned = 0;
+    let totalProgress = 0;
+    let activeMiningCount = 0;
+    const anyRobotActive = window.myActiveRobots && window.myActiveRobots.some(r => {
+        const exp = r.expiresAt ? new Date(r.expiresAt) : null;
+        return r.isActivated && (!exp || exp >= now);
+    });
     
     // Page stack header
     const sectionHeader = document.createElement('div');
@@ -407,6 +418,9 @@ window.updateMiningUI = () => {
         <span style="font-size:10px; background:rgba(0,240,255,0.1); color:#00f0ff; font-weight:800; padding:2px 8px; border-radius:10px; text-shadow:0 0 5px rgba(0,240,255,0.5)">ONLINE</span>
     `;
     homeMiningList.appendChild(sectionHeader);
+    let closestExpiry = null;
+    let anyIdleRigs = false;
+    let transitionCountdownText = '';
 
     activePkgs.forEach(item => {
         const nowMs = Date.now();
@@ -442,6 +456,9 @@ window.updateMiningUI = () => {
         if (isOldTestPackage) {
             isMining = true;
         }
+        if (isMining) {
+            anyMiningActive = true;
+        }
         
         let estEarned = 0;
         let progress = 0;
@@ -468,6 +485,7 @@ window.updateMiningUI = () => {
         } else {
             estEarned = 0;
             progress = 0;
+            anyIdleRigs = true;
         }
 
         // Automatic shift completion detector: when 100% is reached (either manual or robot), immediately payouts
@@ -475,31 +493,11 @@ window.updateMiningUI = () => {
             autoCompleteJob(item.id, item.userId || (window.auth?.currentUser?.uid));
         }
 
-        const rigRow = document.createElement('div');
-        rigRow.className = 'premium-cyber-card mining-rig-card';
-        
-        const robotRunning = robotOn && isMining;
-        const robotLabel = robotRunning ? 'Robot Active' : 'robot offline';
-        const robotColor = robotRunning ? '#00f0ff' : '#94a3b8';
-
-        const pkgIdHash = item.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const coinLogosMap = {
-            'bitcoin': 'https://cryptologos.cc/logos/bitcoin-btc-logo.svg',
-            'ethereum': 'https://cryptologos.cc/logos/ethereum-eth-logo.svg',
-            'bnb': 'https://cryptologos.cc/logos/bnb-bnb-logo.svg',
-            'tron': 'https://cryptologos.cc/logos/tron-trx-logo.svg',
-            'cardano': 'https://cryptologos.cc/logos/cardano-ada-logo.svg',
-            'dogecoin': 'https://ik.imagekit.io/91980rkbfg/ChatGPT_Image_May_6__2026__02_31_43_PM-removebg-preview.png?updatedAt=1778057226661'
-        };
-        const coinLogosArr = Object.values(coinLogosMap);
-        let activePkgLogo = coinLogosArr[pkgIdHash % coinLogosArr.length];
-        if (item.packageName) {
-            const lowerName = item.packageName.toLowerCase();
-            for (const key in coinLogosMap) {
-                if (lowerName.includes(key)) {
-                    activePkgLogo = coinLogosMap[key];
-                    break;
-                }
+        // Expiry tracking
+        if (item.expiresAt) {
+            const expDate = new Date(item.expiresAt);
+            if (!closestExpiry || expDate < closestExpiry) {
+                closestExpiry = expDate;
             }
         }
 
@@ -516,135 +514,37 @@ window.updateMiningUI = () => {
         const dMinute = parseInt(dPartsVal.find(p => p.type === 'minute')?.value || '0', 10);
         const dSecond = parseInt(dPartsVal.find(p => p.type === 'second')?.value || '0', 10);
 
-        let countdownHtml = '';
         if (dHour === 23 && dMinute === 59) {
-            countdownHtml = `
-                <div style="background: rgba(255, 236, 0, 0.15); border: 1px solid #ffec00; padding: 10px; border-radius: 12px; margin-top: 12px; text-align: center; font-size: 11px; font-weight: 800; color: #ffec00; text-shadow: 0 0 5px rgba(255,236,0,0.5); z-index: 2; position: relative;">
-                    <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px; animation: fa-bounce 1s infinite"></i> 
-                    MIDNIGHT TRANSITION COUNTDOWN: ${dSecond}s
-                </div>
-            `;
+            transitionCountdownText = `MIDNIGHT TRANSITION COUNTDOWN: ${dSecond}s`;
         }
-        
-        const cpuSpinOuterClass = isMining ? 'spin-right-active' : '';
-        const cpuSpinInnerClass = isMining ? 'spin-left-active' : '';
-        const robotDisplay = robotRunning ? 'flex' : 'none';
-        const lightningDisplay = robotRunning ? 'block' : 'none';
 
-        const robotStatusText = robotRunning ? 'ACTIVE' : 'OFFLINE';
-        const robotStatusColor = robotRunning ? '#2E7D32' : '#C62828';
-        const robotStatusBg = robotRunning ? '#C8E6C9' : '#FFCDD2';
-        const robotStatusBorder = robotRunning ? '#A5D6A7' : '#EF9A9A';
-
-        const processingBoxHtml = `
-        <div class="package-mining-box" style="background-color: #E3F2FD; padding: 20px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; position: relative; min-height: 140px; border: 1px solid #BBDEFB; margin-bottom: 12px; overflow: hidden;">
-            
-            <!-- Watermark background package logo -->
-            <img src="${activePkgLogo}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 110px; height: 110px; opacity: 0.1; pointer-events: none; z-index: 1;" />
-
-            <!-- Ironman robot block -->
-            <div class="ironman-real" id="ironman-robot-node" style="width: 80px; display: ${robotDisplay}; flex-direction: column; align-items: center; justify-content: center; z-index: 2; animation: ironmanRecoil 3s ease-in-out infinite;">
-                <svg viewBox="0 0 64 64" width="60" height="60" style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
-                    <path d="M24 12C24 8 26 6 32 6C38 6 40 8 40 12V20H24V12Z" fill="#ED1C24" stroke="#1A1A1A" stroke-width="2"/>
-                    <path d="M27 12H37V18H27V12Z" fill="#FFD700"/>
-                    <path d="M42 22H48V10H42V22Z" fill="#ED1C24" stroke="#1A1A1A" stroke-width="2"/> <circle cx="45" cy="9" r="2.5" fill="#00d2ff"/>
-                    <path d="M22 20H42V42H22V20Z" fill="#ED1C24" stroke="#1A1A1A" stroke-width="2"/>
-                    <circle cx="32" cy="29" r="4.5" fill="#FFFFFF" stroke="#00d2ff" stroke-width="2"/>
-                    <path d="M16 22H22V36H16V22Z" fill="#ED1C24" stroke="#1A1A1A" stroke-width="2"/>
-                    <path d="M24 42H29V58H24V42Z" fill="#1A1A1A"/><path d="M35 42H40V58H35V42Z" fill="#1A1A1A"/>
-                </svg>
-                <span style="font-size: 10px; font-weight: bold; color: ${robotStatusColor}; background: ${robotStatusBg}; border: 1px solid ${robotStatusBorder}; padding: 2px 6px; border-radius: 10px; margin-top: 5px; letter-spacing: 0.5px;">${robotStatusText}</span>
-            </div>
-
-            <!-- Repulsor blast zigzag lightning -->
-            <div id="repulsor-blast" style="position: absolute; left: 75px; right: 80px; top: 0; bottom: 0; pointer-events: none; z-index: 1; display: ${lightningDisplay};">
-                <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 140">
-                    <path d="M 5 35 L 30 55 L 55 25 L 75 65 L 95 50" fill="none" stroke="#00d2ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="live-lightning-strike">
-                        <animate attributeName="opacity" values="0.4;1;0.4" dur="0.2s" repeatCount="indefinite" />
-                    </path>
-                    <path d="M 5 35 L 30 55 L 55 25 L 75 65 L 95 50" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="live-lightning-strike" style="animation-delay: 0.15s;">
-                        <animate attributeName="opacity" values="0.3;1;0.3" dur="0.3s" repeatCount="indefinite" />
-                    </path>
-                </svg>
-            </div>
-
-            <!-- Double counter rotating CPU logo dual spin -->
-            <div class="cpu-logo-dual-spin" id="cpu-container" style="width: 80px; display: flex; flex-direction: column; align-items: center; z-index: 2; margin-left: auto;">
-                <div style="width: 65px; height: 65px; position: relative; display: flex; align-items: center; justify-content: center;">
-                    <!-- Outer Body chipBody -->
-                    <div id="chipBody" class="${cpuSpinOuterClass}" style="position: absolute; width: 65px; height: 65px; background: #FFD700; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid #1A1A1A; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transform-origin: center;">
-                        <svg viewBox="0 0 24 24" width="36" height="36" fill="#1A1A1A" style="width: 100%; height: 100%; padding: 4px;">
-                            <rect x="5" y="5" width="14" height="14" rx="3" fill="#2d3436"/>
-                            <path d="M2 8h3M2 12h3M2 16h3M19 8h3M19 12h3M19 16h3M8 2v3M12 2v3M16 2v3M8 19v3M12 19v3M16 19v3" stroke="#1A1A1A" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                    </div>
-                    <!-- Inner Core chipCore -->
-                    <div id="chipCore" class="${cpuSpinInnerClass}" style="position: absolute; width: 32px; height: 32px; background: #FFD700; border-radius: 6px; border: 1.5px solid #1A1A1A; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.2); transform-origin: center;">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="#1A1A1A" style="width: 100%; height: 100%; padding: 2px;">
-                            <rect x="8" y="8" width="8" height="8" fill="#FFD700" rx="1.5"/>
-                            <path d="M6 10H8M6 14H8M16 10h2M16 14h2M10 6v2M14 6v2M10 16v2M14 16v2" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                    </div>
-                </div>
-                <span style="font-size: 11px; font-weight: bold; color: #37474F; margin-top: 10px;">3D MATRIX CPU</span>
-            </div>
-        </div>
-        `;
-
-        rigRow.innerHTML = `
-            ${processingBoxHtml}
-
-            <!-- Package and Income Stats -->
-            <div style="margin-top: 14px; border-top: 1px solid #E2E8F0; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2">
-                <div>
-                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                        <img src="${activePkgLogo}" class="logo-pulsing-monogram" style="width: 18px; height: 18px; filter: drop-shadow(0 0 4px rgba(9, 132, 227, 0.4)); animation: monogramSpin 3s linear infinite;" />
-                        <strong style="font-size: 14px; color: #2D3436; font-weight: 800; letter-spacing: -0.2px; text-transform: capitalize;">${item.packageName}</strong>
-                    </div>
-                    <span style="font-size: 9px; color: #5F6368;"><i class="fa-solid fa-clock"></i> Exp: ${item.expiresAt ? new Date(item.expiresAt).toLocaleDateString() : 'Never'}</span>
-                </div>
-                <div style="text-align: right;">
-                    <strong style="font-size: 15px; color: #0984E3; font-family: var(--font-mono); font-weight: 850; display: block; text-shadow: 0 0 8px rgba(9,132,227,0.15)">Tk ${estEarned.toFixed(4)}</strong>
-                    <span style="font-size: 8px; font-weight: 800; color: ${isMining ? '#10b981' : (isMinedToday ? '#3b82f6' : '#5F6368')}; letter-spacing: 0.5px; text-transform: uppercase; display: block;">
-                        ${isMining ? '● MINING LIVE' : (isMinedToday ? '✓ COMPLETED' : 'IDLE')}
-                    </span>
-                </div>
-            </div>
-            
-            <!-- Floating Cybernetic Liquid Progress Bar (Clear container, taller design with animated core logo) -->
-            <div style="margin-top: 14px; position: relative; z-index: 2">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 10px; color: #2D3436; font-family: var(--font-mono); font-weight: 750; text-transform: uppercase; letter-spacing: 0.5px">
-                    <span>Mining Progress</span>
-                    <strong style="color: #0984E3; text-shadow: 0 0 5px rgba(9,132,227,0.25);">${progress.toFixed(2)}%</strong>
-                </div>
-                <!-- Liquid Bar container -->
-                <div style="width: 100%; height: 32px; background: rgba(9, 132, 227, 0.08); border-radius: 16px; border: 1.5px solid rgba(9, 132, 227, 0.35); overflow: hidden; position: relative; display: flex; align-items: center; box-shadow: inset 0 0 10px rgba(9, 132, 227, 0.15)">
-                    
-                    <!-- Liquid Fill -->
-                    <div class="liquid-progress-fill" style="width: ${progress.toFixed(2)}%; height: 100%; box-shadow: 0 0 15px rgba(9, 132, 227, 0.45); transition: width 0.1s linear; border-radius: 16px; position: absolute; left: 0; top: 0;"></div>
-                    
-                    <!-- Center Overlay containing the Animated Core Logo -->
-                    <div style="position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; z-index: 3; font-family: var(--font-mono); font-size: 10px; font-weight: 800; color: #2D3436; text-shadow: 0 1px 2px rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.2px">
-                        <img src="${activePkgLogo}" class="logo-pulsing-monogram" style="width: 14px; height: 14px; filter: drop-shadow(0 0 5px rgba(9,132,227,0.3));" />
-                        <span style="letter-spacing: 0.5px; opacity: 0.95;">mining live</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dynamic countdown placeholder -->
-            ${countdownHtml}
-
-            <!-- Start button only if idle, not mined today and robot is not active -->
-            ${(!isMining && !isMinedToday && !robotOn) ? `
-            <div style="margin-top:12px; position: relative; z-index: 2">
-                <button onclick="window.startWork('${item.id}', ${item.daily})" class="btn btn-primary" style="height:35px; width:100%; padding:0 12px; border-radius:10px; font-size:12px; font-weight:800; background: linear-gradient(135deg, #0984E3, #3498db); border: none; box-shadow: 0 4px 15px rgba(9,132,227,0.3); text-transform: lowercase; letter-spacing: 0.5px">
-                    <i class="fa-solid fa-play" style="margin-right:6px"></i> mining start
-                </button>
-            </div>
-            ` : ''}
-        `;
-        homeMiningList.appendChild(rigRow);
+        totalEstEarned += estEarned;
+        totalProgress += progress;
+        activeMiningCount++;
     });
+
+    // Elegant high-tech terminal row displayed below active mining stack
+    const rigSummaryRow = document.createElement('div');
+    rigSummaryRow.style = 'padding: 16px; background: #FFFFFF; border-radius: 16px; border: 1px solid #CBD5E1; text-align: center; color: #475569; font-size: 11px; font-weight: 700; font-family: monospace; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(15,23,42,0.02);';
+    
+    let summaryText = `⚙️ SYSTEM CORES ONLINE • ${activeMiningCount} ACTIVE CLOUD RIGS`;
+    if (transitionCountdownText) {
+        summaryText = `⚠️ ${transitionCountdownText}`;
+    }
+    
+    rigSummaryRow.innerHTML = `
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 6px; height: 6px; background: #10B981; border-radius: 50%; box-shadow: 0 0 8px #10B981;"></span>
+            <span>${summaryText}</span>
+        </div>
+    `;
+    homeMiningList.appendChild(rigSummaryRow);
+
+    const avgProgress = activeMiningCount > 0 ? (totalProgress / activeMiningCount) : 0;
+    const firstPackageName = activePkgs.length > 0 ? (activePkgs[0].packageName || 'bitcoin') : 'default';
+    if (typeof window.syncHardwareDashboard === 'function') {
+        window.syncHardwareDashboard(anyMiningActive, anyRobotActive, firstPackageName, avgProgress, totalEstEarned, anyIdleRigs, closestExpiry ? closestExpiry.getTime() : null);
+    }
 };
 
 // Expiry countdown timers
