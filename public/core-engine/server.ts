@@ -6,6 +6,7 @@ import cron from "node-cron";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { getActiveSecondsForToday, calculateProfit, calculateDailyCommission, getBDDate, calculateInstantCommission } from "./server-mining-math";
 
 // Load environment variables
 dotenv.config();
@@ -39,11 +40,6 @@ const PORT = 3000;
 expressApp.use(express.json());
 
 // --- Mining Logic Helpers ---
-
-function calculateProfit(seconds: number, dailyProfit: number): number {
-  const profitPerSecond = dailyProfit / 86400;
-  return Math.max(0, seconds * profitPerSecond);
-}
 
 async function distributeReferralCommission(database: any, userId: string, pkgPrice: number) {
   try {
@@ -167,270 +163,137 @@ async function processDailyMining() {
     return;
   }
   
-  // 1. Get STRICT Dhaka Date (YYYY-MM-DD)
   const now = new Date();
-  const dhakaFormatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Dhaka',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const dateStr = dhakaFormatter.format(now); // Guaranteed YYYY-MM-DD
-  
-  // Dhaka Midnight Timestamp
-  const dhakaNowStr = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-  const dhakaMidnight = new Date(dhakaNowStr);
-  dhakaMidnight.setHours(0, 0, 0, 0);
-  const midnightTimestamp = dhakaMidnight.getTime();
-
-  console.log(`[Cron] Executing mining distribution for ${dateStr} (Dhaka Midnight: ${dhakaMidnight.toISOString()})`);
+  const dateBD = getBDDate(now);
+  console.log(`[Cron] Starting daily mining settlement for BD Date: ${dateBD} at current UTC: ${now.toISOString()}`);
 
   try {
-    // 2. ATOMIC GLOBAL PROCESS LOCK (To prevent concurrent runs)
-    const lockAcquired = await database.runTransaction(async (transaction) => {
-      const globalLockRef = database.collection("system_locks").doc(`mining_${dateStr}`);
-      const lockSnap = await transaction.get(globalLockRef);
-      if (lockSnap.exists) {
-        return false; // If lock exists, terminate instantly to stop duplicate payouts
-      }
-      transaction.set(globalLockRef, {
-        status: "running",
-        date: dateStr,
-        startedAt: new Date().toISOString()
-      }, { merge: true });
-      return true;
-    });
-
-    if (!lockAcquired) {
-      console.log(`[Cron] Skip instantly: Lock document inside 'system_locks/mining_${dateStr}' exists. Terminating to stop duplicate payouts.`);
-      return;
-    }
-
     const usersSnap = await database.collection("users").get();
-    const packagesSnap = await database.collection("packages").get();
     
-    const packagesMap: Record<string, any> = {};
-    packagesSnap.forEach(doc => {
-      packagesMap[doc.id] = doc.data();
-    });
-
     for (const userDoc of usersSnap.docs) {
       const userId = userDoc.id;
-      
+      const userData = userDoc.data() || {};
+
       try {
-        await database.runTransaction(async (transaction) => {
-          // A. User Identity & Idempotency / Double-Spending Prevention
-          const logId = `daily_${userId}_${dateStr}`;
-          const logRef = database.collection("daily_mining_logs").doc(logId);
-          const logSnap = await transaction.get(logRef);
+        // a. Check if user has active robot: query "user_robots" where userId==user.id AND status=='active' AND endTime > now()
+        const robotSnap = await database.collection("user_robots")
+          .where("userId", "==", userId)
+          .where("status", "==", "active")
+          .where("endTime", ">", now)
+          .get();
+        const hasActiveRobot = !robotSnap.empty;
+
+        // b. Get all active packages: query "user_packages" where userId==user.id AND status=='active' AND endTime > now()
+        const pkgsSnap = await database.collection("user_packages")
+          .where("userId", "==", userId)
+          .where("status", "==", "active")
+          .where("endTime", ">", now)
+          .get();
+
+        let totalDailyIncome = 0;
+        const batch = database.batch();
+        let hasUpdates = false;
+
+        // c. Loop each package
+        for (const pkgDoc of pkgsSnap.docs) {
+          const pkgRaw = pkgDoc.data() || {};
           
+          const pkg = {
+            startTime: pkgRaw.startTime || pkgRaw.purchasedAt || pkgRaw.createdAt || new Date().toISOString(),
+            endTime: pkgRaw.endTime || pkgRaw.expiresAt || new Date().toISOString(),
+            dailyProfit: typeof pkgRaw.dailyProfit === 'number' ? pkgRaw.dailyProfit : (typeof pkgRaw.daily === 'number' ? pkgRaw.daily : 0),
+            miningStartTime: pkgRaw.miningStartTime || pkgRaw.miningStartedAt || null
+          };
+
+          // 4. UNIQUE check: Before creating mining_logs, check if log for userId+packageId+dateBD exists. If yes, skip to avoid double credit.
+          const logId = `${userId}_${pkgDoc.id}_${dateBD}`;
+          const logSnap = await database.collection("mining_logs").doc(logId).get();
           if (logSnap.exists) {
-            console.log(`[Cron] User ${userId} already rewarded for ${dateStr}. Skipping.`);
-            return; // Skip to prevent double-spending
+            console.log(`[Cron] Log ${logId} already exists. Skipping pkg ${pkgDoc.id} to avoid double credit.`);
+            continue;
           }
 
-          const userRef = database.collection("users").doc(userId);
-          const userSnap = await transaction.get(userRef);
-          if (!userSnap.exists) return;
-          const userData = userSnap.data()!;
-
-          // NEW: Validate Non-Expired Active Robot (`current_date <= robot_expiry_date`) and hard delete expired ones
-          const robotSnap = await database.collection("user_robots")
-            .where("userId", "==", userId)
-            .get();
-          
-          let robotOn = false;
-          const currentDateObj = new Date();
-          for (const rDoc of robotSnap.docs) {
-            const rData = rDoc.data();
-            if (rData.expiresAt && new Date(rData.expiresAt) < currentDateObj) {
-              transaction.delete(rDoc.ref);
-            } else if (rData.isActivated && (!rData.expiresAt || new Date(rData.expiresAt) >= currentDateObj)) {
-              robotOn = true;
-            }
-          }
-
-          // B. Eligibility Check (Get ALL packages for this user from purchasedPackages sub-collection)
-          const pkgsSnap = await userRef.collection("purchasedPackages")
-            .where("status", "==", "active")
-            .get();
-
-          if (pkgsSnap.empty) return;
-
-          let totalProfitForUser = 0;
-          const todayIso = new Date().toISOString();
-          
-          // Calculate next day's automated start time: 12:00:01 AM Dhaka Time (Start of current calendar day's cycle)
-          const nextDayStartMs = midnightTimestamp + 1000; // Dhaka Midnight + 1s (Corrected from adding unneeded 24 hours)
-          const nextDayStartISO = new Date(nextDayStartMs).toISOString();
-
-          for (const pkgDoc of pkgsSnap.docs) {
-            // Read dynamic status fields from global collection to ensure alignment with frontend
-            const globalPkgRef = database.collection("user_packages").doc(pkgDoc.id);
-            const globalPkgSnap = await transaction.get(globalPkgRef);
-            const pkgData = globalPkgSnap.exists ? globalPkgSnap.data()! : pkgDoc.data();
-
-            // Expiration Check: current_date > expiry_date means expired
-            if (pkgData.expiresAt && new Date(pkgData.expiresAt) < now) {
-              const expireUpdate = { status: 'expired', miningStatus: 'inactive' };
-              transaction.update(pkgDoc.ref, expireUpdate);
-              transaction.update(globalPkgRef, expireUpdate);
-              continue;
-            }
-
-            const details = packagesMap[pkgData.packageId];
-            if (!details) continue;
-
-            const isManualActive = pkgData.miningStatus === 'active';
-            const shouldMineAuto = robotOn && isManualActive; // Enforced strict rule: Robot respects CPU state. If CPU is off, it will not start mining at 12 AM! 
-
-            if (isManualActive || shouldMineAuto) {
-              // Profit-per-second calculation based on robot/manual logic
-              let seconds = 0;
-              if (isManualActive && pkgData.miningStartedAt) {
-                const startMs = new Date(pkgData.miningStartedAt).getTime();
-                const endMs = now.getTime();
-                seconds = Math.max(0, Math.floor((endMs - startMs) / 1000));
-                // Cap at 24 hours (86400 seconds)
-                if (seconds > 86400) seconds = 86400;
-              } else if (shouldMineAuto) {
-                // If robot is active, calculate for full day
-                seconds = 86400;
-              }
-
-              const profitPerSecond = details.dailyProfit / 86400;
-              const pkgProfit = Number((seconds * profitPerSecond).toFixed(6));
-
-              totalProfitForUser += pkgProfit;
-
-              // Reset/prepare the package status for the next day's cycle
-              const cycleUpdate: any = {};
-              if (robotOn) {
-                // Robot automatically auto-starts the package for the new day's cycle starting strictly at 12:00:01 AM
-                cycleUpdate.miningStatus = 'active';
-                cycleUpdate.lastClaim = todayIso;
-                cycleUpdate.miningStartedAt = nextDayStartISO;
-                cycleUpdate.currentPotentialEarning = details.dailyProfit;
-              } else {
-                // Non-robot users remain 'inactive' until they manually click start.
-                cycleUpdate.miningStatus = 'inactive';
-                cycleUpdate.lastClaim = todayIso;
-                cycleUpdate.miningStartedAt = "";
-                cycleUpdate.currentPotentialEarning = 0;
-              }
-
-              transaction.update(pkgDoc.ref, cycleUpdate);
-              transaction.update(globalPkgRef, cycleUpdate);
-            }
-          }
-
-          if (totalProfitForUser <= 0) {
-            // No work done for this user today, ensure state reflects that
-            const miningStateRef = database.collection("mining_states").doc(userId);
-            const stateSnap = await transaction.get(miningStateRef);
-            if (stateSnap.exists && stateSnap.data()?.isActive) {
-              transaction.update(miningStateRef, { isActive: robotOn, lastStartTime: robotOn ? nextDayStartMs : 0 });
-            }
-            return;
-          }
-
-          const miningStateRef = database.collection("mining_states").doc(userId);
-          const profit = Number(totalProfitForUser.toFixed(6));
+          const seconds = getActiveSecondsForToday(pkg, hasActiveRobot);
+          const profit = calculateProfit(seconds, pkg.dailyProfit);
 
           if (profit > 0) {
-            // Bulk update user balance inside our transactional context
-            transaction.update(userRef, {
-              mainBalance: admin.firestore.FieldValue.increment(profit)
-            });
+            totalDailyIncome += profit;
 
-            // 2. Referral Commission (2.5% Daily Mining Bonus)
-            if (userData.referredBy) {
-              const refBonus = Number((profit * 0.025).toFixed(6));
-              const l1Ref = database.collection("users").doc(userData.referredBy);
-              
-              transaction.update(l1Ref, {
-                referralCommissionBalance: admin.firestore.FieldValue.increment(refBonus),
-                totalReferralEarned: admin.firestore.FieldValue.increment(refBonus)
-              });
-
-              // Log referral earning
-              const refEarnId = `ref_daily_${userId}_${dateStr}`;
-              transaction.set(database.collection("referral_earnings").doc(refEarnId), {
-                referrerId: userData.referredBy,
-                referredId: userId,
-                referredName: userData.fullName || userData.name || 'User',
-                amount: refBonus,
-                type: 'mining_commission',
-                source: '2.5% Daily Mining Bonus',
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
-              });
-
-              // Log transaction for referrer
-              const refTxId = `ref_tx_${userId}_${dateStr}`;
-              transaction.set(database.collection("transactions").doc(refTxId), {
-                userId: userData.referredBy,
-                amount: refBonus,
-                type: 'commission',
-                status: 'completed',
-                description: `2.5% Mining Bonus from ${userData.fullName || 'Referral'}`,
-                timestamp: admin.firestore.FieldValue.serverTimestamp()
-              });
-            }
-
-            // Write a persistent idempotency log document
-            transaction.set(logRef, {
+            // Create mining_logs doc with userId, packageId, dateBD, seconds, amount
+            const logRef = database.collection("mining_logs").doc(logId);
+            batch.set(logRef, {
               userId,
-              date: dateStr,
+              packageId: pkgDoc.id,
+              dateBD,
+              seconds,
               amount: profit,
               timestamp: admin.firestore.FieldValue.serverTimestamp()
             });
-
-            // Audit log entry in a transactions_ledger table/collection for security purposes
-            const ledgerId = `ledger_${userId}_${dateStr}`;
-            transaction.set(database.collection("transactions_ledger").doc(ledgerId), {
-              userId,
-              amount: profit,
-              type: "mining_reward",
-              date: dateStr,
-              timestamp: admin.firestore.FieldValue.serverTimestamp(),
-              description: `Audit log of daily mining reward for user ${userId} on ${dateStr}`,
-              status: "committed"
-            });
-
-            // Transaction History Entry (Unique ID)
-            const dailyTxId = `mining_hist_${userId}_${dateStr}`;
-            transaction.set(database.collection("transactions").doc(dailyTxId), {
-              userId,
-              amount: profit,
-              type: "mining_profit",
-              createdAt: dhakaMidnight.toISOString(),
-              timestamp: dhakaMidnight.toISOString(),
-              status: "completed",
-              description: `Daily mining profit distribution for ${dateStr}`
-            });
-
-            // Update Mining State for next day
-            transaction.set(miningStateRef, {
-              userId,
-              isActive: robotOn,
-              lastStartTime: robotOn ? nextDayStartMs : 0
-            }, { merge: true });
-
-            console.log(`[Cron] Distributed ${profit} profit and commission for ${userId}. Robot automation status: ${robotOn}`);
+            hasUpdates = true;
           }
-        });
+
+          if (!hasActiveRobot) {
+            // Update package doc set miningStartTime = null for next day
+            const pkgRef = database.collection("user_packages").doc(pkgDoc.id);
+            batch.update(pkgRef, {
+              miningStartTime: null
+            });
+
+            // Also update sub-collection user package for consistency
+            const userSubPkgRef = database.collection("users").doc(userId).collection("purchasedPackages").doc(pkgDoc.id);
+            batch.update(userSubPkgRef, {
+              miningStartTime: null
+            });
+            hasUpdates = true;
+          }
+        }
+
+        // d. If totalDailyIncome > 0
+        if (totalDailyIncome > 0) {
+          // Increment users/{userId}.mainBalance by totalDailyIncome
+          const userRef = database.collection("users").doc(userId);
+          batch.update(userRef, {
+            mainBalance: admin.firestore.FieldValue.increment(totalDailyIncome)
+          });
+
+          // If user.uplineId exists
+          const uplineId = userData.uplineId || userData.referredBy;
+          if (uplineId) {
+            const commission = calculateDailyCommission(totalDailyIncome);
+            if (commission > 0) {
+              // Increment users/{uplineId}.referralCommissionBalance by commission
+              const uplineRef = database.collection("users").doc(uplineId);
+              batch.update(uplineRef, {
+                referralCommissionBalance: admin.firestore.FieldValue.increment(commission)
+              });
+
+              // Create commission_logs doc with fromUser, toUser, dateBD, type='daily_2.5', baseAmount, amount
+              const commLogId = `comm_${userId}_${uplineId}_${dateBD}`;
+              const commRef = database.collection("commission_logs").doc(commLogId);
+              batch.set(commRef, {
+                fromUser: userId,
+                toUser: uplineId,
+                dateBD,
+                type: "daily_2.5",
+                baseAmount: totalDailyIncome,
+                amount: commission,
+                timestamp: admin.firestore.FieldValue.serverTimestamp()
+              });
+            }
+          }
+          hasUpdates = true;
+        }
+
+        // e. Use Firestore batched writes for each user. Commit batch after each user.
+        if (hasUpdates) {
+          await batch.commit();
+          console.log(`[Cron] Committed batch successfully for user ${userId}. Profit: ${totalDailyIncome}`);
+        }
+
       } catch (userErr) {
-        console.error(`[Cron] User ${userId} processing failed:`, userErr);
+        console.error(`[Cron] Individual user processing ${userId} failed:`, userErr);
       }
     }
-
-    // 3. Mark Global Lock as Completed
-    const globalLockRef = database.collection("system_locks").doc(`mining_${dateStr}`);
-    await globalLockRef.set({
-      status: "completed",
-      date: dateStr,
-      finishedAt: new Date().toISOString()
-    });
 
     // 4. Run Hard-Delete Cleanup Module
     await runHardDeleteCleanup(database);
@@ -440,11 +303,64 @@ async function processDailyMining() {
   }
 }
 
-// Schedule Cron: Every day at 12:00 AM (00:00) Bangladesh Time
-cron.schedule("0 0 * * *", () => {
-  processDailyMining();
-}, {
-  timezone: "Asia/Dhaka"
+// Schedule Cron: 12:01 AM BD Time (18:01 UTC)
+cron.schedule("1 18 * * *", async () => {
+  const today = getBDDate();
+  const now = new Date();
+  console.log("Starting daily settlement for BD date:", today);
+  
+  try {
+    const usersSnap = await dbCompat.collection("users").get();
+    
+    for (const userDoc of usersSnap.docs) {
+      const userId = userDoc.id;
+      const userData = userDoc.data();
+      const batch = dbCompat.batch();
+      let totalDailyIncome = 0;
+      
+      const robotSnap = await dbCompat.collection("user_robots").where("userId", "==", userId).where("status", "==", "active").where("endTime", ">", now).limit(1).get();
+      const hasActiveRobot = !robotSnap.empty;
+      
+      const pkgsSnap = await dbCompat.collection("user_packages").where("userId", "==", userId).where("status", "==", "active").where("endTime", ">", now).get();
+      
+      for (const pkgDoc of pkgsSnap.docs) {
+        const pkg = pkgDoc.data();
+        const seconds = getActiveSecondsForToday(pkg, hasActiveRobot);
+        const profit = calculateProfit(seconds, pkg.dailyProfit);
+        
+        if (profit > 0) {
+          totalDailyIncome += profit;
+          const logId = `${userId}_${pkgDoc.id}_${today}`;
+          const logRef = dbCompat.collection("mining_logs").doc(logId);
+          batch.set(logRef, {userId, packageId: pkgDoc.id, dateBD: today, seconds, amount: profit, createdAt: admin.firestore.FieldValue.serverTimestamp()});
+        }
+        
+        if (!hasActiveRobot) {
+          batch.update(pkgDoc.ref, {miningStartTime: null});
+        }
+      }
+      
+      if (totalDailyIncome > 0) {
+        const userRef = dbCompat.collection("users").doc(userId);
+        batch.update(userRef, {mainBalance: admin.firestore.FieldValue.increment(totalDailyIncome)});
+        
+        if (userData.uplineId) {
+          const commission = calculateDailyCommission(totalDailyIncome);
+          if (commission > 0) {
+            const uplineRef = dbCompat.collection("users").doc(userData.uplineId);
+            batch.update(uplineRef, {referralCommissionBalance: admin.firestore.FieldValue.increment(commission)});
+            const comLogId = `${userData.uplineId}_${userId}_${today}_daily_2.5`;
+            batch.set(dbCompat.collection("commission_logs").doc(comLogId), {fromUser: userId, toUser: userData.uplineId, dateBD: today, type: 'daily_2.5', baseAmount: totalDailyIncome, amount: commission});
+          }
+        }
+      }
+      
+      await batch.commit();
+    }
+    console.log("Daily settlement done for " + today);
+  } catch (e) {
+    console.error("Cron error:", e);
+  }
 });
 
 // --- API Endpoints ---
@@ -576,6 +492,29 @@ expressApp.post("/api/package/purchase", async (req, res) => {
         currentPotentialEarning: proRataEarn
       });
 
+      // 2.5: Award instant referral commission inside the transaction
+      const uplineId = userData.uplineId || userData.referredBy;
+      if (uplineId) {
+        const commission = calculateInstantCommission(pkgData.price);
+        if (commission > 0) {
+          const uplineRef = database.collection("users").doc(uplineId);
+          transaction.update(uplineRef, {
+            referralCommissionBalance: admin.firestore.FieldValue.increment(commission)
+          });
+
+          const commLogId = `comm_${userId}_${uplineId}_${userPkgId}`;
+          const commRef = database.collection("commission_logs").doc(commLogId);
+          transaction.set(commRef, {
+            fromUser: userId,
+            toUser: uplineId,
+            packageId: userPkgId,
+            type: "instant_10",
+            amount: commission,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      }
+
       // 3. Record Transaction
       const txId = `purchase_${Date.now()}_${userId}`;
       transaction.set(database.collection("transactions").doc(txId), {
@@ -597,9 +536,6 @@ expressApp.post("/api/package/purchase", async (req, res) => {
         });
       }
     });
-
-    // Notify Distribute Commissions
-    distributeReferralCommission(database, userId, pkgPrice);
 
     res.json({ message: "Package purchased successfully" });
   } catch (error: any) {
@@ -980,6 +916,55 @@ expressApp.post("/api/referral/claim", async (req, res) => {
     });
 
     res.json({ message: `Successfully claimed referral bonus of BDT ${claimRes.claimed.toFixed(2)}`, amount: claimRes.claimed });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+expressApp.post("/api/claim-referral", async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing parameters" });
+
+  // 1. Check if today is 1st day of month in BD Time: new Date().getDate() === 1 after converting to UTC+6
+  const bdTime = new Date(Date.now() + 6 * 60 * 60 * 1000);
+  const isFirstDay = bdTime.getUTCDate() === 1;
+
+  // 2. If not 1st, return 400 error "রেফারেল ব্যালেন্স শুধুমাত্র প্রত্যেক মাসের ১ তারিখে ক্লেম করা যাবে"
+  if (!isFirstDay) {
+    return res.status(400).json({ error: "রেফারেল ব্যালেন্স শুধুমাত্র প্রত্যেক মাসের ১ তারিখে ক্লেম করা যাবে" });
+  }
+
+  const database = ensureDb();
+  if (!database) return res.status(503).json({ error: "Backend database not connected" });
+
+  try {
+    const claimRes = await database.runTransaction(async (transaction) => {
+      const userRef = database.collection("users").doc(userId);
+      const userSnap = await transaction.get(userRef);
+      if (!userSnap.exists) throw new Error("User not found");
+      const userData = userSnap.data()!;
+
+      const referralComm = userData.referralCommissionBalance || 0;
+      if (referralComm <= 0) throw new Error("No referral commissions available to claim.");
+
+      transaction.update(userRef, {
+        mainBalance: admin.firestore.FieldValue.increment(referralComm),
+        referralCommissionBalance: 0
+      });
+
+      const txId = `claim_ref_${Date.now()}_${userId}`;
+      transaction.set(database.collection("transaction_logs").doc(txId), {
+        userId,
+        amount: referralComm,
+        type: "referral_claim",
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        description: `Bengali claim of BDT ${referralComm.toFixed(2)} in referral mining commission`
+      });
+
+      return { claimed: referralComm };
+    });
+
+    res.json({ message: "Successfully claimed", amount: claimRes.claimed });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
