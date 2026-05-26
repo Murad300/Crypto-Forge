@@ -1013,52 +1013,82 @@ expressApp.post("/api/referral/claim", async (req, res) => {
   }
 });
 
-expressApp.post("/api/claim-referral", async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: "Missing parameters" });
-
-  // 1. Check if today is 1st day of month in BD Time: new Date().getDate() === 1 after converting to UTC+6
-  const bdTime = new Date(Date.now() + 6 * 60 * 60 * 1000);
-  const isFirstDay = bdTime.getUTCDate() === 1;
-
-  // 2. If not 1st, return 400 error "রেফারেল ব্যালেন্স শুধুমাত্র প্রত্যেক মাসের ১ তারিখে ক্লেম করা যাবে"
-  if (!isFirstDay) {
-    return res.status(400).json({ error: "রেফারেল ব্যালেন্স শুধুমাত্র প্রত্যেক মাসের ১ তারিখে ক্লেম করা যাবে" });
+// Token Verification Middleware using Firebase Admin or secure Identity Toolkit fallback
+const verifyToken = async (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
   }
-
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend database not connected" });
-
+  const token = authHeader.split(" ")[1];
   try {
-    const claimRes = await database.runTransaction(async (transaction) => {
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists) throw new Error("User not found");
-      const userData = userSnap.data()!;
+    const config = getFirebaseConfig() || { apiKey: "AIzaSyD4K1as0o0WUb51nL6WGK5KAknG5oOpBwI" };
+    const apiKey = config.apiKey;
+    
+    const lookupRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: token })
+    });
+    
+    if (!lookupRes.ok) {
+      const errorData = await lookupRes.json();
+      return res.status(401).json({ error: "Invalid token", details: errorData });
+    }
+    
+    const data = await lookupRes.json();
+    if (!data.users || data.users.length === 0) {
+      return res.status(401).json({ error: "User not found" });
+    }
+    
+    req.user = { uid: data.users[0].localId };
+    next();
+  } catch (err: any) {
+    console.error("verifyToken error:", err);
+    return res.status(401).json({ error: "Authentication failed", details: err.message });
+  }
+};
 
-      const referralComm = userData.referralCommissionBalance || 0;
-      if (referralComm <= 0) throw new Error("No referral commissions available to claim.");
+expressApp.post("/api/claim-referral", verifyToken, async (req: any, res: any) => {
+  const userId = req.user.uid;
+  try {
+    // Check if today is 1st day in BD Time UTC+6
+    const bdTime = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Dhaka"}));
+    const isFirstDay = bdTime.getDate() === 1;
+    
+    if (!isFirstDay) {
+      return res.status(400).json({ 
+        error: "রেফারেল ব্যালেন্স শুধুমাত্র প্রত্যেক মাসের ১ তারিখে ক্লেম করা যাবে।" 
+      });
+    }
+
+    await dbCompat.runTransaction(async (transaction) => {
+      const userRef = dbCompat.collection("users").doc(userId);
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) throw new Error("ব্যবহারকারী পাওয়া যায়নি।");
+      const balance = userDoc.data().referralCommissionBalance || 0;
+      
+      if (balance <= 0) {
+        throw new Error("ক্লেম করার মতো রেফারেল ব্যালেন্স নেই।");
+      }
 
       transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(referralComm),
+        mainBalance: admin.firestore.FieldValue.increment(balance),
         referralCommissionBalance: 0
       });
 
-      const txId = `claim_ref_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transaction_logs").doc(txId), {
+      const logRef = dbCompat.collection("transaction_logs").doc();
+      transaction.set(logRef, {
         userId,
-        amount: referralComm,
-        type: "referral_claim",
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        description: `Bengali claim of BDT ${referralComm.toFixed(2)} in referral mining commission`
+        type: 'referral_claim',
+        amount: balance,
+        dateBD: getBDDate(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
-
-      return { claimed: referralComm };
     });
 
-    res.json({ message: "Successfully claimed", amount: claimRes.claimed });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    res.json({ success: true, message: "রেফারেল ব্যালেন্স সফলভাবে ক্লেম করা হয়েছে।" });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 });
 
