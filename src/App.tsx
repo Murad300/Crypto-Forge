@@ -491,6 +491,22 @@ export default function App() {
     }
   };
 
+  const handleClaimReferral = async () => {
+    try {
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/claim-referral', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert(data.message);
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-gray-100 font-sans selection:bg-cyan-500/30 pb-24">
       <AnimatePresence mode="wait">
