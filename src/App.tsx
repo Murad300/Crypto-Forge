@@ -13,12 +13,14 @@ import {
   limit,
   serverTimestamp,
   updateDoc,
-  writeBatch
+  writeBatch,
+  Timestamp
 } from 'firebase/firestore';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { motion, AnimatePresence } from 'motion/react';
 import IronMan from './components/IronMan';
 import Lightning from './components/Lightning';
+import { getActiveSecondsForToday, calculateProfit, getBDDate, getBDMidnight, getBDEndOfDay } from "../public/core-engine/mining-math.js";
 import { 
   Home, 
   LogIn,
@@ -40,65 +42,7 @@ import {
   Bell
 } from 'lucide-react';
 
-// Bangladesh Time Zone Helpers
-function getBDDate(date = new Date()) {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Dhaka',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const parts = formatter.formatToParts(date);
-  const year = parts.find(p => p.type === 'year')?.value || '';
-  const month = parts.find(p => p.type === 'month')?.value || '';
-  const day = parts.find(p => p.type === 'day')?.value || '';
-  return `${year}-${month}-${day}`;
-}
-
-function getBDMidnight(dateStr: string) {
-  return new Date(`${dateStr}T00:00:00+06:00`);
-}
-
-function getBDEndOfDay(dateStr: string) {
-  return new Date(`${dateStr}T23:59:59+06:00`);
-}
-
-function calculateProfit(seconds: number, dailyProfit: number) {
-  const profit = (dailyProfit / 86400) * seconds;
-  return Number(profit.toFixed(10));
-}
-
-function getActiveSecondsForToday(pkg: any, hasActiveRobot: boolean) {
-  if (!pkg) return 0;
-
-  const todayStr = getBDDate(new Date());
-  const bdMidnightToday = getBDMidnight(todayStr);
-  const bdEndOfDayToday = getBDEndOfDay(todayStr);
-
-  const pkgStart = new Date(pkg.startTime || pkg.createdAt || pkg.purchasedAt);
-  const pkgEnd = new Date(pkg.endTime || pkg.expiresAt);
-
-  if (pkgEnd.getTime() < bdMidnightToday.getTime()) {
-    return 0;
-  }
-  if (pkgStart.getTime() > bdEndOfDayToday.getTime()) {
-    return 0;
-  }
-
-  let miningStart;
-  if (hasActiveRobot) {
-    miningStart = bdMidnightToday;
-  } else {
-    if (!pkg.miningStartTime) return 0;
-    miningStart = pkg.miningStartTime.seconds ? new Date(pkg.miningStartTime.seconds * 1000) : new Date(pkg.miningStartTime);
-  }
-
-  const activeEnd = new Date(Math.min(bdEndOfDayToday.getTime(), pkgEnd.getTime()));
-  const diff = activeEnd.getTime() - miningStart.getTime();
-  if (diff <= 0) return 0;
-
-  return Math.floor(diff / 1000);
-}
+// Bangladesh Time Zone helper wrapper has been imported from the official mining-math engine.
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -113,6 +57,8 @@ export default function App() {
   const [activePackage, setActivePackage] = useState<any>(null);
   const [userPackages, setUserPackages] = useState<any[]>([]);
   const [hasActiveRobot, setHasActiveRobot] = useState<boolean>(false);
+  const [liveIncome, setLiveIncome] = useState(0);
+  const currentUser = user;
   const [liveMiningRevenue, setLiveMiningRevenue] = useState<number>(0);
   const [lifespanText, setLifespanText] = useState<string>("");
   const [todayProgress, setTodayProgress] = useState<number>(0);
@@ -152,13 +98,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    let unsubUserPkgs: (() => void) | null = null;
-    let unsubUserRobots: (() => void) | null = null;
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (unsubUserPkgs) { unsubUserPkgs(); unsubUserPkgs = null; }
-      if (unsubUserRobots) { unsubUserRobots(); unsubUserRobots = null; }
-
       if (currentUser) {
         const urlParams = new URLSearchParams(window.location.search);
         const refCode = urlParams.get('ref');
@@ -230,36 +170,6 @@ export default function App() {
             setActivePackage(null);
           }
         });
-
-        // Listen to All User Packages for Homepage mining modes
-        const qUserPkgs = query(
-          collection(db, 'user_packages'),
-          where('userId', '==', currentUser.uid),
-          where('status', '==', 'active')
-        );
-        unsubUserPkgs = onSnapshot(qUserPkgs, (snap) => {
-          const now = new Date();
-          const pList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((p: any) => {
-            const end = p.endTime ? (p.endTime.seconds ? new Date(p.endTime.seconds * 1000) : new Date(p.endTime)) : null;
-            return !end || end > now;
-          });
-          setUserPackages(pList);
-        });
-
-        // Listen to All User Robots
-        const qUserRobots = query(
-          collection(db, 'user_robots'),
-          where('userId', '==', currentUser.uid),
-          where('status', '==', 'active')
-        );
-        unsubUserRobots = onSnapshot(qUserRobots, (snap) => {
-          const now = new Date();
-          const activeRobots = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((r: any) => {
-            const end = r.endTime ? (r.endTime.seconds ? new Date(r.endTime.seconds * 1000) : new Date(r.endTime)) : null;
-            return !end || end > now;
-          });
-          setHasActiveRobot(activeRobots.length > 0);
-        });
       }
       setUser(currentUser);
       setAuthLoading(false);
@@ -267,10 +177,37 @@ export default function App() {
     });
     return () => {
       unsubscribe();
-      if (unsubUserPkgs) unsubUserPkgs();
-      if (unsubUserRobots) unsubUserRobots();
     };
   }, []);
+
+  // 3. Add useEffect for real-time data:
+  useEffect(() => {
+    if (!currentUser) return;
+    const now = Timestamp.now();
+    const qPkg = query(collection(db, "user_packages"), where("userId", "==", currentUser.uid), where("status", "==", "active"), where("endTime", ">", now));
+    const unsubPkg = onSnapshot(qPkg, (snap) => {
+      setUserPackages(snap.docs.map(d => ({id: d.id, ...d.data()})));
+    });
+    const qRobot = query(collection(db, "user_robots"), where("userId", "==", currentUser.uid), where("status", "==", "active"), where("endTime", ">", now));
+    const unsubRobot = onSnapshot(qRobot, (snap) => {
+      setHasActiveRobot(!snap.empty);
+    });
+    return () => {unsubPkg(); unsubRobot();};
+  }, [currentUser]);
+
+  // 4. Add useEffect for live Tk counter:
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let total = 0;
+      const today = getBDDate();
+      userPackages.forEach(pkg => {
+        const seconds = getActiveSecondsForToday({...pkg, startTime: pkg.startTime, endTime: pkg.endTime, miningStartTime: pkg.miningStartTime}, hasActiveRobot);
+        total += calculateProfit(seconds, pkg.dailyProfit);
+      });
+      setLiveIncome(total);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [userPackages, hasActiveRobot]);
 
   // Live Timer Logic
   useEffect(() => {
@@ -522,6 +459,38 @@ export default function App() {
   const otherTransactions = transactions.filter(tx => !['deposit', 'withdrawal'].includes(tx.type));
   const allTransactions = [...transactions].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+  // Task 4.1 UI flag calculations and handleStartMining helper
+  const convertToDateValue = (val: any) => {
+    if (!val) return new Date();
+    if (typeof val.toDate === 'function') return val.toDate();
+    if (val.seconds) return new Date(val.seconds * 1000);
+    return new Date(val);
+  };
+
+  const noPackage = userPackages.length === 0;
+  const isManualRunning = !hasActiveRobot && userPackages.some(p => {
+    if (!p.miningStartTime) return false;
+    const mDate = convertToDateValue(p.miningStartTime);
+    return mDate.toDateString() === new Date().toDateString();
+  });
+  const showStartButton = !noPackage && !hasActiveRobot && !isManualRunning;
+  const isRunning = hasActiveRobot || isManualRunning;
+  const totalDaily = userPackages.reduce((sum, p) => sum + (typeof p.dailyProfit === 'number' ? p.dailyProfit : 0), 0);
+  const earliestEnd = userPackages.length > 0 ? Math.min(...userPackages.map(p => convertToDateValue(p.endTime).getTime())) : null;
+
+  const handleStartMining = async () => {
+    try {
+      const batch = writeBatch(db);
+      userPackages.forEach(pkg => {
+        batch.update(doc(db, "user_packages", pkg.id), { miningStartTime: serverTimestamp() });
+      });
+      await batch.commit();
+      setSuccess("মাইনিং সফলভাবে শুরু হয়েছে!");
+    } catch (err: any) {
+      setError("মাইনিং শুরু করতে ব্যর্থ হয়েছে: " + err.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-gray-100 font-sans selection:bg-cyan-500/30 pb-24">
       <AnimatePresence mode="wait">
@@ -671,10 +640,10 @@ export default function App() {
                   </div>
                 </div>
 
-                {userPackages.length === 0 ? (
+                {noPackage ? (
                   <div className="space-y-4 mb-6" id="inactive-user-banners">
                     {/* Banner 1: অ্যাকাউন্ট অ্যাক্টিভ করুন */}
-                    <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20 p-6 rounded-3xl relative overflow-hidden flex items-center justify-between gap-4">
+                    <div className="banner bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20 p-6 rounded-3xl relative overflow-hidden flex items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <Zap className="w-5 h-5 text-amber-400 animate-pulse" />
@@ -693,7 +662,7 @@ export default function App() {
                     </div>
 
                     {/* Banner 2: প্যাকেজ কিনুন */}
-                    <div className="bg-gradient-to-r from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 p-6 rounded-3xl relative overflow-hidden flex items-center justify-between gap-4">
+                    <div className="banner bg-gradient-to-r from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 p-6 rounded-3xl relative overflow-hidden flex items-center justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <Cpu className="w-5 h-5 text-cyan-400 animate-pulse" />
@@ -712,9 +681,7 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  /* MiningCard Clause */
-                  <div className="bg-[#141416]/95 border border-white/5 p-8 rounded-3xl mb-6 relative overflow-visible group" id="unified-premium-mining-card">
-                    {/* Conditionally render IronMan and Lightning components based on robot activity */}
+                  <div className="mining-card relative bg-[#141416]/95 border border-white/5 p-8 rounded-3xl mb-6 overflow-visible group" id="unified-premium-mining-card">
                     {hasActiveRobot && (
                       <>
                         <IronMan />
@@ -722,75 +689,46 @@ export default function App() {
                       </>
                     )}
 
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="header flex items-center justify-between mb-6">
                       <div className="flex items-center gap-3">
                         <div className={`p-3 rounded-2xl border ${hasActiveRobot ? 'bg-cyan-500/20 border-cyan-500/40' : 'bg-white/5 border-white/10'}`}>
                           <Cpu className={`w-6 h-6 ${hasActiveRobot ? 'text-cyan-400 animate-spin-slow' : 'text-gray-400'}`} />
                         </div>
                         <div>
-                          <h4 className="font-black text-white text-md">LIVE MININGSTACK</h4>
-                          <p className="text-xs text-gray-500">
+                          <span className="font-black text-white text-md block leading-tight">LIVE MININGSTACK</span>
+                          <span className="text-xs text-gray-500 block mt-1">
                             {userPackages.length} Active Cloud Rigs
-                          </p>
+                          </span>
                         </div>
                       </div>
 
-                      {/* Power States badges */}
-                      { (hasActiveRobot || hasMiningToday) ? (
-                        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-4 py-1.5 rounded-full">
+                      {isRunning && (
+                        <span className="badge flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest text-emerald-400 uppercase">
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                          <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">RUNNING</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/25 px-4 py-1.5 rounded-full">
-                          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                          <span className="text-[10px] font-black tracking-widest text-amber-400 uppercase">IDLE</span>
-                        </div>
+                          RUNNING
+                        </span>
                       )}
                     </div>
 
-                    {/* Tk Counter Box */}
+                    <div className="total-daily mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <span>Total Daily:</span>
+                      <span className="text-white text-sm font-black font-mono">৳{totalDaily.toFixed(2)}</span>
+                    </div>
+
                     <div className="mb-6 bg-white/5 p-5 rounded-2xl border border-white/5">
-                      <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1">লাইভ মাইনিং রেভিনিউ (আজ)</p>
-                      <div className="text-3xl font-black text-cyan-400 font-mono tracking-tight">
-                        ৳{liveMiningRevenue.toFixed(8)}
+                      <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1.5">লাইভ মাইনিং রেভিনিউ (আজ)</p>
+                      <div className="live-counter text-3xl font-black text-cyan-400 font-mono tracking-tight">
+                        ৳{liveIncome.toFixed(4)}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                        <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">মোট দৈনিক প্রফিট</p>
-                        <p className="text-xl font-black text-white font-mono">
-                          ৳{userPackages.reduce((sum, p) => sum + (typeof p.dailyProfit === 'number' ? p.dailyProfit : (typeof p.daily === 'number' ? p.daily : 0)), 0).toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="bg-white/5 p-4 rounded-xl border border-white/5 relative overflow-hidden">
-                        <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">Nodes Lifespan</p>
-                        <p className="text-xs font-black text-amber-400 font-mono mt-1">
-                          {lifespanText || "বুট করা হচ্ছে..."}
-                        </p>
-                      </div>
+                    <div className="nodes text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-6">
+                      NODES LIFESPAN: <span className="text-amber-400 font-mono text-xs font-black">{earliestEnd ? new Date(earliestEnd).toLocaleDateString() : '-'}</span>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="mb-6">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">আজকের মাইনিং চক্রের অগ্রগতি</span>
-                        <span className="text-[10px] font-black text-cyan-400">{todayProgress.toFixed(2)}%</span>
-                      </div>
-                      <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                        <div 
-                          className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-400 rounded-full transition-all duration-1000" 
-                          style={{ width: `${todayProgress}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Start Mining trigger button conditionally rendered */}
-                    { !(hasActiveRobot || hasMiningToday) && (
+                    {showStartButton && (
                       <button 
-                        onClick={startMining}
-                        disabled={hasMiningToday}
+                        onClick={handleStartMining}
                         className="w-full bg-cyan-500 text-black py-4 rounded-2xl font-black hover:bg-cyan-400 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
                       >
                         <CirclePlay className="w-5 h-5 text-black" /> START MINING
@@ -1119,5 +1057,4 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
     </button>
   );
 }
-
 
