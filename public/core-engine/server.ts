@@ -492,25 +492,31 @@ expressApp.post("/api/package/purchase", async (req, res) => {
         currentPotentialEarning: proRataEarn
       });
 
+      const newPackageDoc = { id: userPkgId };
+      const newPackageData = pkgData;
+
       // 2.5: Award instant referral commission inside the transaction
-      const uplineId = userData.uplineId || userData.referredBy;
-      if (uplineId) {
-        const commission = calculateInstantCommission(pkgData.price);
+      const buyerRef = dbCompat.collection("users").doc(userId);
+      const buyerDoc = await transaction.get(buyerRef);
+      const buyerData = buyerDoc.data();
+
+      if (buyerData && buyerData.uplineId) {
+        const commission = calculateInstantCommission(newPackageData.price);
         if (commission > 0) {
-          const uplineRef = database.collection("users").doc(uplineId);
+          const uplineRef = dbCompat.collection("users").doc(buyerData.uplineId);
           transaction.update(uplineRef, {
             referralCommissionBalance: admin.firestore.FieldValue.increment(commission)
           });
-
-          const commLogId = `comm_${userId}_${uplineId}_${userPkgId}`;
-          const commRef = database.collection("commission_logs").doc(commLogId);
-          transaction.set(commRef, {
+          const comLogRef = dbCompat.collection("commission_logs").doc();
+          transaction.set(comLogRef, {
             fromUser: userId,
-            toUser: uplineId,
-            packageId: userPkgId,
-            type: "instant_10",
+            toUser: buyerData.uplineId,
+            packageId: newPackageDoc.id,
+            dateBD: getBDDate(),
+            type: 'instant_10',
+            baseAmount: newPackageData.price,
             amount: commission,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
           });
         }
       }
@@ -541,6 +547,92 @@ expressApp.post("/api/package/purchase", async (req, res) => {
   } catch (error: any) {
     console.error("Purchase error:", error);
     res.status(400).json({ error: error.message || "Purchase failed" });
+  }
+});
+
+// SECURE ROBOT PURCHASE
+expressApp.post("/api/buy-robot", async (req, res) => {
+  const database = ensureDb();
+  if (!database) return res.status(503).json({ error: "Backend not configured" });
+
+  const { userId, robotId } = req.body;
+  if (!userId || !robotId) return res.status(400).json({ error: "Missing parameters" });
+
+  const robots = [
+    { id: 'robot_7d', name: 'Smart Bot (7 Days)', price: 150, duration: 7 },
+    { id: 'robot_15d', name: 'Pro Bot (15 Days)', price: 300, duration: 15 },
+    { id: 'robot_30d', name: 'Ultra Bot (30 Days)', price: 500, duration: 30 }
+  ];
+
+  const r = robots.find(x => x.id === robotId);
+  if (!r) return res.status(400).json({ error: "Invalid robot ID" });
+
+  try {
+    await database.runTransaction(async (transaction) => {
+      // Task 2 check: Check for active robot
+      const existingRobotSnap = await transaction.get(
+        dbCompat.collection("user_robots")
+          .where("userId", "==", userId)
+          .where("status", "==", "active")
+          .where("endTime", ">", admin.firestore.Timestamp.now())
+          .limit(1)
+      );
+
+      if (!existingRobotSnap.empty) {
+        throw new Error("আপনার একটি রোবট সক্রিয় আছে। মেয়াদ শেষ হওয়ার আগে নতুন রোবট কিনতে পারবেন না।");
+      }
+
+      const userRef = database.collection("users").doc(userId);
+      const userSnap = await transaction.get(userRef);
+      if (!userSnap.exists) throw new Error("User not found");
+      const userData = userSnap.data()!;
+
+      const currentBal = typeof userData.mainBalance === 'number' ? userData.mainBalance : (userData.balance || 0);
+      if (currentBal < r.price) {
+        throw new Error("Insufficient balance");
+      }
+
+      // Deduct Balance
+      transaction.update(userRef, {
+        mainBalance: admin.firestore.FieldValue.increment(-r.price),
+        balance: admin.firestore.FieldValue.increment(-r.price),
+        hasBoughtPackage: true
+      });
+
+      // Create new robot doc
+      const botRef = database.collection("user_robots").doc();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + r.duration);
+
+      transaction.set(botRef, {
+        userId,
+        customerID: userData.uid || 'N/A',
+        robotId: r.id,
+        name: r.name,
+        status: 'active',
+        isActivated: true,
+        createdAt: new Date().toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        endTime: expiresAt
+      });
+
+      // Buyer Transaction history log
+      const txId = `purchase_robot_${Date.now()}_${userId}`;
+      transaction.set(database.collection("transactions").doc(txId), {
+        userId,
+        type: 'purchase',
+        amount: -r.price,
+        productType: 'robot',
+        productName: r.name,
+        createdAt: new Date().toISOString(),
+        status: 'completed'
+      });
+    });
+
+    res.json({ message: "Robot purchased successfully!" });
+  } catch (error: any) {
+    console.error("Robot purchase error:", error);
+    res.status(400).json({ error: error.message || "Robot purchase failed" });
   }
 });
 
