@@ -934,7 +934,7 @@ document.getElementById('loginForm').onsubmit = async (e) => {
     try {
         const cred = await signInWithEmailAndPassword(auth, document.getElementById('adminEmail').value, document.getElementById('adminPassword').value);
         const uEmail = (cred.user.email || '').toLowerCase().trim();
-        const isSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com'; 
+        const isSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com' || uEmail === 'admin@smartbd.com'; 
         const adminDoc = await getDoc(doc(db, 'admins', cred.user.uid));
         
         if (!adminDoc.exists() && !isSuperAdmin) { 
@@ -959,7 +959,7 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         const uEmail = (user.email || '').toLowerCase().trim();
         // Force superadmin status for authorized admin emails
-        isUserSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com';
+        isUserSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com' || uEmail === 'admin@smartbd.com';
         console.log("Logged in as:", uEmail, "Is SuperAdmin:", isUserSuperAdmin);
         
         const emailEl = document.getElementById('adminUserEmail');
