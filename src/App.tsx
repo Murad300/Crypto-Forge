@@ -1,1668 +1,1090 @@
-import express from "express";
-import path from "path";
-import { createServer as createViteServer } from "vite";
-import { dbCompat, adminCompat as admin, authenticateBackendSystem } from "./firebase-compat";
-import cron from "node-cron";
-import fs from "fs";
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-import { getActiveSecondsForToday, calculateProfit, calculateDailyCommission, getBDDate, calculateInstantCommission } from "./server-mining-math";
+import React, { useEffect, useState, useRef } from 'react';
+import { auth, db } from './firebase';
+import { 
+  doc, 
+  getDoc, 
+  getDocs,
+  setDoc, 
+  onSnapshot, 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  limit,
+  serverTimestamp,
+  updateDoc,
+  writeBatch,
+  Timestamp
+} from 'firebase/firestore';
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { motion, AnimatePresence } from 'motion/react';
+import IronMan from './components/IronMan';
+import Lightning from './components/Lightning';
+import { getActiveSecondsForToday, calculateProfit, getBDDate, getBDMidnight, getBDEndOfDay } from "../public/core-engine/mining-math.js";
+import { 
+  Home, 
+  LogIn,
+  LogOut, 
+  Loader2, 
+  Zap, 
+  Wallet, 
+  Cpu, 
+  History, 
+  ShoppingCart, 
+  TrendingUp,
+  Settings,
+  CirclePlay,
+  RotateCcw,
+  Bot,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Package,
+  Bell
+} from 'lucide-react';
 
-// Load environment variables
-dotenv.config();
+// Bangladesh Time Zone helper wrapper has been imported from the official mining-math engine.
 
-// Load Firebase Config helper
-function getFirebaseConfig() {
-  const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-  if (fs.existsSync(configPath)) {
-    try {
-      return JSON.parse(fs.readFileSync(configPath, "utf8"));
-    } catch (e) {
-      console.error("Error parsing firebase-applet-config.json:", e);
-      return null;
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [miningState, setMiningState] = useState<any>(null);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [activePackage, setActivePackage] = useState<any>(null);
+  const [userPackages, setUserPackages] = useState<any[]>([]);
+  const [hasActiveRobot, setHasActiveRobot] = useState<boolean>(false);
+  const [liveIncome, setLiveIncome] = useState(0);
+  const currentUser = user;
+  const [liveMiningRevenue, setLiveMiningRevenue] = useState<number>(0);
+  const [lifespanText, setLifespanText] = useState<string>("");
+  const [todayProgress, setTodayProgress] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<'home' | 'mining' | 'wallet' | 'history' | 'profile'>('home');
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const hasMiningToday = userPackages.some((p: any) => {
+    if (!p.miningStartTime) return false;
+    let mDate: Date;
+    if (typeof p.miningStartTime === 'object' && p.miningStartTime && 'seconds' in p.miningStartTime) {
+      mDate = new Date((p.miningStartTime as any).seconds * 1000);
+    } else {
+      mDate = new Date(p.miningStartTime);
     }
-  }
-  return null;
-}
-
-// Initialize Firebase Admin lazily logic
-let db: any = null;
-function ensureDb() {
-  if (db) return db;
-  db = dbCompat;
-  return db;
-}
-ensureDb();
-
-const expressApp = express();
-const PORT = 3000;
-
-expressApp.use(express.json());
-
-// --- Mining Logic Helpers ---
-
-async function distributeReferralCommission(database: any, userId: string, pkgPrice: number) {
-  try {
-    const userSnap = await database.collection("users").doc(userId).get();
-    const userData = userSnap.data();
-    if (!userData || !userData.referredBy) return;
-
-    // Level 1 Commission (10%)
-    const l1ReferrerId = userData.referredBy;
-    const l1Commission = pkgPrice * 0.10;
-    
-    await database.runTransaction(async (tx) => {
-      const l1Ref = database.collection("users").doc(l1ReferrerId);
-      const l1Snap = await tx.get(l1Ref);
-      
-      if (l1Snap.exists) {
-        tx.update(l1Ref, {
-          referralCommissionBalance: admin.firestore.FieldValue.increment(l1Commission),
-          referralEarned: admin.firestore.FieldValue.increment(l1Commission)
-        });
-
-        const txId = `tx_ref_l1_${Date.now()}_${l1ReferrerId}`;
-        tx.set(database.collection("transactions").doc(txId), {
-          userId: l1ReferrerId,
-          amount: l1Commission,
-          type: "referral_bonus",
-          timestamp: new Date().toISOString(),
-          description: `L1 Referral Commission from ${userData.email || userId}`
-        });
-
-        // Notification for L1
-        const notifId = `notif_${Date.now()}_${l1ReferrerId}`;
-        tx.set(database.collection("notifications").doc(notifId), {
-          userId: l1ReferrerId,
-          title: "Referral Commission",
-          message: `You earned BDT ${l1Commission.toFixed(2)} from your referral's purchase!`,
-          type: "referral",
-          timestamp: new Date().toISOString(),
-          read: false
-        });
-      }
-    });
-  } catch (error) {
-    console.error("Referral commission error:", error);
-  }
-}
-
-async function runHardDeleteCleanup(database: any) {
-  console.log("[Cleanup] Starting hard-delete routine for customer data (>30 days) and admin data (>90 days)...");
-  
-  const limit30Days = new Date();
-  limit30Days.setDate(limit30Days.getDate() - 30);
-
-  const limit90Days = new Date();
-  limit90Days.setDate(limit90Days.getDate() - 90);
-
-  try {
-    // 1. Customer Collections (Older than 30 days): transactions, transactions_ledger, notifications, support_chats
-    const customerCollections = ["transactions", "transactions_ledger", "notifications", "support_chats", "landing_chats", "chats", "messages", "daily_mining_logs"];
-    for (const colName of customerCollections) {
-      const snap = await database.collection(colName).get();
-      const batch = database.batch();
-      let deletableCount = 0;
-      for (const doc of snap.docs) {
-        const data = doc.data();
-        const timeField = data.timestamp || data.createdAt || data.created || data.time;
-        if (timeField) {
-          try {
-            const docDate = new Date(timeField);
-            if (!isNaN(docDate.getTime()) && docDate < limit30Days) {
-              batch.delete(doc.ref);
-              deletableCount++;
-            }
-          } catch (e) {}
-        }
-      }
-      if (deletableCount > 0) {
-        await batch.commit();
-        console.log(`[Cleanup] Hard-deleted ${deletableCount} documents from customer collection: ${colName}`);
-      }
-    }
-
-    // 2. Admin Collections (Older than 90 days): admin_logs, system_locks
-    const adminCollections = ["admin_logs", "system_locks"];
-    for (const colName of adminCollections) {
-      const snap = await database.collection(colName).get();
-      const batch = database.batch();
-      let deletableCount = 0;
-      for (const doc of snap.docs) {
-        const data = doc.data();
-        const timeField = data.startedAt || data.finishedAt || data.timestamp || data.createdAt || data.date;
-        if (timeField) {
-          try {
-            let docDate = new Date(timeField);
-            if (colName === "system_locks" && data.date) {
-              docDate = new Date(data.date);
-            }
-            if (!isNaN(docDate.getTime()) && docDate < limit90Days) {
-              batch.delete(doc.ref);
-              deletableCount++;
-            }
-          } catch (e) {}
-        }
-      }
-      if (deletableCount > 0) {
-        await batch.commit();
-        console.log(`[Cleanup] Hard-deleted ${deletableCount} documents from admin collection: ${colName}`);
-      }
-    }
-
-    console.log("[Cleanup] Hard-delete routine completed successfully.");
-  } catch (error) {
-    console.error("[Cleanup] Hard-delete routine error:", error);
-  }
-}
-
-async function processDailyMining() {
-  const database = ensureDb();
-  if (!database) {
-    console.error("[Cron] Skip distribution: Firestore not initialized");
-    return;
-  }
-  
-  const now = new Date();
-  const dateBD = getBDDate(now);
-  console.log(`[Cron] Starting daily mining settlement for BD Date: ${dateBD} at current UTC: ${now.toISOString()}`);
-
-  try {
-    const usersSnap = await database.collection("users").get();
-    
-    for (const userDoc of usersSnap.docs) {
-      const userId = userDoc.id;
-      const userData = userDoc.data() || {};
-
-      try {
-        // a. Check if user has active robot: query "user_robots" where userId==user.id AND status=='active' AND endTime > now()
-        const robotSnap = await database.collection("user_robots")
-          .where("userId", "==", userId)
-          .where("status", "==", "active")
-          .where("endTime", ">", now)
-          .get();
-        const hasActiveRobot = !robotSnap.empty;
-
-        // b. Get all active packages: query "user_packages" where userId==user.id AND status=='active' AND endTime > now()
-        const pkgsSnap = await database.collection("user_packages")
-          .where("userId", "==", userId)
-          .where("status", "==", "active")
-          .where("endTime", ">", now)
-          .get();
-
-        let totalDailyIncome = 0;
-        const batch = database.batch();
-        let hasUpdates = false;
-
-        // c. Loop each package
-        for (const pkgDoc of pkgsSnap.docs) {
-          const pkgRaw = pkgDoc.data() || {};
-          
-          const pkg = {
-            startTime: pkgRaw.startTime || pkgRaw.purchasedAt || pkgRaw.createdAt || new Date().toISOString(),
-            endTime: pkgRaw.endTime || pkgRaw.expiresAt || new Date().toISOString(),
-            dailyProfit: typeof pkgRaw.dailyProfit === 'number' ? pkgRaw.dailyProfit : (typeof pkgRaw.daily === 'number' ? pkgRaw.daily : 0),
-            miningStartTime: pkgRaw.miningStartTime || pkgRaw.miningStartedAt || null
-          };
-
-          // 4. UNIQUE check: Before creating mining_logs, check if log for userId+packageId+dateBD exists. If yes, skip to avoid double credit.
-          const logId = `${userId}_${pkgDoc.id}_${dateBD}`;
-          const logSnap = await database.collection("mining_logs").doc(logId).get();
-          if (logSnap.exists) {
-            console.log(`[Cron] Log ${logId} already exists. Skipping pkg ${pkgDoc.id} to avoid double credit.`);
-            continue;
-          }
-
-          const seconds = getActiveSecondsForToday(pkg, hasActiveRobot);
-          const profit = calculateProfit(seconds, pkg.dailyProfit);
-
-          if (profit > 0) {
-            totalDailyIncome += profit;
-
-            // Create mining_logs doc with userId, packageId, dateBD, seconds, amount
-            const logRef = database.collection("mining_logs").doc(logId);
-            batch.set(logRef, {
-              userId,
-              packageId: pkgDoc.id,
-              dateBD,
-              seconds,
-              amount: profit,
-              timestamp: admin.firestore.FieldValue.serverTimestamp()
-            });
-            hasUpdates = true;
-          }
-
-          if (!hasActiveRobot) {
-            // Update package doc set miningStartTime = null for next day
-            const pkgRef = database.collection("user_packages").doc(pkgDoc.id);
-            batch.update(pkgRef, {
-              miningStartTime: null
-            });
-
-            // Also update sub-collection user package for consistency
-            const userSubPkgRef = database.collection("users").doc(userId).collection("purchasedPackages").doc(pkgDoc.id);
-            batch.update(userSubPkgRef, {
-              miningStartTime: null
-            });
-            hasUpdates = true;
-          }
-        }
-
-        // d. If totalDailyIncome > 0
-        if (totalDailyIncome > 0) {
-          // Increment users/{userId}.mainBalance by totalDailyIncome
-          const userRef = database.collection("users").doc(userId);
-          batch.update(userRef, {
-            mainBalance: admin.firestore.FieldValue.increment(totalDailyIncome)
-          });
-
-          // If user.uplineId exists
-          const uplineId = userData.uplineId || userData.referredBy;
-          if (uplineId) {
-            const commission = calculateDailyCommission(totalDailyIncome);
-            if (commission > 0) {
-              // Increment users/{uplineId}.referralCommissionBalance by commission
-              const uplineRef = database.collection("users").doc(uplineId);
-              batch.update(uplineRef, {
-                referralCommissionBalance: admin.firestore.FieldValue.increment(commission)
-              });
-
-              // Create commission_logs doc with fromUser, toUser, dateBD, type='daily_2.5', baseAmount, amount
-              const commLogId = `comm_${userId}_${uplineId}_${dateBD}`;
-              const commRef = database.collection("commission_logs").doc(commLogId);
-              batch.set(commRef, {
-                fromUser: userId,
-                toUser: uplineId,
-                dateBD,
-                type: "daily_2.5",
-                baseAmount: totalDailyIncome,
-                amount: commission,
-                timestamp: admin.firestore.FieldValue.serverTimestamp()
-              });
-            }
-          }
-          hasUpdates = true;
-        }
-
-        // e. Use Firestore batched writes for each user. Commit batch after each user.
-        if (hasUpdates) {
-          await batch.commit();
-          console.log(`[Cron] Committed batch successfully for user ${userId}. Profit: ${totalDailyIncome}`);
-        }
-
-      } catch (userErr) {
-        console.error(`[Cron] Individual user processing ${userId} failed:`, userErr);
-      }
-    }
-
-    // 4. Run Hard-Delete Cleanup Module
-    await runHardDeleteCleanup(database);
-
-  } catch (err) {
-    console.error("[Cron] Major failure in processDailyMining:", err);
-  }
-}
-
-// Schedule Cron: 12:01 AM BD Time (18:01 UTC)
-cron.schedule("1 18 * * *", async () => {
-  const today = getBDDate();
-  const now = new Date();
-  console.log("Starting daily settlement for BD date:", today);
-  
-  try {
-    const usersSnap = await dbCompat.collection("users").get();
-    
-    for (const userDoc of usersSnap.docs) {
-      const userId = userDoc.id;
-      const userData = userDoc.data();
-      const batch = dbCompat.batch();
-      let totalDailyIncome = 0;
-      
-      const robotSnap = await dbCompat.collection("user_robots").where("userId", "==", userId).where("status", "==", "active").where("endTime", ">", now).limit(1).get();
-      const hasActiveRobot = !robotSnap.empty;
-      
-      const pkgsSnap = await dbCompat.collection("user_packages").where("userId", "==", userId).where("status", "==", "active").where("endTime", ">", now).get();
-      
-      for (const pkgDoc of pkgsSnap.docs) {
-        const pkg = pkgDoc.data();
-        const seconds = getActiveSecondsForToday(pkg, hasActiveRobot);
-        const profit = calculateProfit(seconds, pkg.dailyProfit);
-        
-        if (profit > 0) {
-          totalDailyIncome += profit;
-          const logId = `${userId}_${pkgDoc.id}_${today}`;
-          const logRef = dbCompat.collection("mining_logs").doc(logId);
-          batch.set(logRef, {userId, packageId: pkgDoc.id, dateBD: today, seconds, amount: profit, createdAt: admin.firestore.FieldValue.serverTimestamp()});
-        }
-        
-        if (!hasActiveRobot) {
-          batch.update(pkgDoc.ref, {miningStartTime: null});
-        }
-      }
-      
-      if (totalDailyIncome > 0) {
-        const userRef = dbCompat.collection("users").doc(userId);
-        batch.update(userRef, {mainBalance: admin.firestore.FieldValue.increment(totalDailyIncome)});
-        
-        if (userData.uplineId) {
-          const commission = calculateDailyCommission(totalDailyIncome);
-          if (commission > 0) {
-            const uplineRef = dbCompat.collection("users").doc(userData.uplineId);
-            batch.update(uplineRef, {referralCommissionBalance: admin.firestore.FieldValue.increment(commission)});
-            const comLogId = `${userData.uplineId}_${userId}_${today}_daily_2.5`;
-            batch.set(dbCompat.collection("commission_logs").doc(comLogId), {fromUser: userId, toUser: userData.uplineId, dateBD: today, type: 'daily_2.5', baseAmount: totalDailyIncome, amount: commission});
-          }
-        }
-      }
-      
-      await batch.commit();
-    }
-    console.log("Daily settlement done for " + today);
-  } catch (e) {
-    console.error("Cron error:", e);
-  }
-});
-
-// --- API Endpoints ---
-
-// Health check with Bangladesh Time info
-expressApp.get("/api/health", (req, res) => {
-  const now = new Date();
-  const dhakaTime = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-  res.json({ 
-    status: "ok", 
-    initialized: !!db, 
-    serverTime: now.toISOString(),
-    dhakaTime: dhakaTime,
-    timezone: "Asia/Dhaka",
-    env: process.env.NODE_ENV || "development"
+    return getBDDate(mDate) === getBDDate(new Date());
   });
-});
 
-// Admin Route - Using a cleaner, non-generic path to avoid security flags
-// This helps prevent "Dangerous Site" warnings often triggered by generic "/admin" paths on new domains
-expressApp.get("/portal-manager", (req, res) => {
-  const adminPath = path.join(process.cwd(), "admin.html");
-  if (fs.existsSync(adminPath)) {
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.sendFile(adminPath);
-  } else {
-    res.status(404).send("Management portal not found.");
-  }
-});
+  // Live profit calculation state
+  const [liveProfit, setLiveProfit] = useState(0);
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [referralCount, setReferralCount] = useState(0);
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("Bkash");
+  const [accountNumber, setAccountNumber] = useState("");
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-// Admin Custom Domain Panel Shortcut
-expressApp.get("/admin-panel", (req, res) => {
-  const adminPath = path.join(process.cwd(), "admin.html");
-  if (fs.existsSync(adminPath)) {
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.sendFile(adminPath);
-  } else {
-    res.status(404).send("Admin panel endpoint active but resource not found.");
-  }
-});
+  useEffect(() => {
+    const fetchReferralCount = async () => {
+      if (!user) return;
+      const q = query(collection(db, 'users'), where('referredBy', '==', user.uid));
+      const snap = await getDocs(q);
+      setReferralCount(snap.size);
+    };
+    if (user) fetchReferralCount();
+  }, [user]);
 
-// Redirect old /admin to new /admin-panel
-expressApp.get("/admin", (req, res) => {
-  res.redirect("/admin-panel");
-});
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
 
-// --- Unified API Routes ---
+        // Sync Profile
+        const userRef = doc(db, 'users', currentUser.uid);
+        onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setProfile(docSnap.data());
+          } else {
+            // Initial profile setup
+            setDoc(userRef, {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              photoURL: currentUser.photoURL,
+              mainBalance: 0,
+              referralEarned: 0,
+              hasActiveRobot: false,
+              referredBy: refCode || null,
+              referralCode: currentUser.uid.slice(0, 8),
+              status: 'active',
+              createdAt: new Date().toISOString()
+            });
+          }
+        });
 
-// SECURE PACKAGE PURCHASE
-expressApp.post("/api/package/purchase", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured" });
+        // Listen to Notifications
+        const qNotif = query(
+          collection(db, 'notifications'),
+          where('userId', '==', currentUser.uid),
+          orderBy('timestamp', 'desc'),
+          limit(20)
+        );
+        onSnapshot(qNotif, (snap) => {
+          setNotifications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
 
-  const { userId, packageId } = req.body;
-  if (!userId || !packageId) return res.status(400).json({ error: "Missing parameters" });
+        // Listen to Mining State
+        onSnapshot(doc(db, 'mining_states', currentUser.uid), (doc) => {
+          setMiningState(doc.data());
+        });
 
-  let pkgPrice = 0;
-  try {
-    await database.runTransaction(async (transaction) => {
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists) throw new Error("User not found");
-      const userData = userSnap.data()!;
+        // Listen to Transactions
+        const qTx = query(
+          collection(db, 'transactions'),
+          where('userId', '==', currentUser.uid),
+          orderBy('timestamp', 'desc')
+        );
+        onSnapshot(qTx, (snap) => {
+          setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
 
-      const pkgRef = database.collection("packages").doc(packageId);
-      const pkgSnap = await transaction.get(pkgRef);
-      if (!pkgSnap.exists) throw new Error("Package not found");
-      const pkgData = pkgSnap.data()!;
-      pkgPrice = pkgData.price;
-
-      const currentBal = typeof userData.mainBalance === 'number' ? userData.mainBalance : (userData.balance || 0);
-      if (currentBal < pkgData.price) {
-        throw new Error("Insufficient balance");
+        // Listen to User Package
+        const qPkg = query(
+          collection(db, 'user_packages'),
+          where('userId', '==', currentUser.uid),
+          where('status', '==', 'active'),
+          limit(1)
+        );
+        onSnapshot(qPkg, async (snap) => {
+          if (!snap.empty) {
+            const up = snap.docs[0].data();
+            const pDoc = await getDoc(doc(db, 'packages', up.packageId));
+            if (pDoc.exists()) {
+              setActivePackage(pDoc.data());
+            }
+          } else {
+            setActivePackage(null);
+          }
+        });
       }
+      setUser(currentUser);
+      setAuthLoading(false);
+      setLoading(false);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
-      // 1. Deduct Balance
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(-pkgData.price)
+  // 3. Add useEffect for real-time data:
+  useEffect(() => {
+    if (!currentUser) return;
+    const now = Timestamp.now();
+    const qPkg = query(collection(db, "user_packages"), where("userId", "==", currentUser.uid), where("status", "==", "active"), where("endTime", ">", now));
+    const unsubPkg = onSnapshot(qPkg, (snap) => {
+      setUserPackages(snap.docs.map(d => ({id: d.id, ...d.data()})));
+    });
+    const qRobot = query(collection(db, "user_robots"), where("userId", "==", currentUser.uid), where("status", "==", "active"), where("endTime", ">", now));
+    const unsubRobot = onSnapshot(qRobot, (snap) => {
+      setHasActiveRobot(!snap.empty);
+    });
+    return () => {unsubPkg(); unsubRobot();};
+  }, [currentUser]);
+
+  // 4. Add useEffect for live Tk counter:
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let total = 0;
+      const today = getBDDate();
+      userPackages.forEach(pkg => {
+        const seconds = getActiveSecondsForToday({...pkg, startTime: pkg.startTime, endTime: pkg.endTime, miningStartTime: pkg.miningStartTime}, hasActiveRobot);
+        total += calculateProfit(seconds, pkg.dailyProfit);
       });
+      setLiveIncome(total);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [userPackages, hasActiveRobot]);
 
-      // 2. Add Package
-      const userPkgId = `up_${Date.now()}_${userId}`;
-      const expiresAt = new Date();
-      const validityVal = pkgData.validity != null ? pkgData.validity : (pkgData.durationDays || pkgData.duration || 30);
-      expiresAt.setDate(expiresAt.getDate() + validityVal);
+  // Live Timer Logic
+  useEffect(() => {
+    if (miningState?.isActive && activePackage && miningState.lastStartTime) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      
+      timerRef.current = setInterval(() => {
+        const now = Date.now();
+        const durationSeconds = (now - miningState.lastStartTime) / 1000;
+        const profitPerSecond = activePackage.dailyProfit / 86400;
+        setLiveProfit(durationSeconds * profitPerSecond);
+      }, 1000);
+    } else {
+      setLiveProfit(0);
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [miningState, activePackage]);
 
-      // Get user's active non-expired robots inside the transaction
-      const robotsRef = database.collection("user_robots").where("userId", "==", userId);
-      const robotsSnap = await transaction.get(robotsRef);
-      let robotOn = false;
-      const nowTime = new Date();
-      for (const rDoc of robotsSnap.docs) {
-        const rData = rDoc.data();
-        if (rData.isActivated === true && rData.expiresAt && new Date(rData.expiresAt) >= nowTime) {
-          robotOn = true;
-          break;
-        }
+  // Core Timer Loop updating pro-rata live revenues and node lifespan countdowns
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    const tick = () => {
+      // 1. Tk counter
+      const isRunning = hasActiveRobot || hasMiningToday;
+      if (isRunning && userPackages.length > 0) {
+        let totalRevenue = 0;
+        userPackages.forEach((p: any) => {
+          const daily = typeof p.dailyProfit === 'number' ? p.dailyProfit : (typeof p.daily === 'number' ? p.daily : 0);
+          const seconds = getActiveSecondsForToday(p, hasActiveRobot);
+          const profit = calculateProfit(seconds, daily);
+          totalRevenue += profit;
+        });
+        setLiveMiningRevenue(totalRevenue);
+      } else {
+        setLiveMiningRevenue(0);
       }
 
+      // 2. Nodes Lifespan Countdown
+      if (userPackages.length > 0) {
+        const sorted = [...userPackages].filter((p: any) => p.endTime || p.expiresAt).sort((a: any, b: any) => {
+          const tA = new Date(a.endTime || a.expiresAt).getTime();
+          const tB = new Date(b.endTime || b.expiresAt).getTime();
+          return tA - tB;
+        });
+
+        if (sorted.length > 0) {
+          const earliest = sorted[0];
+          const expDate = new Date(earliest.endTime || earliest.expiresAt);
+          const diff = expDate.getTime() - Date.now();
+          if (diff <= 0) {
+            setLifespanText("Expired");
+          } else {
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            setLifespanText(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+          }
+        } else {
+          setLifespanText("No Lifespan Data");
+        }
+      } else {
+        setLifespanText("");
+      }
+
+      // 3. Progress Bar calculation
+      const todayStr = getBDDate(new Date());
+      const bdMidnightToday = getBDMidnight(todayStr);
       const now = new Date();
-      const dhakaStr = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-      const dhakaNow = new Date(dhakaStr);
-      const dhakaMidnight = new Date(dhakaNow);
-      dhakaMidnight.setHours(23, 59, 59, 999);
-      const secondsRemaining = Math.max(0, (dhakaMidnight.getTime() - dhakaNow.getTime()) / 1000);
-      const factor = secondsRemaining / 86400;
-      const dailyEarn = pkgData.dailyProfit || pkgData.daily || 0;
-      const proRataEarn = Number((dailyEarn * factor).toFixed(6));
+      const secondsPassed = Math.max(0, Math.floor((now.getTime() - bdMidnightToday.getTime()) / 1000));
+      const pct = Math.min(100, (secondsPassed / 86400) * 100);
+      setTodayProgress(pct);
+    };
 
-      const purchasedAtStr = now.toISOString();
+    tick();
+    timer = setInterval(tick, 1000);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [userPackages, hasActiveRobot]);
 
-      const pkgDocData = {
-        userId,
-        packageId,
-        packageName: pkgData.name,
-        daily: dailyEarn,
-        purchasedAt: purchasedAtStr,
-        expiresAt: expiresAt.toISOString(),
-        status: "active",
-        miningStatus: "active",
-        miningStartedAt: purchasedAtStr,
-        currentPotentialEarning: proRataEarn
-      };
+  useEffect(() => {
+    const fetchPackages = async () => {
+      const snap = await getDocs(collection(db, "packages"));
+      setPackages(snap.docs.map(d => d.data()));
+    };
+    fetchPackages();
+  }, []);
 
-      // Add to global collection (for backward compatibility)
-      transaction.set(database.collection("user_packages").doc(userPkgId), pkgDocData);
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      console.error(err);
+      setError("Login failed.");
+    }
+  };
 
-      // Add to sub-collection 'purchasedPackages' under user document
-      const purchasedPkgRef = userRef.collection("purchasedPackages").doc(userPkgId);
-      transaction.set(purchasedPkgRef, {
-        packageId,
-        packageName: pkgData.name,
-        daily: dailyEarn,
-        purchasedAt: pkgDocData.purchasedAt,
-        expiresAt: pkgDocData.expiresAt,
-        status: "active",
-        miningStatus: "active",
-        miningStartedAt: purchasedAtStr,
-        currentPotentialEarning: proRataEarn
-      });
-
-      const newPackageDoc = { id: userPkgId };
-      const newPackageData = pkgData;
-
-      // 2.5: Award instant referral commission inside the transaction
-      const buyerRef = dbCompat.collection("users").doc(userId);
-      const buyerDoc = await transaction.get(buyerRef);
-      const buyerData = buyerDoc.data();
-
-      if (buyerData && buyerData.uplineId) {
-        const commission = calculateInstantCommission(newPackageData.price);
-        if (commission > 0) {
-          const uplineRef = dbCompat.collection("users").doc(buyerData.uplineId);
-          transaction.update(uplineRef, {
-            referralCommissionBalance: admin.firestore.FieldValue.increment(commission)
-          });
-          const comLogRef = dbCompat.collection("commission_logs").doc();
-          transaction.set(comLogRef, {
-            fromUser: userId,
-            toUser: buyerData.uplineId,
-            packageId: newPackageDoc.id,
-            dateBD: getBDDate(),
-            type: 'instant_10',
-            baseAmount: newPackageData.price,
-            amount: commission,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-        }
-      }
-
-      // 3. Record Transaction
-      const txId = `purchase_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        amount: -pkgData.price,
-        type: "purchase",
-        timestamp: new Date().toISOString(),
-        description: `Purchased ${pkgData.name}`
-      });
-
-      // 4. Initial Mining State
-      const miningRef = database.collection("mining_states").doc(userId);
-      const miningSnap = await transaction.get(miningRef);
-      if (!miningSnap.exists) {
-        transaction.set(miningRef, {
-          userId,
-          isActive: false,
-          lastStartTime: 0
+  const startMining = async () => {
+    if (!user) return;
+    if (userPackages.length === 0) {
+      setError("আপনার কোনো সক্রিয় মাইনিং প্যাকেজ নেই।");
+      return;
+    }
+    setLoading(true);
+    try {
+      const batch = writeBatch(db);
+      userPackages.forEach((pkg: any) => {
+        const pkgRef = doc(db, 'user_packages', pkg.id);
+        batch.update(pkgRef, {
+          miningStartTime: serverTimestamp()
         });
-      }
-    });
-
-    res.json({ message: "Package purchased successfully" });
-  } catch (error: any) {
-    console.error("Purchase error:", error);
-    res.status(400).json({ error: error.message || "Purchase failed" });
-  }
-});
-
-// SECURE ROBOT PURCHASE
-expressApp.post("/api/buy-robot", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured" });
-
-  const { userId, robotId } = req.body;
-  if (!userId || !robotId) return res.status(400).json({ error: "Missing parameters" });
-
-  const robots = [
-    { id: 'robot_7d', name: 'Smart Bot (7 Days)', price: 150, duration: 7 },
-    { id: 'robot_15d', name: 'Pro Bot (15 Days)', price: 300, duration: 15 },
-    { id: 'robot_30d', name: 'Ultra Bot (30 Days)', price: 500, duration: 30 }
-  ];
-
-  const r = robots.find(x => x.id === robotId);
-  if (!r) return res.status(400).json({ error: "Invalid robot ID" });
-
-  try {
-    await database.runTransaction(async (transaction) => {
-      // Task 2 check: Check for active robot
-      const existingRobotSnap = await transaction.get(
-        dbCompat.collection("user_robots")
-          .where("userId", "==", userId)
-          .where("status", "==", "active")
-          .where("endTime", ">", admin.firestore.Timestamp.now())
-          .limit(1)
-      );
-
-      if (!existingRobotSnap.empty) {
-        throw new Error("আপনার একটি রোবট সক্রিয় আছে। মেয়াদ শেষ হওয়ার আগে নতুন রোবট কিনতে পারবেন না।");
-      }
-
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists) throw new Error("User not found");
-      const userData = userSnap.data()!;
-
-      const currentBal = typeof userData.mainBalance === 'number' ? userData.mainBalance : (userData.balance || 0);
-      if (currentBal < r.price) {
-        throw new Error("Insufficient balance");
-      }
-
-      // Deduct Balance
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(-r.price),
-        balance: admin.firestore.FieldValue.increment(-r.price),
-        hasBoughtPackage: true
       });
-
-      // Create new robot doc
-      const botRef = database.collection("user_robots").doc();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + r.duration);
-
-      transaction.set(botRef, {
-        userId,
-        customerID: userData.uid || 'N/A',
-        robotId: r.id,
-        name: r.name,
-        status: 'active',
-        isActivated: true,
-        createdAt: new Date().toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        endTime: expiresAt
-      });
-
-      // Buyer Transaction history log
-      const txId = `purchase_robot_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        type: 'purchase',
-        amount: -r.price,
-        productType: 'robot',
-        productName: r.name,
-        createdAt: new Date().toISOString(),
-        status: 'completed'
-      });
-    });
-
-    res.json({ message: "Robot purchased successfully!" });
-  } catch (error: any) {
-    console.error("Robot purchase error:", error);
-    res.status(400).json({ error: error.message || "Robot purchase failed" });
-  }
-});
-
-// WALLET DEPOSIT (Manual/Admin Adjustment)
-expressApp.post("/api/wallet/deposit", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured" });
-  const { userId, amount, method } = req.body;
-  if (!userId || !amount || amount <= 0) return res.status(400).json({ error: "Invalid parameters" });
-
-  try {
-    await database.runTransaction(async (transaction) => {
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists) throw new Error("User not found");
-
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(amount),
-        balance: admin.firestore.FieldValue.increment(amount)
-      });
-
-      const txId = `dep_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        amount: amount,
-        type: "deposit",
-        timestamp: new Date().toISOString(),
-        description: `Deposit via ${method || 'Wallet'}`
-      });
-    });
-    res.json({ message: "Deposit processed successfully" });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// WALLET WITHDRAWAL
-expressApp.post("/api/wallet/withdraw", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured" });
-  const { userId, amount, method, account } = req.body;
-  if (!userId || !amount || amount <= 0) return res.status(400).json({ error: "Invalid parameters" });
-
-  try {
-    await database.runTransaction(async (transaction) => {
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists) throw new Error("User not found");
-      const userData = userSnap.data()!;
-
-      const currentBal = typeof userData.mainBalance === 'number' ? userData.mainBalance : (userData.balance || 0);
-      if (currentBal < amount) throw new Error("Insufficient balance");
-
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(-amount),
-        balance: admin.firestore.FieldValue.increment(-amount)
-      });
-
-      const txId = `wd_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        amount: -amount,
-        type: "withdrawal",
-        timestamp: new Date().toISOString(),
-        description: `Withdrawal to ${method} (${account})`
-      });
-    });
-    res.json({ message: "Withdrawal requested successfully" });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// DEPOSIT APPROVAL (Transactional with atomic user-document lock)
-expressApp.post("/api/deposit/approve", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured" });
-  const { depositId } = req.body;
-  if (!depositId) return res.status(400).json({ error: "Missing depositId parameter" });
-
-  try {
-    const result = await database.runTransaction(async (transaction) => {
-      const depRef = database.collection("deposits").doc(depositId);
-      const depSnap = await transaction.get(depRef);
-      if (!depSnap.exists) throw new Error("Deposit request not found");
-      const depData = depSnap.data()!;
-      if (depData.status !== "pending") throw new Error("Deposit request has already been processed");
-
-      const userId = depData.userId;
-      const amount = Number(depData.amount);
-      if (isNaN(amount) || amount <= 0) throw new Error("Invalid deposit amount on document");
-
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef); // Atomically locks user document
-      if (!userSnap.exists) throw new Error("User record not found");
-
-      // 1. Approve deposit
-      transaction.update(depRef, { 
-        status: "approved", 
-        approvedAt: new Date().toISOString() 
-      });
-
-      // 2. Increment user mainBalance and balance
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(amount),
-        balance: admin.firestore.FieldValue.increment(amount)
-      });
-
-      // 3. Log customer transaction history
-      const txId = `dep_app_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        amount: amount,
-        type: "deposit",
-        timestamp: new Date().toISOString(),
-        description: `Approved deposit of BDT ${amount.toFixed(2)}`
-      });
-
-      // 4. Create Notification
-      const notifId = `notif_dep_${Date.now()}_${userId}`;
-      transaction.set(database.collection("notifications").doc(notifId), {
-        userId,
-        title: "Deposit Approved",
-        message: `Your deposit of BDT ${amount.toFixed(2)} has been approved and credited.`,
-        type: "deposit",
-        timestamp: new Date().toISOString(),
-        read: false
-      });
-
-      return { userId, amount };
-    });
-
-    res.json({ message: `Deposit request approved successfully. Credited BDT ${result.amount.toFixed(2)} to user ${result.userId}.`, success: true });
-  } catch (error: any) {
-    console.error("Deposit approval transaction failed:", error);
-    res.status(400).json({ error: error.message || "Deposit approval failed" });
-  }
-});
-
-// Manual Mining Start
-expressApp.post("/api/mining/start", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured with Firebase" });
-  
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: "User ID required" });
-
-  try {
-    await database.collection("mining_states").doc(userId).set({
-      userId,
-      isActive: true,
-      lastStartTime: Date.now()
-    }, { merge: true });
-
-    res.json({ message: "Mining started successfully" });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to start mining" });
-  }
-});
-
-// Complete Finished Mining Jobs
-expressApp.post("/api/mining/complete-finished-jobs", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured with Firebase" });
-
-  const { userId, packageId } = req.body;
-  if (!userId || !packageId) {
-    return res.status(400).json({ error: "userId and packageId are required" });
-  }
-
-  try {
-    const result = await database.runTransaction(async (transaction) => {
-      const globalPkgRef = database.collection("user_packages").doc(packageId);
-      const subPkgRef = database.collection("users").doc(userId).collection("purchasedPackages").doc(packageId);
-      const userRef = database.collection("users").doc(userId);
-
-      const globalPkgSnap = await transaction.get(globalPkgRef);
-      const userSnap = await transaction.get(userRef);
-
-      if (!globalPkgSnap.exists) {
-        throw new Error("Mining package not found");
-      }
-      if (!userSnap.exists) {
-        throw new Error("User profile not found");
-      }
-
-      const pkgData = globalPkgSnap.data()!;
-      if (pkgData.miningStatus !== 'active') {
-        throw new Error("This mining job is not active");
-      }
-
-      const profit = Number((pkgData.currentPotentialEarning || pkgData.daily || 0).toFixed(6));
-      if (profit <= 0) {
-        throw new Error("No profit accumulated for this job");
-      }
-
-      // Increment user's main balance and decrement/clear mining profit
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(profit)
-      });
-
-      const todayIso = new Date().toISOString();
-      const cycleUpdate = {
-        miningStatus: 'inactive',
-        lastClaim: todayIso,
-        miningStartedAt: "",
-        currentPotentialEarning: 0
-      };
-
-      transaction.update(globalPkgRef, cycleUpdate);
-      transaction.update(subPkgRef, cycleUpdate);
-
-      // Create a transaction history entry
-      const txId = `mining_comp_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        amount: profit,
-        type: "mining_profit",
-        createdAt: todayIso,
-        timestamp: todayIso,
-        status: "completed",
-        description: `Mining profit for ${pkgData.packageName || 'Level Miner'} credited successfully`
-      });
-
-      return { profit };
-    });
-
-    res.json({ message: "Job completed and profit transferred successfully", profit: result.profit, success: true });
-  } catch (error: any) {
-    console.error("Job completion failed:", error);
-    res.status(400).json({ error: error.message || "Failed to complete job" });
-  }
-});
-
-expressApp.post("/api/admin/trigger-mining", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured with Firebase" });
-  await processDailyMining();
-  res.json({ message: "Mining distribution triggered manually" });
-});
-
-expressApp.post("/api/admin/setup", async (req, res) => {
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend not configured with Firebase" });
-  const packages = [
-    { id: "starter", name: "Starter Mine", price: 100, dailyProfit: 5, durationDays: 30 },
-    { id: "pro", name: "Pro Mine", price: 500, dailyProfit: 30, durationDays: 30 },
-    { id: "whale", name: "Whale Mine", price: 2000, dailyProfit: 150, durationDays: 30 }
-  ];
-
-  try {
-    const batch = database.batch();
-    for (const pkg of packages) {
-      batch.set(database.collection("packages").doc(pkg.id), pkg);
+      await batch.commit();
+      setSuccess("মাইনিং সফলভাবে শুরু হয়েছে!");
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError("মাইনিং শুরু করতে ব্যর্থ হয়েছে।");
+    } finally {
+      setLoading(false);
     }
-    await batch.commit();
-    res.json({ message: "System setup complete" });
-  } catch (error) {
-    res.status(500).json({ error: "Setup failed" });
+  };
+
+  const buyPackage = async (pkgId: string) => {
+    if (!user || !profile) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/package/purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, packageId: pkgId })
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setSuccess("Package purchased successfully!");
+        setError(null);
+      }
+    } catch (err) {
+      setError("Purchase failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyReferralLink = () => {
+    if (!profile) return;
+    const link = `${window.location.origin}?ref=${profile.uid}`;
+    navigator.clipboard.writeText(link);
+    setSuccess("রেফারেল লিংক কপি করা হয়েছে!");
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  const handleDeposit = async () => {
+    if (!user || !amount) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/wallet/deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, amount: parseFloat(amount), method })
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else {
+        setSuccess("ডিপোজিট সফল হয়েছে!");
+        setIsDepositModalOpen(false);
+        setAmount("");
+      }
+    } catch (err) {
+      setError("Deposit failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!user || !amount || !accountNumber) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/wallet/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userId: user.uid, 
+          amount: parseFloat(amount), 
+          method,
+          account: accountNumber
+        })
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else {
+        setSuccess("উত্তোলন সফল হয়েছে!");
+        setIsWithdrawModalOpen(false);
+        setAmount("");
+        setAccountNumber("");
+      }
+    } catch (err) {
+      setError("Withdrawal failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markNotificationsRead = async () => {
+    if (!user || notifications.length === 0) return;
+    // For simplicity, we just clear the list in UI or mark all read via Batch
+    // Real implementation would use server-side update
+    notifications.forEach(async (n) => {
+      if (!n.read) {
+        await updateDoc(doc(db, 'notifications', n.id), { read: true });
+      }
+    });
+  };
+
+  const deleteNotifications = async () => {
+    if (!user) return;
+    // Logic to delete notifications
+    setNotifications([]);
+  };
+
+  const toggleRobot = async () => {
+    if (!user || !profile) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        hasActiveRobot: !profile.hasActiveRobot
+      });
+    } catch (err) {
+      setError("Update failed.");
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0b]">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+      </div>
+    );
   }
-});
 
-// --- Claim Reward Routes Restricted to 1st of the Month (Dhaka Time) ---
+  // Filter transactions
+  const walletTransactions = transactions.filter(tx => ['deposit', 'withdrawal'].includes(tx.type));
+  const otherTransactions = transactions.filter(tx => !['deposit', 'withdrawal'].includes(tx.type));
+  const allTransactions = [...transactions].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-function checkFirstDayOfMonth(res: any): boolean {
-  const now = new Date();
-  const dhakaFormatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Dhaka',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
+  // Task 4.1 UI flag calculations and handleStartMining helper
+  const convertToDateValue = (val: any) => {
+    if (!val) return new Date();
+    if (typeof val.toDate === 'function') return val.toDate();
+    if (val.seconds) return new Date(val.seconds * 1000);
+    return new Date(val);
+  };
+
+  const noPackage = userPackages.length === 0;
+  const isManualRunning = !hasActiveRobot && userPackages.some(p => {
+    if (!p.miningStartTime) return false;
+    const mDate = convertToDateValue(p.miningStartTime);
+    return mDate.toDateString() === new Date().toDateString();
   });
-  const dateStr = dhakaFormatter.format(now); // Guaranteed YYYY-MM-DD
-  const day = parseInt(dateStr.split("-")[2], 10);
+  const showStartButton = !noPackage && !hasActiveRobot && !isManualRunning;
+  const isRunning = hasActiveRobot || isManualRunning;
+  const totalDaily = userPackages.reduce((sum, p) => sum + (typeof p.dailyProfit === 'number' ? p.dailyProfit : 0), 0);
+  const earliestEnd = userPackages.length > 0 ? Math.min(...userPackages.map(p => convertToDateValue(p.endTime).getTime())) : null;
 
-  if (day !== 1) {
-    res.status(403).json({
-      error: `📅 Calendar Warning: Claim requests are restricted! Today is day ${day} of the calendar month (Asia/Dhaka). Reward withdrawals and claim distributions can only be processed on exactly the 1st day of each month.`
-    });
-    return false;
-  }
-  return true;
-}
-
-expressApp.post("/api/jobs/claim", async (req, res) => {
-  if (!checkFirstDayOfMonth(res)) return;
-
-  const { userId, jobId } = req.body;
-  if (!userId || !jobId) return res.status(400).json({ error: "Missing parameters" });
-
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend database not connected" });
-
-  try {
-    const claimRes = await database.runTransaction(async (transaction) => {
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists) throw new Error("User not found");
-
-      const today = new Date();
-      const monthPrefix = `${today.getFullYear()}-${today.getMonth() + 1}`;
-      const logId = `job_claim_${userId}_${jobId}_${monthPrefix}`;
-      const logRef = database.collection("user_claims").doc(logId);
-      const logSnap = await transaction.get(logRef);
-      if (logSnap.exists) throw new Error("You have already claimed this job reward for this month.");
-
-      const reward = 10; // Default flat reward for tasks
-
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(reward),
-        balance: admin.firestore.FieldValue.increment(reward)
-      });
-
-      transaction.set(logRef, {
-        userId,
-        jobId,
-        claimedAt: new Date().toISOString(),
-        amount: reward
-      });
-
-      const txId = `claim_job_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        amount: reward,
-        type: "job_claim",
-        timestamp: new Date().toISOString(),
-        description: `Job Claim reward for ${jobId}`
-      });
-
-      return { reward };
-    });
-
-    res.json({ message: `Successfully claimed job reward of BDT ${claimRes.reward}`, amount: claimRes.reward });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-expressApp.post("/api/referral/claim", async (req, res) => {
-  if (!checkFirstDayOfMonth(res)) return;
-
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: "Missing parameters" });
-
-  const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Backend database not connected" });
-
-  try {
-    const claimRes = await database.runTransaction(async (transaction) => {
-      const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists) throw new Error("User not found");
-      const userData = userSnap.data()!;
-
-      const referralComm = userData.referralCommissionBalance || 0;
-      if (referralComm <= 0) throw new Error("No referral commissions available to claim.");
-
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(referralComm),
-        referralCommissionBalance: 0
-      });
-
-      const txId = `claim_ref_${Date.now()}_${userId}`;
-      transaction.set(database.collection("transactions").doc(txId), {
-        userId,
-        amount: referralComm,
-        type: "referral_claim",
-        timestamp: new Date().toISOString(),
-        description: `Claimed BDT ${referralComm.toFixed(2)} in referral mining commission`
-      });
-
-      return { claimed: referralComm };
-    });
-
-    res.json({ message: `Successfully claimed referral bonus of BDT ${claimRes.claimed.toFixed(2)}`, amount: claimRes.claimed });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Token Verification Middleware using Firebase Admin or secure Identity Toolkit fallback
-const verifyToken = async (req: any, res: any, next: any) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "No token provided" });
-  }
-  const token = authHeader.split(" ")[1];
-  try {
-    const config = getFirebaseConfig() || { apiKey: "AIzaSyD4K1as0o0WUb51nL6WGK5KAknG5oOpBwI" };
-    const apiKey = config.apiKey;
-    
-    const lookupRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken: token })
-    });
-    
-    if (!lookupRes.ok) {
-      const errorData = await lookupRes.json();
-      return res.status(401).json({ error: "Invalid token", details: errorData });
-    }
-    
-    const data = await lookupRes.json();
-    if (!data.users || data.users.length === 0) {
-      return res.status(401).json({ error: "User not found" });
-    }
-    
-    req.user = { uid: data.users[0].localId };
-    next();
-  } catch (err: any) {
-    console.error("verifyToken error:", err);
-    return res.status(401).json({ error: "Authentication failed", details: err.message });
-  }
-};
-
-expressApp.post("/api/claim-referral", verifyToken, async (req: any, res: any) => {
-  const userId = req.user.uid;
-  try {
-    // Check if today is 1st day in BD Time UTC+6
-    const bdTime = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Dhaka"}));
-    const isFirstDay = bdTime.getDate() === 1;
-    
-    if (!isFirstDay) {
-      return res.status(400).json({ 
-        error: "রেফারেল ব্যালেন্স শুধুমাত্র প্রত্যেক মাসের ১ তারিখে ক্লেম করা যাবে।" 
-      });
-    }
-
-    await dbCompat.runTransaction(async (transaction) => {
-      const userRef = dbCompat.collection("users").doc(userId);
-      const userDoc = await transaction.get(userRef);
-      if (!userDoc.exists) throw new Error("ব্যবহারকারী পাওয়া যায়নি।");
-      const balance = userDoc.data().referralCommissionBalance || 0;
-      
-      if (balance <= 0) {
-        throw new Error("ক্লেম করার মতো রেফারেল ব্যালেন্স নেই।");
-      }
-
-      transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(balance),
-        referralCommissionBalance: 0
-      });
-
-      const logRef = dbCompat.collection("transaction_logs").doc();
-      transaction.set(logRef, {
-        userId,
-        type: 'referral_claim',
-        amount: balance,
-        dateBD: getBDDate(),
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-    });
-
-    res.json({ success: true, message: "রেফারেল ব্যালেন্স সফলভাবে ক্লেম করা হয়েছে।" });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// --- Zoho SMTP Email Handler with VIP Dark-Gold Styling ---
-
-let transporter: any = null;
-
-function getMailTransporter() {
-  if (transporter) return transporter;
-  const user = process.env.SMTP_USER || "cryptoforge@zohomail.com";
-  const pass = process.env.SMTP_PASS || "g0qtbWru880v";
-  transporter = nodemailer.createTransport({
-    host: "smtp.zoho.com",
-    port: 465,
-    secure: true, // SSL/TLS
-    auth: {
-      user: user,
-      pass: pass
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-  return transporter;
-}
-
-// 1. SMTP Registration Verification / Verification OTP endpoint
-expressApp.post("/api/email/send-verification", async (req, res) => {
-  const { email, name } = req.body;
-  if (!email) return res.status(400).json({ error: "Email is required" });
-
-  try {
-    const database = ensureDb();
-    if (!database) {
-      throw new Error("Firestore Database could not be initialized. Please check your Firebase configuration.");
-    }
-    const mailer = getMailTransporter();
-    const fromUser = "cryptoforge@zohomail.com";
-    
-    const senderName = "CryptoForge VIP Network";
-    const subject = "🔥 Complete Your Registration - Verification Required";
-    
-    // Server-side secure OTP code generation
-    const displayOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Save to Firestore user document - query robustly
-    let userSnapshot = await database.collection('users').where('email', '==', email).get();
-    if (userSnapshot.empty) {
-      userSnapshot = await database.collection('users').where('email', '==', email.toLowerCase().trim()).get();
-    }
-    if (userSnapshot.empty) {
-      userSnapshot = await database.collection('users').where('email', '==', email.trim()).get();
-    }
-    
-    if (!userSnapshot.empty) {
-      await userSnapshot.docs[0].ref.update({
-        verificationOtp: displayOtp
-      });
-      console.log(`Stored verification OTP code for email ${email}`);
-    } else {
-      console.warn(`Could not find Firestore user document for email ${email} during send-verification`);
-    }
-
-    const plainText = `Welcome to CryptoForge, ${name || "Miner"}!\n\nYour Verification Code is: ${displayOtp}\n\nPlease enter this on the verification screen to activate your account.`;
-    
-    const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify Your Email</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0B0F19; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F19; padding: 40px 10px;">
-    <tr>
-      <td align="center" valign="top">
-        <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #151D30; border: 2px solid #D4AF37; border-radius: 16px; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
-          <!-- Gold Highlight Banner -->
-          <tr>
-            <td height="4" style="background: linear-gradient(90deg, #AA7C11 0%, #FFD700 50%, #AA7C11 100%);"></td>
-          </tr>
-          <tr>
-            <td align="left" style="padding: 40px 35px 30px 35px;">
-              <!-- Header Logo/Branding -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 25px;">
-                <tr>
-                  <td>
-                    <h1 style="color: #FFD700; font-size: 26px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 2px;">CryptoForge</h1>
-                    <p style="color: #AA7C11; font-size: 11px; font-weight: bold; margin: 4px 0 0 0; text-transform: uppercase; letter-spacing: 3px;">The Ultimate Mining Forge</p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- Separator -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
-                <tr>
-                  <td height="1" style="background-color: rgba(212, 175, 55, 0.25);"></td>
-                </tr>
-              </table>
-
-              <!-- Greeting & Core Info -->
-              <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 12px;">Greetings, ${name || "Miner"}!</h2>
-              <p style="color: #B2C0D4; font-size: 14px; line-height: 1.6; margin-top: 0; margin-bottom: 25px;">
-                Your registration with the VIP CryptoForge network is almost complete. To activate your secure mining profile and begin launching hardware nodes, please confirm your authenticity by typing the 6-digit OTP code below.
-              </p>
-
-              <!-- OTP Premium Box -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 25px; margin-bottom: 25px;">
-                <tr>
-                  <td align="center">
-                    <table border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F19; border: 2px dashed #D4AF37; border-radius: 12px; min-width: 260px;">
-                      <tr>
-                        <td align="center" style="padding: 18px 24px;">
-                          <span style="color: #AA7C11; font-size: 10px; font-weight: bold; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 2px;">OTP/Verification Code</span>
-                          <span style="color: #FFD700; font-size: 34px; font-weight: 800; letter-spacing: 6px; font-family: 'Courier New', Courier, monospace; line-height: 1;">${displayOtp}</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Optional Direct Connection -->
-              <p style="color: #B2C0D4; font-size: 13px; line-height: 1.5; margin-bottom: 30px; text-align: center;">
-                Please copy and paste the security code above into the 6-Digit Code field on the registration verification screen.
-              </p>
-
-              <!-- Secondary Separator -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 25px;">
-                <tr>
-                  <td height="1" style="background-color: rgba(212, 175, 55, 0.15);"></td>
-                </tr>
-              </table>
-
-              <!-- Footer disclaimer -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="center" style="color: #6C7D93; font-size: 11px; line-height: 1.5;">
-                    If you did not request this account registration, please safely disregard this transmission.
-                  </td>
-                </tr>
-                <tr>
-                  <td height="15"></td>
-                </tr>
-                <tr>
-                  <td align="center" style="color: #AA7C11; font-size: 10px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">
-                    &copy; 2026 CryptoForge Network. All rights reserved.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `;
-
-    let emailSent = true;
-    let smtpErrorMsg = "";
+  const handleStartMining = async () => {
     try {
-      await mailer.sendMail({
-        from: `"${senderName}" <${fromUser}>`,
-        to: email,
-        subject: subject,
-        text: plainText,
-        html: htmlBody
+      const batch = writeBatch(db);
+      userPackages.forEach(pkg => {
+        batch.update(doc(db, "user_packages", pkg.id), { miningStartTime: serverTimestamp() });
       });
-    } catch (mailErr: any) {
-      emailSent = false;
-      smtpErrorMsg = mailErr.message;
-      console.error("Error sending verification email via SMTP:", mailErr);
+      await batch.commit();
+      setSuccess("মাইনিং সফলভাবে শুরু হয়েছে!");
+    } catch (err: any) {
+      setError("মাইনিং শুরু করতে ব্যর্থ হয়েছে: " + err.message);
     }
+  };
 
-    if (emailSent) {
-      res.json({ success: true, message: "Verification email sent successfully" });
-    } else {
-      res.json({ 
-        success: true, 
-        smtpError: true, 
-        message: "We encountered an issue dispatching the email. Your verification code is provided here.", 
-        debugOtp: displayOtp,
-        smtpErrorMsg: smtpErrorMsg
-      });
-    }
-  } catch (error: any) {
-    console.error("Overall error in verification endpoint:", error);
-    res.status(500).json({ error: "Failed to set up verification: " + error.message });
-  }
-});
-
-// 2. SMTP Password Reset Link / Code
-expressApp.post("/api/email/send-reset", async (req, res) => {
-  const { email, name } = req.body;
-  if (!email) return res.status(400).json({ error: "Email is required" });
-
-  try {
-    const database = ensureDb();
-    if (!database) {
-      throw new Error("Firestore Database could not be initialized. Please check your Firebase configuration.");
-    }
-    const mailer = getMailTransporter();
-    const fromUser = "cryptoforge@zohomail.com";
-    
-    const senderName = "CryptoForge Security";
-    const subject = "🔒 Secure Password Reset Code - CryptoForge VIP";
-    
-    // Server-side secure OTP code generation for password reset
-    const displayCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Save to Firestore user document - query robustly
-    let userSnapshot = await database.collection('users').where('email', '==', email).get();
-    if (userSnapshot.empty) {
-      userSnapshot = await database.collection('users').where('email', '==', email.toLowerCase().trim()).get();
-    }
-    if (userSnapshot.empty) {
-      userSnapshot = await database.collection('users').where('email', '==', email.trim()).get();
-    }
-    
-    if (!userSnapshot.empty) {
-      await userSnapshot.docs[0].ref.update({
-        resetOtp: displayCode
-      });
-      console.log(`Stored password reset OTP code for email ${email}`);
-    } else {
-      console.warn(`Could not find Firestore user document for email ${email} during send-reset`);
-    }
-
-    const plainText = `Greetings ${name || "Miner"}!\n\nWe received a request to reset your Password credentials.\n\nYour Recovery Code is: ${displayCode}\n\nPlease enter this on the recovery screen to authorize password reset.`;
-    
-    const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Your Password</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0B0F19; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F19; padding: 40px 10px;">
-    <tr>
-      <td align="center" valign="top">
-        <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #151D30; border: 2px solid #D4AF37; border-radius: 16px; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
-          <!-- Gold Highlight Banner -->
-          <tr>
-            <td height="4" style="background: linear-gradient(90deg, #AA7C11 0%, #FFD700 50%, #AA7C11 100%);"></td>
-          </tr>
-          <tr>
-            <td align="left" style="padding: 40px 35px 30px 35px;">
-              <!-- Header Logo/Branding -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 25px;">
-                <tr>
-                  <td>
-                    <h1 style="color: #FFD700; font-size: 26px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 2px;">CryptoForge</h1>
-                    <p style="color: #AA7C11; font-size: 11px; font-weight: bold; margin: 4px 0 0 0; text-transform: uppercase; letter-spacing: 3px;">The Ultimate Mining Forge</p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- Separator -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
-                <tr>
-                  <td height="1" style="background-color: rgba(212, 175, 55, 0.25);"></td>
-                </tr>
-              </table>
-
-              <!-- Greeting & Core Info -->
-              <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 12px;">Security Transmission</h2>
-              <p style="color: #B2C0D4; font-size: 14px; line-height: 1.6; margin-top: 0; margin-bottom: 25px;">
-                We received a request to change your CryptoForge credentials. If you initiated this request, please use the security code below to update your wallet password immediately on the recovery screen.
-              </p>
-
-              <!-- OTP Premium Box -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 25px; margin-bottom: 25px;">
-                <tr>
-                  <td align="center">
-                    <table border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F19; border: 2px dashed #D4AF37; border-radius: 12px; min-width: 260px;">
-                      <tr>
-                        <td align="center" style="padding: 18px 24px;">
-                          <span style="color: #AA7C11; font-size: 10px; font-weight: bold; display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 2px;">Account Reset Token</span>
-                          <span style="color: #FFD700; font-size: 34px; font-weight: 800; letter-spacing: 6px; font-family: 'Courier New', Courier, monospace; line-height: 1;">${displayCode}</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Alternative URL fallback -->
-              <p style="color: #B2C0D4; font-size: 13px; line-height: 1.5; margin-bottom: 25px; text-align: center;">
-                Please input this security reset token on the website recovery screen to verify your identity.
-              </p>
-
-              <!-- Secondary Separator -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 25px;">
-                <tr>
-                  <td height="1" style="background-color: rgba(212, 175, 55, 0.15);"></td>
-                </tr>
-              </table>
-
-              <!-- Footer disclaimer -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="center" style="color: #6C7D93; font-size: 11px; line-height: 1.5;">
-                    If you did not issue this password reset security request, you can safely ignore this email. No password changes will be authorized.
-                  </td>
-                </tr>
-                <tr>
-                  <td height="15"></td>
-                </tr>
-                <tr>
-                  <td align="center" style="color: #AA7C11; font-size: 10px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">
-                    &copy; 2026 CryptoForge Network. All rights reserved.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `;
-
-    let emailSent = true;
-    let smtpErrorMsg = "";
+  const handleClaimReferral = async () => {
     try {
-      await mailer.sendMail({
-        from: `"${senderName}" <${fromUser}>`,
-        to: email,
-        subject: subject,
-        text: plainText,
-        html: htmlBody
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/claim-referral', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-    } catch (mailErr: any) {
-      emailSent = false;
-      smtpErrorMsg = mailErr.message;
-      console.error("Error sending reset email via SMTP:", mailErr);
-    }
-
-    if (emailSent) {
-      res.json({ success: true, message: "Password reset email sent successfully" });
-    } else {
-      res.json({ 
-        success: true, 
-        smtpError: true, 
-        message: "We encountered an issue dispatching the email. Your reset security code is provided here.", 
-        debugCode: displayCode,
-        smtpErrorMsg: smtpErrorMsg
-      });
-    }
-  } catch (error: any) {
-    console.error("Overall error in reset endpoint:", error);
-    res.status(500).json({ error: "Failed to set up password reset: " + error.message });
-  }
-});
-
-// 3. Verify OTP Code and Generate Auto-Login JWT Token
-expressApp.post("/api/auth/verify-code", async (req, res) => {
-  const { email, code } = req.body;
-  if (!email || !code) {
-    return res.status(400).json({ error: "Email and verification code are required" });
-  }
-
-  try {
-    const database = ensureDb();
-    if (!database) {
-      return res.status(503).json({ error: "Backend database not initialized" });
-    }
-    
-    // Query users collection by email
-    const usersRef = database.collection("users");
-    const snapshot = await usersRef.where("email", "==", email.toLowerCase().trim()).get();
-    if (snapshot.empty) {
-      return res.status(404).json({ error: "User account with this email not found." });
-    }
-
-    const userDoc = snapshot.docs[0];
-    const userData = userDoc.data();
-
-    if (!userData.verificationOtp || userData.verificationOtp !== code.trim()) {
-      return res.status(400).json({ error: "Invalid verification code. Please check and try again." });
-    }
-
-    // Retrieve Firebase Auth User by email
-    let firebaseUser;
-    try {
-      firebaseUser = await admin.auth().getUserByEmail(email.toLowerCase().trim());
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert(data.message);
     } catch (e: any) {
-      return res.status(404).json({ error: "auth user not found for this email: " + e.message });
+      alert(e.message);
     }
+  };
 
-    // Set emailVerified is true in Firebase Auth
-    await admin.auth().updateUser(firebaseUser.uid, { emailVerified: true });
+  return (
+    <div className="min-h-screen bg-[#0a0a0b] text-gray-100 font-sans selection:bg-cyan-500/30 pb-24">
+      <AnimatePresence mode="wait">
+        {!user ? (
+          <motion.div
+            key="login"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="min-h-screen flex flex-col items-center justify-center p-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-cyan-500/10 via-transparent to-transparent"
+          >
+            <div className="relative mb-8">
+              <div className="absolute -inset-4 bg-cyan-500/20 blur-2xl rounded-full" />
+              <Cpu className="w-16 h-16 text-cyan-400 relative" />
+            </div>
+            <h1 className="text-4xl font-black tracking-tighter mb-2 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+              PROFIT PULSE
+            </h1>
+            <p className="text-gray-500 mb-10 text-center max-w-xs">
+              AI চালিত মাইনিং এবং আর্নিং প্ল্যাটফর্ম। প্রতি সেকেন্ডে প্রফিট জেনারেট করুন।
+            </p>
+            <button
+              onClick={handleLogin}
+              className="flex items-center gap-4 bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-white/10 px-8 py-4 rounded-2xl transition-all active:scale-95 group"
+            >
+              <LogIn className="w-5 h-5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+              <span className="font-semibold text-lg">গুগল দিয়ে শুরু করুন</span>
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto px-4 py-8"
+          >
+            {/* Notifications and Error Toast */}
+            <div className="fixed top-4 left-0 right-0 z-50 pointer-events-none flex flex-col items-center gap-2">
+              <AnimatePresence>
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="pointer-events-auto p-4 bg-red-500 text-white rounded-2xl shadow-xl flex items-center gap-3 text-sm font-bold min-w-[300px]"
+                  >
+                    <Zap className="w-5 h-5" />
+                    {error}
+                    <button onClick={() => setError(null)} className="ml-auto px-2">×</button>
+                  </motion.div>
+                )}
+                {success && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="pointer-events-auto p-4 bg-green-500 text-white rounded-2xl shadow-xl flex items-center gap-3 text-sm font-bold min-w-[300px]"
+                  >
+                    <Zap className="w-5 h-5" />
+                    {success}
+                    <button onClick={() => setSuccess(null)} className="ml-auto px-2">×</button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-    // Update user document on Firestore
-    await userDoc.ref.update({
-      emailVerified: true,
-      status: "active",
-      verificationOtp: admin.firestore.FieldValue.delete()
-    });
+            {/* TAB VIEWS */}
+            {activeTab === 'home' && (
+              <div>
+                <header className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <img src={user.photoURL || ""} alt="" className="w-12 h-12 rounded-2xl border border-white/10" />
+                    <div>
+                      <h2 className="text-lg font-bold">{user.displayName}</h2>
+                      <p className="text-xs text-gray-500">স্বাগতম, আপনার ড্যাশবোর্ডে</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowNotifications(!showNotifications)}
+                        className="p-3 bg-white/5 border border-white/10 rounded-xl relative hover:bg-white/10 transition-all"
+                      >
+                        <Bell className="w-5 h-5 text-gray-400" />
+                        {notifications.filter(n => !n.read).length > 0 && (
+                          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#141416]" />
+                        )}
+                      </button>
 
-    // Create Firebase Custom Token for immediate auto-login
-    const customToken = await admin.auth().createCustomToken(firebaseUser.uid);
+                      <AnimatePresence>
+                        {showNotifications && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              className="absolute right-0 mt-2 w-80 bg-[#1c1c1f] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                            >
+                              <div className="p-4 border-b border-white/5 flex justify-between items-center">
+                                <h4 className="font-bold">নোটিফিকেশন</h4>
+                                <button 
+                                  onClick={deleteNotifications}
+                                  className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest"
+                                >
+                                  সব মুছে দিন
+                                </button>
+                              </div>
+                              <div className="max-h-96 overflow-y-auto">
+                                {notifications.length === 0 ? (
+                                  <div className="p-8 text-center text-gray-500 text-xs">কোনো নোটিফিকেশন নেই</div>
+                                ) : (
+                                  notifications.map(n => (
+                                    <div 
+                                      key={n.id} 
+                                      onClick={() => updateDoc(doc(db, 'notifications', n.id), { read: true })}
+                                      className={`p-4 border-b border-white/5 cursor-pointer transition-colors ${n.read ? 'opacity-60' : 'bg-cyan-500/5'}`}
+                                    >
+                                      <p className="text-sm font-bold mb-1">{n.title}</p>
+                                      <p className="text-xs text-gray-400 leading-relaxed">{n.message}</p>
+                                      <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase">{new Date(n.timestamp).toLocaleString()}</p>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    <button onClick={() => setActiveTab('profile')} className="p-3 bg-white/5 border border-white/10 rounded-xl">
+                      <Settings className="w-5 h-5 text-gray-400" />
+                    </button>
+                  </div>
+                </header>
 
-    console.log(`Successfully verified email for ${email} & generated auto-login custom token`);
+                <div className="bg-[#141416] border border-white/5 p-8 rounded-3xl mb-6 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Wallet className="w-32 h-32" />
+                  </div>
+                  <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">মোট ব্যালেন্স</p>
+                  <div className="flex items-end gap-2 mb-6">
+                    <span className="text-5xl font-black text-white">৳{(profile?.mainBalance || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex gap-4">
+                    <button onClick={() => setIsDepositModalOpen(true)} className="flex-1 bg-cyan-500 text-black font-black py-4 rounded-2xl hover:bg-cyan-400 transition-all active:scale-95">ডিপোজিট</button>
+                    <button onClick={() => setIsWithdrawModalOpen(true)} className="flex-1 bg-white/5 border border-white/10 text-white font-black py-4 rounded-2xl hover:bg-white/10 transition-all active:scale-95">উত্তোলন</button>
+                  </div>
+                </div>
 
-    res.json({
-      success: true,
-      message: "Email verified successfully!",
-      token: customToken
-    });
-  } catch (err: any) {
-    console.error("Error verifying code:", err);
-    res.status(500).json({ error: "Verification server error: " + err.message });
-  }
-});
+                {noPackage ? (
+                  <div className="space-y-4 mb-6" id="inactive-user-banners">
+                    {/* Banner 1: অ্যাকাউন্ট অ্যাক্টিভ করুন */}
+                    <div className="banner bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/20 p-6 rounded-3xl relative overflow-hidden flex items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Zap className="w-5 h-5 text-amber-400 animate-pulse" />
+                          <h4 className="font-extrabold text-amber-400 text-sm tracking-wide uppercase">অ্যাকাউন্ট অ্যাক্টিভ করুন</h4>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed max-w-sm">
+                          আপনার ক্লাউড মাইনিং ইনফ্রাস্ট্রাকচার আনলক করতে ব্যালেন্স ডিপোজিট করুন এবং যেকোনো মাইনিং রিগ সচল করুন।
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setIsDepositModalOpen(true)}
+                        className="bg-amber-400 text-black text-xs font-black px-5 py-3 rounded-2xl hover:bg-amber-300 transition-all active:scale-95 whitespace-nowrap"
+                      >
+                        ডিপোজিট করুন
+                      </button>
+                    </div>
 
-// 4. Verify OTP Code for Password Reset
-expressApp.post("/api/auth/verify-reset-otp", async (req, res) => {
-  const { email, code } = req.body;
-  if (!email || !code) {
-    return res.status(400).json({ error: "Email and code are required" });
-  }
-  try {
-    const database = ensureDb();
-    if (!database) {
-      return res.status(503).json({ error: "Database not initialized" });
-    }
-    
-    const snapshot = await database.collection("users").where("email", "==", email.toLowerCase().trim()).get();
-    if (snapshot.empty) {
-      return res.status(404).json({ error: "User profile with this email not found." });
-    }
-    
-    const userData = snapshot.docs[0].data();
-    if (!userData.resetOtp || userData.resetOtp !== code.trim()) {
-      return res.status(400).json({ error: "Invalid reset code. Please check and try again." });
-    }
-    
-    res.json({ success: true, message: "Verification code match confirmed." });
-  } catch (err: any) {
-    console.error("Error verifying reset OTP:", err);
-    res.status(500).json({ error: "Verification server error: " + err.message });
-  }
-});
+                    {/* Banner 2: প্যাকেজ কিনুন */}
+                    <div className="banner bg-gradient-to-r from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 p-6 rounded-3xl relative overflow-hidden flex items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Cpu className="w-5 h-5 text-cyan-400 animate-pulse" />
+                          <h4 className="font-extrabold text-cyan-400 text-sm tracking-wide uppercase">প্যাকেজ কিনুন</h4>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed max-w-sm">
+                          ১২টি ডিসেন্ট্রালাইজড স্টেবল আল্ট্রা-রিগসের যেকোনো একটি প্যাকেজ বেছে নিয়ে আজই অটোমেটেড মাইনিং শুরু করুন।
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setActiveTab('mining')}
+                        className="bg-cyan-500 text-black text-xs font-black px-5 py-3 rounded-2xl hover:bg-cyan-400 transition-all active:scale-95 whitespace-nowrap"
+                      >
+                        প্যাকেজ কিনুন
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mining-card relative bg-[#141416]/95 border border-white/5 p-8 rounded-3xl mb-6 overflow-visible group" id="unified-premium-mining-card">
+                    {hasActiveRobot && (
+                      <>
+                        <IronMan />
+                        <Lightning />
+                      </>
+                    )}
 
-// 5. Complete Password Reset using OTP and New Credentials
-expressApp.post("/api/auth/reset-password", async (req, res) => {
-  const { email, code, newPassword } = req.body;
-  if (!email || !code || !newPassword) {
-    return res.status(400).json({ error: "Email, code and new password are required" });
-  }
-  try {
-    const database = ensureDb();
-    if (!database) {
-      return res.status(503).json({ error: "Database not initialized" });
-    }
-    
-    const snapshot = await database.collection("users").where("email", "==", email.toLowerCase().trim()).get();
-    if (snapshot.empty) {
-      return res.status(404).json({ error: "User with this email not found." });
-    }
-    
-    const userDoc = snapshot.docs[0];
-    const userData = userDoc.data();
-    if (!userData.resetOtp || userData.resetOtp !== code.trim()) {
-      return res.status(400).json({ error: "Invalid or expired reset token." });
-    }
-    
-    // Perform standard password reset on Authentication backend
-    await admin.auth().updateUser(snapshot.docs[0].id, { password: newPassword });
-    
-    // Clear OTP fields in DB
-    await userDoc.ref.update({
-      resetOtp: admin.firestore.FieldValue.delete()
-    });
-    
-    res.json({ success: true, message: "Your password has been successfully reset!" });
-  } catch (err: any) {
-    console.error("Error resetting password:", err);
-    res.status(500).json({ error: "Internal reset server error: " + err.message });
-  }
-});
+                    <div className="header flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-2xl border ${hasActiveRobot ? 'bg-cyan-500/20 border-cyan-500/40' : 'bg-white/5 border-white/10'}`}>
+                          <Cpu className={`w-6 h-6 ${hasActiveRobot ? 'text-cyan-400 animate-spin-slow' : 'text-gray-400'}`} />
+                        </div>
+                        <div>
+                          <span className="font-black text-white text-md block leading-tight">LIVE MININGSTACK</span>
+                          <span className="text-xs text-gray-500 block mt-1">
+                            {userPackages.length} Active Cloud Rigs
+                          </span>
+                        </div>
+                      </div>
 
-// 6. Secure In-App Account Settings Profile Password Refactor
-expressApp.post("/api/auth/update-inapp-password", async (req, res) => {
-  const { email, currentPassword, newPassword } = req.body;
-  if (!email || !currentPassword || !newPassword) {
-    return res.status(400).json({ error: "Email, current password, and new password are required" });
-  }
-  try {
-    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-    if (!fs.existsSync(configPath)) {
-      return res.status(503).json({ error: "Config file not found." });
-    }
-    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
-    const apiKey = firebaseConfig.apiKey;
-    
-    // Perform secure REST call to verify current password credentials on Google Auth Service
-    const verifyRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password: currentPassword, returnSecureToken: true })
-    });
-    
-    if (!verifyRes.ok) {
-      return res.status(401).json({ error: "Incorrect current password. Verification failed." });
-    }
-    
-    const database = ensureDb();
-    if (!database) {
-      return res.status(503).json({ error: "Database not initialized" });
-    }
-    
-    const snapshot = await database.collection("users").where("email", "==", email.toLowerCase().trim()).get();
-    if (snapshot.empty) {
-      return res.status(404).json({ error: "User record not found." });
-    }
-    
-    // Commit the operational change to Auth SDK
-    await admin.auth().updateUser(snapshot.docs[0].id, { password: newPassword });
-    
-    res.json({ success: true, message: "Password updated successfully!" });
-  } catch (err: any) {
-    console.error("Error setting profile password in-app:", err);
-    res.status(500).json({ error: "Failed to commit credential update: " + err.message });
-  }
-});
+                      {isRunning && (
+                        <span className="badge flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest text-emerald-400 uppercase">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                          RUNNING
+                        </span>
+                      )}
+                    </div>
 
-// Vite Middleware
-async function startServer() {
-  try {
-    await authenticateBackendSystem();
-  } catch (err) {
-    console.error("⚠️ Failed to authenticate backend system account on startup:", err);
-  }
+                    <div className="total-daily mb-4 text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <span>Total Daily:</span>
+                      <span className="text-white text-sm font-black font-mono">৳{totalDaily.toFixed(2)}</span>
+                    </div>
 
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    expressApp.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    expressApp.use(express.static(distPath));
-    
-    expressApp.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-  }
+                    <div className="mb-6 bg-white/5 p-5 rounded-2xl border border-white/5">
+                      <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1.5">লাইভ মাইনিং রেভিনিউ (আজ)</p>
+                      <div className="live-counter text-3xl font-black text-cyan-400 font-mono tracking-tight">
+                        ৳{liveIncome.toFixed(4)}
+                      </div>
+                    </div>
 
-  expressApp.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+                    <div className="nodes text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-6">
+                      NODES LIFESPAN: <span className="text-amber-400 font-mono text-xs font-black">{earliestEnd ? new Date(earliestEnd).toLocaleDateString() : '-'}</span>
+                    </div>
+
+                    {showStartButton && (
+                      <button 
+                        onClick={handleStartMining}
+                        className="w-full bg-cyan-500 text-black py-4 rounded-2xl font-black hover:bg-cyan-400 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                      >
+                        <CirclePlay className="w-5 h-5 text-black" /> START MINING
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  <button 
+                    onClick={copyReferralLink}
+                    className="bg-[#141416] p-6 rounded-3xl border border-white/5 text-left group hover:border-cyan-500/30 transition-all"
+                  >
+                    <p className="text-gray-500 text-[10px] font-bold uppercase mb-2">রেফার আর্নিং</p>
+                    <p className="text-2xl font-black text-green-400">৳{(profile?.referralEarned || 0).toFixed(2)}</p>
+                    <p className="text-[9px] text-gray-600 mt-2 font-bold uppercase group-hover:text-cyan-400">লিংক কপি করুন</p>
+                  </button>
+                  <div className="bg-[#141416] p-6 rounded-3xl border border-white/5">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase mb-2">এক্টিভ প্যাকেজ</p>
+                    <p className="text-2xl font-black text-cyan-400">{activePackage ? activePackage.name : 'নাই'}</p>
+                  </div>
+                </div>
+
+                <section className="mb-20">
+                  <h3 className="text-xl font-black mb-4">ডেইলি টাস্ক</h3>
+                  <div className="space-y-3">
+                    <div className="bg-[#141416] p-4 rounded-2xl flex items-center gap-4 border border-white/5">
+                      <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center">
+                        <Zap className="text-cyan-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-sm">টেলিগ্রাম গ্রুপে জয়েন করুন</p>
+                        <p className="text-xs text-green-400">পুরস্কার: ৳৫.০০</p>
+                      </div>
+                      <button className="bg-white/5 px-4 py-2 rounded-lg text-xs font-bold">সম্পন্ন করুন</button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {activeTab === 'mining' && (
+              <div>
+                <h2 className="text-3xl font-black mb-8">মাইনিং সেন্টার</h2>
+                
+                <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-8 rounded-3xl mb-8 relative overflow-hidden">
+                   <div className="relative z-10">
+                      <p className="text-white/60 text-xs font-bold uppercase tracking-widest mb-2">লাইভ প্রফিট জেনারেটর</p>
+                      <div className="text-5xl font-black mb-8">৳{liveProfit.toFixed(6)}</div>
+                      
+                      <div className="flex gap-4">
+                        {!miningState?.isActive ? (
+                          <button onClick={startMining} className="bg-white text-black px-8 py-4 rounded-2xl font-black flex items-center gap-2">
+                            <CirclePlay className="w-6 h-6" /> মাইনিং শুরু করুন
+                          </button>
+                        ) : (
+                          <div className="bg-white/20 border border-white/30 backdrop-blur-md px-8 py-4 rounded-2xl font-black flex items-center gap-2">
+                            <RotateCcw className="w-6 h-6 animate-spin-slow" /> মাইনিং চলছে
+                          </div>
+                        )}
+                      </div>
+                   </div>
+                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+                </div>
+
+                <h3 className="text-xl font-black mb-4 flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-cyan-500" /> শপ
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {packages.map((pkg) => (
+                    <div key={pkg.id} className={`bg-[#141416] p-6 rounded-3xl border ${activePackage?.id === pkg.id ? 'border-cyan-500' : 'border-white/5'}`}>
+                      <h4 className="font-bold text-lg mb-1">{pkg.name}</h4>
+                      <p className="text-2xl font-black text-cyan-400 mb-4">৳{pkg.price}</p>
+                      <div className="space-y-2 mb-6 text-xs text-gray-500">
+                        <div className="flex justify-between"><span>দৈনিক আয়</span> <span className="text-green-400">৳{pkg.dailyProfit}</span></div>
+                        <div className="flex justify-between"><span>মেয়াদ</span> <span>৩০ দিন</span></div>
+                      </div>
+                      <button 
+                        onClick={() => buyPackage(pkg.id)}
+                        disabled={activePackage?.id === pkg.id || loading}
+                        className={`w-full py-4 rounded-2xl font-bold bg-white text-black active:scale-95 transition-all ${activePackage?.id === pkg.id && 'opacity-30'}`}
+                      >
+                        {activePackage?.id === pkg.id ? 'এক্টিভ আছে' : 'কিনুন'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'wallet' && (
+              <div>
+                <h2 className="text-3xl font-black mb-8">ওয়ালেট</h2>
+                <div className="bg-[#141416] p-8 rounded-4xl border border-white/5 mb-8">
+                  <p className="text-gray-500 text-xs font-bold uppercase mb-2">ব্যালেন্স</p>
+                  <p className="text-5xl font-black mb-8">৳{(profile?.mainBalance || 0).toFixed(2)}</p>
+                  <div className="flex gap-4">
+                    <button onClick={() => setIsDepositModalOpen(true)} className="flex-1 bg-green-500 text-black py-4 rounded-2xl font-black transition-all active:scale-95">ডিপোজিট</button>
+                    <button onClick={() => setIsWithdrawModalOpen(true)} className="flex-1 bg-amber-500 text-black py-4 rounded-2xl font-black transition-all active:scale-95">উত্তোলন</button>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-bold mb-4">ওয়ালেট লেনদেন</h3>
+                <div className="space-y-3">
+                  {walletTransactions.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500 text-sm">কোনো লেনদেন পাওয়া যায়নি</div>
+                  ) : (
+                    walletTransactions.map(tx => (
+                      <div key={tx.id} className="bg-[#141416] p-4 rounded-2xl flex items-center justify-between border border-white/5">
+                         <div className="flex items-center gap-4">
+                           <div className={`p-3 rounded-xl ${tx.amount > 0 ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
+                             {tx.amount > 0 ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                           </div>
+                           <div>
+                             <p className="text-sm font-bold">{tx.description}</p>
+                             <p className="text-[10px] text-gray-500 uppercase font-bold">{new Date(tx.timestamp).toLocaleString()}</p>
+                           </div>
+                         </div>
+                         <span className={`font-black ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
+                           {tx.amount > 0 ? "+" : ""}৳{tx.amount?.toFixed(2)}
+                         </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'history' && (
+              <div>
+                <h2 className="text-3xl font-black mb-8">অ্যাকাউন্ট হিস্ট্রি</h2>
+                <div className="space-y-3">
+                  {allTransactions.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500 text-sm">কোনো হিস্ট্রি পাওয়া যায়নি</div>
+                  ) : (
+                    allTransactions.map(tx => (
+                      <div key={tx.id} className="bg-[#141416] p-4 rounded-2xl flex items-center justify-between border border-white/5">
+                         <div className="flex items-center gap-4">
+                           <div className={`p-3 rounded-xl ${
+                             tx.type === 'mining_profit' ? "bg-cyan-500/10 text-cyan-400" : 
+                             tx.type === 'deposit' ? "bg-green-500/10 text-green-400" :
+                             tx.type === 'withdrawal' ? "bg-amber-500/10 text-amber-400" :
+                             "bg-purple-500/10 text-purple-400"
+                           }`}>
+                             {tx.type === 'mining_profit' ? <Zap className="w-4 h-4" /> : 
+                              tx.type === 'deposit' ? <ArrowDownLeft className="w-4 h-4" /> :
+                              tx.type === 'withdrawal' ? <ArrowUpRight className="w-4 h-4" /> :
+                              <Package className="w-4 h-4" />}
+                           </div>
+                           <div>
+                             <p className="text-sm font-bold">{tx.description}</p>
+                             <p className="text-[10px] text-gray-500 uppercase font-bold">{new Date(tx.timestamp).toLocaleString()}</p>
+                           </div>
+                         </div>
+                         <span className={`font-black ${tx.amount > 0 ? "text-green-400" : "text-red-400"}`}>
+                           {tx.amount > 0 ? "+" : ""}৳{tx.amount?.toFixed(2)}
+                         </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'profile' && (
+              <div className="pb-10">
+                <h2 className="text-3xl font-black mb-8">প্রোফাইল</h2>
+                
+                <div className="bg-[#141416] p-8 rounded-4xl border border-white/5 mb-6 text-center">
+                  <img src={user.photoURL || ""} alt="" className="w-24 h-24 rounded-3xl mx-auto mb-4 border-2 border-cyan-500" />
+                  <h3 className="text-2xl font-black">{profile?.displayName}</h3>
+                  <p className="text-gray-500 text-sm mb-6">{profile?.email}</p>
+                  
+                  <div className="bg-white/5 p-4 rounded-2xl text-left mb-6">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">আপনার রেফারেল লিংক</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <code className="text-[10px] truncate block text-cyan-400/80">{`${window.location.origin}?ref=${profile?.uid}`}</code>
+                      <button onClick={copyReferralLink} className="p-2 bg-cyan-500 text-black rounded-lg hover:scale-105 active:scale-95 transition-all">
+                        <History className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Referral Commission Balance & Claim Button Card */}
+                  <div className="bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/20 p-5 rounded-2xl text-left mb-6 flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">রেফারেল কমিশন ব্যালেন্স</p>
+                      <p className="text-2xl font-black text-cyan-400 font-mono">৳{(profile?.referralCommissionBalance || 0).toFixed(2)}</p>
+                    </div>
+                    <button 
+                      onClick={handleClaimReferral}
+                      className="px-5 py-3 bg-cyan-500 text-black font-black rounded-xl text-xs hover:bg-cyan-400 active:scale-95 transition-all shadow-lg shadow-cyan-500/20"
+                    >
+                      ক্লেম করুন
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-white/5 p-4 rounded-2xl">
+                      <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">টোটাল রেফার</p>
+                      <p className="text-xl font-black text-white">{referralCount}</p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-2xl text-cyan-400">
+                      <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">লেভেল ১ (১০%)</p>
+                      <p className="text-xl font-black">{((profile?.referralEarned || 0) * 0.8).toFixed(2)}</p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-2xl text-purple-400">
+                      <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">লেভেল ২ (২.৫%)</p>
+                      <p className="text-xl font-black">{((profile?.referralEarned || 0) * 0.2).toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  <button onClick={() => signOut(auth)} className="w-full py-4 bg-red-500/10 border border-red-500/20 text-red-400 font-bold rounded-2xl flex items-center justify-center gap-2">
+                    <LogOut className="w-5 h-5" /> লগ আউট
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-[#141416] p-6 rounded-3xl border border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Bot className="text-cyan-400" />
+                      <div>
+                        <p className="font-bold">রোবট অ্যাসিস্ট্যান্ট</p>
+                        <p className="text-xs text-gray-500">অটো-মাইনিং শুরু করে</p>
+                      </div>
+                    </div>
+                    <button onClick={toggleRobot} className={`px-4 py-2 rounded-xl text-xs font-black ${profile?.hasActiveRobot ? 'bg-cyan-500 text-black' : 'bg-white/5 text-gray-500'}`}>
+                      {profile?.hasActiveRobot ? 'এক্টিভ' : 'বন্ধ'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* BOTTOM NAVIGATION */}
+      {user && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-[#141416]/95 backdrop-blur-2xl border-t border-white/5 px-6 py-4 z-50 flex items-center justify-between max-w-2xl mx-auto">
+          <NavItem icon={<Home className="w-6 h-6" />} label="হোম" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
+          <NavItem icon={<Cpu className="w-6 h-6" />} label="মাইনিং" active={activeTab === 'mining'} onClick={() => setActiveTab('mining')} />
+          <NavItem icon={<Wallet className="w-6 h-6" />} label="ওয়ালেট" active={activeTab === 'wallet'} onClick={() => setActiveTab('wallet')} />
+          <NavItem icon={<History className="w-6 h-6" />} label="হিস্ট্রি" active={activeTab === 'history'} onClick={() => setActiveTab('history')} />
+          <NavItem icon={<div className="w-8 h-8 rounded-xl bg-white/10 overflow-hidden ring-2 ring-transparent transition-all"><img src={user.photoURL || ""} className="w-full h-full object-cover" /></div>} label="প্রোফাইল" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+        </nav>
+      )}
+
+      {/* TRANSACTION MODALS */}
+      <AnimatePresence>
+        {(isDepositModalOpen || isWithdrawModalOpen) && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => { setIsDepositModalOpen(false); setIsWithdrawModalOpen(false); }}
+            />
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="relative w-full max-w-md bg-[#1c1c1f] rounded-3xl p-8 border border-white/10"
+            >
+              <h3 className="text-2xl font-black mb-6">{isDepositModalOpen ? 'ডিপোজিট' : 'উত্তোলন'}</h3>
+              
+              <div className="space-y-4 mb-8">
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-gray-500 mb-2 block">মেথড সিলেক্ট করুন</label>
+                  <div className="flex gap-2">
+                    {['Bkash', 'Nagad', 'Rocket'].map(m => (
+                      <button 
+                        key={m}
+                        onClick={() => setMethod(m)}
+                        className={`flex-1 py-3 rounded-xl border text-sm font-bold transition-all ${method === m ? 'bg-cyan-500 border-cyan-500 text-black' : 'border-white/10 text-gray-400'}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-gray-500 mb-2 block">পরিমাণ (৳)</label>
+                  <input 
+                    type="number" 
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 focus:outline-none focus:border-cyan-500 transition-all font-bold"
+                  />
+                </div>
+
+                {isWithdrawModalOpen && (
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-gray-500 mb-2 block">অ্যাকাউন্ট নাম্বার</label>
+                    <input 
+                      type="text" 
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder="017xxxxxxxx"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 focus:outline-none focus:border-cyan-500 transition-all font-bold"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => { setIsDepositModalOpen(false); setIsWithdrawModalOpen(false); }}
+                  className="flex-1 py-4 rounded-2xl font-bold bg-white/5 border border-white/10 text-gray-400"
+                >
+                  বাতিল
+                </button>
+                <button 
+                  onClick={isDepositModalOpen ? handleDeposit : handleWithdraw}
+                  disabled={loading}
+                  className="flex-1 py-4 rounded-2xl font-black bg-cyan-500 text-black disabled:opacity-50"
+                >
+                  {loading ? 'প্রসেসিং...' : 'কনফার্ম'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
-startServer();
+function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-cyan-400 scale-110' : 'text-gray-500 opacity-60'}`}>
+      <div className={`p-2 rounded-xl transition-all ${active ? 'bg-cyan-500/10' : ''}`}>
+        {icon}
+      </div>
+      <span className="text-[11px] font-black uppercase tracking-tighter">{label}</span>
+      {active && <motion.div layoutId="nav_indicator" className="w-1 h-1 rounded-full bg-cyan-400 mt-0.5" />}
+    </button>
+  );
+}
 
