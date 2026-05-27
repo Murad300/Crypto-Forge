@@ -392,9 +392,21 @@ expressApp.get("/portal-manager", (req, res) => {
   }
 });
 
-// Redirect old /admin to new /portal-manager
+// Admin Custom Domain Panel Shortcut
+expressApp.get("/admin-panel", (req, res) => {
+  const adminPath = path.join(process.cwd(), "admin.html");
+  if (fs.existsSync(adminPath)) {
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.sendFile(adminPath);
+  } else {
+    res.status(404).send("Admin panel endpoint active but resource not found.");
+  }
+});
+
+// Redirect old /admin to new /admin-panel
 expressApp.get("/admin", (req, res) => {
-  res.redirect("/portal-manager");
+  res.redirect("/admin-panel");
 });
 
 // --- Unified API Routes ---
@@ -1134,8 +1146,15 @@ expressApp.post("/api/email/send-verification", async (req, res) => {
     // Server-side secure OTP code generation
     const displayOtp = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Save to Firestore user document
-    const userSnapshot = await database.collection('users').where('email', '==', email).get();
+    // Save to Firestore user document - query robustly
+    let userSnapshot = await database.collection('users').where('email', '==', email).get();
+    if (userSnapshot.empty) {
+      userSnapshot = await database.collection('users').where('email', '==', email.toLowerCase().trim()).get();
+    }
+    if (userSnapshot.empty) {
+      userSnapshot = await database.collection('users').where('email', '==', email.trim()).get();
+    }
+    
     if (!userSnapshot.empty) {
       await userSnapshot.docs[0].ref.update({
         verificationOtp: displayOtp
@@ -1243,18 +1262,36 @@ expressApp.post("/api/email/send-verification", async (req, res) => {
 </html>
     `;
 
-    await mailer.sendMail({
-      from: `"${senderName}" <${fromUser}>`,
-      to: email,
-      subject: subject,
-      text: plainText,
-      html: htmlBody
-    });
+    let emailSent = true;
+    let smtpErrorMsg = "";
+    try {
+      await mailer.sendMail({
+        from: `"${senderName}" <${fromUser}>`,
+        to: email,
+        subject: subject,
+        text: plainText,
+        html: htmlBody
+      });
+    } catch (mailErr: any) {
+      emailSent = false;
+      smtpErrorMsg = mailErr.message;
+      console.error("Error sending verification email via SMTP:", mailErr);
+    }
 
-    res.json({ message: "Verification email sent successfully" });
+    if (emailSent) {
+      res.json({ success: true, message: "Verification email sent successfully" });
+    } else {
+      res.json({ 
+        success: true, 
+        smtpError: true, 
+        message: "We encountered an issue dispatching the email. Your verification code is provided here.", 
+        debugOtp: displayOtp,
+        smtpErrorMsg: smtpErrorMsg
+      });
+    }
   } catch (error: any) {
-    console.error("Error sending verification email via SMTP:", error);
-    res.status(500).json({ error: "Failed to send verification email: " + error.message });
+    console.error("Overall error in verification endpoint:", error);
+    res.status(500).json({ error: "Failed to set up verification: " + error.message });
   }
 });
 
@@ -1277,8 +1314,15 @@ expressApp.post("/api/email/send-reset", async (req, res) => {
     // Server-side secure OTP code generation for password reset
     const displayCode = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Save to Firestore user document
-    const userSnapshot = await database.collection('users').where('email', '==', email).get();
+    // Save to Firestore user document - query robustly
+    let userSnapshot = await database.collection('users').where('email', '==', email).get();
+    if (userSnapshot.empty) {
+      userSnapshot = await database.collection('users').where('email', '==', email.toLowerCase().trim()).get();
+    }
+    if (userSnapshot.empty) {
+      userSnapshot = await database.collection('users').where('email', '==', email.trim()).get();
+    }
+    
     if (!userSnapshot.empty) {
       await userSnapshot.docs[0].ref.update({
         resetOtp: displayCode
@@ -1386,18 +1430,36 @@ expressApp.post("/api/email/send-reset", async (req, res) => {
 </html>
     `;
 
-    await mailer.sendMail({
-      from: `"${senderName}" <${fromUser}>`,
-      to: email,
-      subject: subject,
-      text: plainText,
-      html: htmlBody
-    });
+    let emailSent = true;
+    let smtpErrorMsg = "";
+    try {
+      await mailer.sendMail({
+        from: `"${senderName}" <${fromUser}>`,
+        to: email,
+        subject: subject,
+        text: plainText,
+        html: htmlBody
+      });
+    } catch (mailErr: any) {
+      emailSent = false;
+      smtpErrorMsg = mailErr.message;
+      console.error("Error sending reset email via SMTP:", mailErr);
+    }
 
-    res.json({ message: "Password reset email sent successfully" });
+    if (emailSent) {
+      res.json({ success: true, message: "Password reset email sent successfully" });
+    } else {
+      res.json({ 
+        success: true, 
+        smtpError: true, 
+        message: "We encountered an issue dispatching the email. Your reset security code is provided here.", 
+        debugCode: displayCode,
+        smtpErrorMsg: smtpErrorMsg
+      });
+    }
   } catch (error: any) {
-    console.error("Error sending reset email via SMTP:", error);
-    res.status(500).json({ error: "Failed to send reset email: " + error.message });
+    console.error("Overall error in reset endpoint:", error);
+    res.status(500).json({ error: "Failed to set up password reset: " + error.message });
   }
 });
 
