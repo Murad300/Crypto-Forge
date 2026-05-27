@@ -928,6 +928,20 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Referral Commission Balance & Claim Button Card */}
+                  <div className="bg-gradient-to-r from-cyan-500/10 to-purple-500/10 border border-cyan-500/20 p-5 rounded-2xl text-left mb-6 flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">রেফারেল কমিশন ব্যালেন্স</p>
+                      <p className="text-2xl font-black text-cyan-400 font-mono">৳{(profile?.referralCommissionBalance || 0).toFixed(2)}</p>
+                    </div>
+                    <button 
+                      onClick={handleClaimReferral}
+                      className="px-5 py-3 bg-cyan-500 text-black font-black rounded-xl text-xs hover:bg-cyan-400 active:scale-95 transition-all shadow-lg shadow-cyan-500/20"
+                    >
+                      ক্লেম করুন
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-4 mb-6">
                     <div className="bg-white/5 p-4 rounded-2xl">
                       <p className="text-gray-500 text-[10px] font-bold uppercase mb-1">টোটাল রেফার</p>
