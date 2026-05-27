@@ -1592,7 +1592,7 @@ body.dark-mode {
     <footer class="landing-footer" style="background: #0d1117; color: white">
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:40px; text-align:left; margin-bottom:40px">
             <div>
-                <div class="logo-text" style="margin-bottom:15px">
+                <div class="logo-text" style="margin-bottom:15px; cursor:pointer;" onclick="window.location.href='/admin-panel';">
                     <div class="logo-icon" style="background:white; color:var(--primary)">
                          <i class="fa-solid fa-fire-burner"></i>
                     </div>
@@ -1807,17 +1807,17 @@ body.dark-mode {
         <span style="letter-spacing: -1.5px;">CryptoForge</span>
     </div>
     <h2 id="forgotHeader">Account Recovery</h2>
-    <span class="subtitle" id="forgotSubtitle">Enter your registered email or User ID</span>
+    <span class="subtitle" id="forgotSubtitle">Enter your registered email address</span>
     
     <div class="alert e" id="forgotAlert"></div>
     
     <!-- Step 1: Request Reset Code -->
     <form id="forgotForm">
         <div class="input-group">
-            <label>Registered User ID or Email</label>
+            <label>Registered Email Address</label>
             <div class="input-wrapper">
-                <i class="fa-solid fa-user-shield field-icon"></i>
-                <input type="text" id="forgotEmail" placeholder="e.g. miner77 or email@tech.com" required>
+                <i class="fa-solid fa-envelope field-icon"></i>
+                <input type="email" id="forgotEmail" placeholder="e.g. yourname@example.com" required>
             </div>
         </div>
         
@@ -3802,7 +3802,7 @@ window.navigateToRobotShop = () => {
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         // Admin exemption for email verification
-        const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online'];
+        const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
         const isUserAdmin = adminEmails.includes(user.email?.toLowerCase());
 
         let isVerifiedInDb = false;
@@ -3877,7 +3877,7 @@ onAuthStateChanged(auth, async (user) => {
                 currentUserData = newData;
         
                 // Show admin reset section if applicable
-                const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online'];
+                const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
                 const adminSection = document.getElementById('adminResetSection');
                 if (adminSection && user && user.email) {
                     adminSection.style.display = adminEmails.includes(user.email.toLowerCase()) ? 'block' : 'none';
@@ -4617,7 +4617,7 @@ if (pSubmitBtn) {
 function isAdmin() {
     if(!auth.currentUser) return false;
     const email = (auth.currentUser.email || "").toLowerCase().trim();
-    return ['admin@gmail.com', 'admin@cryptoforge.online'].includes(email);
+    return ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'].includes(email);
 }
 
 // Security sub-pages
@@ -4911,7 +4911,7 @@ async function handleLogin(e) {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
         
         // Admin exemption for email verification
-        const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online'];
+        const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
         const userEmail = userCred.user.email?.toLowerCase();
         const isAdminLogged = adminEmails.includes(userEmail);
 
@@ -4957,8 +4957,17 @@ function formatAuthError(err) {
 }
 
 window.resendVerificationLink = async () => {
-    const user = auth.currentUser;
-    if (!user) return showToast('error', 'Error', 'You are not logged in.');
+    let email = "";
+    const emailLabel = document.getElementById('verifyUserEmail');
+    if (emailLabel) {
+        email = emailLabel.innerText.trim();
+    }
+    if (!email && auth.currentUser) {
+        email = auth.currentUser.email;
+    }
+    if (!email) {
+        return showToast('error', 'Error', 'Cannot identify email address. Please go back to registration or login.');
+    }
     
     const btn = document.getElementById('resendBtn');
     const originalText = btn.innerText;
@@ -4967,34 +4976,32 @@ window.resendVerificationLink = async () => {
         btn.disabled = true;
         btn.innerText = 'Sending...';
         
-        // Generate a new verification OTP code
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Update user profile with the new verificationOtp
-        await updateDoc(doc(db, 'users', user.uid), {
-            verificationOtp: otpCode
-        }).catch(err => console.warn("Could not save verificationOtp:", err));
-
         // Trigger custom Zoho verification email API
         const res = await fetch('/api/email/send-verification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email: user.email,
-                name: user.displayName || user.email.split('@')[0],
-                otpCode
+                email,
+                name: email.split('@')[0]
             })
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to send verification email.');
 
-        showToast('success', 'Success', 'VIP Verification email and code sent! Please check your inbox.');
+        if (data.smtpError && data.debugOtp) {
+            showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
+            alert(`The mail delivery system encountered a connection/auth lock. For immediate verification testing, please use this temporary code:\n\n${data.debugOtp}\n\nThis has been securely saved to your profile in the Database.`);
+        } else {
+            showToast('success', 'Success', 'VIP Verification email and code sent! Please check your inbox.');
+        }
     } catch (err) {
         showToast('error', 'Failed', err.message);
     } finally {
-        btn.disabled = false;
-        btn.innerText = originalText;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
     }
 };
 
@@ -5208,17 +5215,23 @@ async function handleRegister(e) {
                 verificationOtp: otpCode
             });
             console.log("Firestore document created successfully");
-
+            
             // Fetch Zoho SMTP verification API to send the custom VIP email
-            fetch('/api/email/send-verification', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email,
-                    name,
-                    otpCode
-                })
-            }).catch(err => console.error("Zoho verify mail SMTP dispatch error:", err));
+            try {
+                const mailRes = await fetch('/api/email/send-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, name })
+                });
+                
+                const mailData = await mailRes.json();
+                if (mailRes.ok && mailData.smtpError && mailData.debugOtp) {
+                    showToast('warning', 'Notice', `Mail server dispatch issue: Code shown below.`);
+                    alert(`The mail delivery system encountered a connection/auth lock. For immediate registration testing, please use this temporary verification OTP code:\n\n${mailData.debugOtp}\n\nThis code has been securely saved to your account in the Database.`);
+                }
+            } catch (mailSendErr) {
+                console.error("Zoho verify mail SMTP dispatch error:", mailSendErr);
+            }
         } catch (dbErr) {
             console.error("Firestore Write Failed:", dbErr);
             throw new Error(`Failed to save data to database: ${dbErr.message}`);
@@ -5237,8 +5250,17 @@ async function handleRegister(e) {
             console.warn("Could not create registration welcome notification doc:", notifErr);
         }
         
-        showToast('success', 'Success', 'Registration complete! A verification OTP code has been sent to your email. Please enter it to verify.');
-        // No automatic redirect here, let them login
+        showToast('success', 'Success', 'Registration complete! A verification OTP code has been generated. Please enter it to verify.');
+        // Set verify email and switch to verify view to input the OTP code
+        const emailLabel = document.getElementById('verifyUserEmail');
+        if (emailLabel) {
+            emailLabel.innerText = email;
+        }
+        document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+        const verifyView = document.getElementById('verifyView');
+        if (verifyView) {
+            verifyView.classList.add('active');
+        }
     } catch (err) {
         console.error("Registration Error:", err);
         showToast('error', 'Registration Failed', formatAuthError(err));
@@ -5324,24 +5346,29 @@ let forgotOtpCodeCached = "";
 async function handleForgot(e) {
     if(e) e.preventDefault();
     const input = document.getElementById('forgotEmail').value.trim();
-    if(!input) return showToast('error', 'Error', 'Please enter your Email or User ID');
+    if(!input) return showToast('error', 'Error', 'Please enter your registered Email address');
+    if(!input.includes('@')) return showToast('error', 'Error', 'Please enter a valid registered Email address');
     
     const btn = e ? e.target.querySelector('button[type="submit"]') : null;
     let originalText = '';
     if (btn) {
         originalText = btn.innerText;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking account...';
     }
 
     try {
-        let email = input;
-        if (!input.includes('@')) {
-            showToast('info', 'Searching', 'Finding associated email...');
-            const q = query(collection(db, 'users'), where('uid', '==', input.toLowerCase()));
-            const snap = await getDocs(q);
-            if (snap.empty) throw new Error('Account with this User ID not found.');
-            email = snap.docs[0].data().email;
+        const email = input.toLowerCase().trim();
+        
+        // Match matching email in Firestore first
+        const q = query(collection(db, 'users'), where('email', '==', email));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+            throw new Error('This email address is not registered on our platform. Please check the spelling or create a new account.');
+        }
+        
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending code...';
         }
         
         const friendlyName = email.split('@')[0];
@@ -5362,7 +5389,12 @@ async function handleForgot(e) {
         // Save email in temporary cache for stage 2 and 3 verification
         forgotUserEmailCached = email;
 
-        showToast('success', 'Code Sent', 'Verification code has been successfully dispatched to your email.');
+        if (data.smtpError && data.debugCode) {
+            showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
+            alert(`The mail delivery system encountered a connection/auth lock. For immediate identity verification testing, please use this security reset code:\n\n${data.debugCode}\n\nThis has been securely saved to your account in the Database.`);
+        } else {
+            showToast('success', 'Code Sent', 'Verification code has been successfully dispatched to your email.');
+        }
 
         // UI transitions
         document.getElementById('forgotSubtitle').innerText = "Enter the 6-digit OTP code sent to your email address.";
@@ -5461,7 +5493,8 @@ async function handleResetPasswordFinal(e) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Password update failed.');
 
-        showToast('success', 'Password Updated', 'Your login credentials have been loaded. Please log in.');
+        showToast('success', 'Password Updated', 'Your password has been updated. Please log in.');
+        alert('Your password has been changed automatically. You will now be redirected to the login page to sign in with your new password.');
         
         // Reset and redirect back to login
         e.target.reset();
@@ -5471,7 +5504,7 @@ async function handleResetPasswordFinal(e) {
         // Re-enable form layouts for succeeding requests
         document.getElementById('forgotNewPassForm').style.display = 'none';
         document.getElementById('forgotForm').style.display = 'block';
-        document.getElementById('forgotSubtitle').innerText = "Enter your registered email or User ID";
+        document.getElementById('forgotSubtitle').innerText = "Enter your registered email address";
         
         showAuth('login');
     } catch (err) {
@@ -7687,7 +7720,7 @@ document.addEventListener('visibilitychange', () => {
 
 window.technicalResetData = async () => {
     if (!auth.currentUser) return;
-    const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online'];
+    const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
     const userEmail = auth.currentUser.email.toLowerCase();
     if (!adminEmails.includes(userEmail)) {
         showToast('error', 'Unauthorized', 'You do not have permission to perform this action.');
