@@ -5984,7 +5984,7 @@ async function handleRegister(e) {
     const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerText = 'Registering Account...';
+        submitBtn.innerText = 'Checking validation...';
     }
 
     try {
@@ -6010,61 +6010,57 @@ async function handleRegister(e) {
         const snap = await getDocs(q);
         if(!snap.empty) throw new Error('This User ID (UID) is already taken. Please try another one.');
 
-        let userCred;
-        try {
-            userCred = await createUserWithEmailAndPassword(auth, email, password);
-        } catch (authErr) {
-            if (authErr.code === 'auth/email-already-in-use') {
-                // If email exists in Auth, but we are here, it means Firestore doc was likely missing
-                throw new Error('This email is already in use. Please login or use a different email.');
-            }
-            throw authErr;
+        // Check if Email already exists in Firestore
+        const qEmail = query(collection(db, 'users'), where('email', '==', email));
+        const snapEmail = await getDocs(qEmail);
+        if(!snapEmail.empty) throw new Error('This Email Address is already registered. Please Login.');
+
+        if (submitBtn) {
+            submitBtn.innerText = 'Sending Verification OTP...';
         }
 
-        const newUserUid = userCred.user.uid;
-        console.log("Creating Firestore document for UID:", newUserUid);
-        
-        try {
-            await setDoc(doc(db, 'users', newUserUid), {
-                uid, 
-                email, 
-                fullName: name, 
-                phone: phone,
-                balance: 0, 
-                status: 'active', 
-                withdrawPin: '', 
-                profileCompleted: false, 
-                referredBy: referrerUidFs,
-                referralCode: uid,
-                referralBalance: 0,
-                totalReferralEarned: 0,
-                createdAt: new Date().toISOString(),
-                savedNumbers: [],
-                emailVerified: false
-            });
-            console.log("Firestore document created successfully");
-        } catch (dbErr) {
-            console.error("Firestore Write Failed:", dbErr);
-            throw new Error(`Failed to save data to database: ${dbErr.message}`);
+        // Store the registration details temporarily
+        window.tempRegData = {
+            uid: uid,
+            email: email,
+            fullName: name,
+            phone: phone,
+            password: password,
+            referredBy: referrerUidFs
+        };
+        window.isRegistrationOtpFlow = true;
+
+        // Trigger OTP dispatch on backend
+        const res = await fetch('/api/send-verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email })
+        });
+        const data = await res.json();
+
+        if (data.smtpError && data.debugOtp) {
+            showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
+            window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor testing, please use this temporary OTP code: ${data.debugOtp}\n\nThis is safely stored in the Database.`);
+        } else if (res.ok) {
+            showToast('success', 'Email Code Sent', 'A verification OTP code has been sent to your email.');
         }
-        
-        // Defensive creation of notifications to ignore duplicate document or permission failures
-        try {
-            await addDoc(collection(db, 'notifications'), {
-                userId: newUserUid,
-                title: 'Welcome to CryptoForge!',
-                message: 'Thank you for joining our platform. Start your journey today! Deposit to activate your account.',
-                createdAt: new Date().toISOString(),
-                read: false
-            });
-        } catch (notifErr) {
-            console.warn("Could not create registration welcome notification doc:", notifErr);
+
+        // Transition to Verification Screen
+        document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+        const verifyView = document.getElementById('verifyView');
+        if (verifyView) {
+            verifyView.classList.add('active');
         }
-        
-        showToast('success', 'Success', 'Registration completed successfully! Welcome to CryptoForge VIP Network.');
+        const emailLabel = document.getElementById('verifyUserEmail');
+        if (emailLabel) {
+            emailLabel.innerText = email;
+        }
+
     } catch (err) {
         console.error("Registration Error:", err);
         showToast('error', 'Registration Failed', formatAuthError(err));
+        window.isRegistrationOtpFlow = false;
+        window.tempRegData = null;
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -6090,14 +6086,32 @@ async function handleVerifyOtp(e) {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
         }
+
+        let res;
+        let payload = {};
+
+        if (window.isRegistrationOtpFlow && window.tempRegData) {
+            payload = {
+                email: email,
+                otp: otpCode,
+                isRegister: true,
+                registrationData: window.tempRegData
+            };
+        } else {
+            const currentUserId = auth.currentUser ? auth.currentUser.uid : '';
+            payload = {
+                email: email,
+                otp: otpCode,
+                userId: currentUserId
+            };
+        }
         
-        const currentUserId = auth.currentUser ? auth.currentUser.uid : '';
-        console.log("Submitting verification for:", email, "with code:", otpCode, "user:", currentUserId);
+        console.log("Submitting verification for:", email, "with payload:", payload);
         
-        const res = await fetch('/api/verify-otp', {
+        res = await fetch('/api/verify-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp: otpCode, userId: currentUserId })
+            body: JSON.stringify(payload)
         });
         
         const data = await res.json();
@@ -6105,7 +6119,21 @@ async function handleVerifyOtp(e) {
             throw new Error(data.error || 'Verification failed');
         }
         
-        showToast('success', 'Email Verified', 'Your account email is successfully verified!');
+        if (window.isRegistrationOtpFlow && window.tempRegData) {
+            showToast('success', 'Registration Completed', 'Email verified & account registered successfully! Signing in...');
+            
+            const loginEmail = window.tempRegData.email;
+            const loginPassword = window.tempRegData.password;
+            
+            // Clean up temp data
+            window.isRegistrationOtpFlow = false;
+            window.tempRegData = null;
+
+            // Automatically sign user in
+            await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+        } else {
+            showToast('success', 'Email Verified', 'Your account email is successfully verified!');
+        }
         
         // Return to app view
         document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
