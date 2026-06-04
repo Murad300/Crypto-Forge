@@ -1666,20 +1666,48 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
       });
       res.json({ success: true, message: "Verification OTP code sent to email." });
     } catch (mailErr: any) {
-      if (mailErr.message && mailErr.message.includes("535-5.7.8")) {
-        console.warn("\n[SMTP Auth Warning] Gmail SMTP authentication was rejected (535-5.7.8).");
-        console.warn("The specified Gmail App Password was rejected by Gmail's SMTP servers.");
-        console.warn("Please verify that you have enabled 2-Step Verification and generated a valid 16-character App Password.");
-        console.warn("Using local fallback mechanism securely to prevent user registration block.\n");
-      } else {
-        console.warn("[SMTP Dispatch Warning] Could not send OTP email via SMTP:", mailErr.message || mailErr);
+      console.warn("[SMTP Dispatch] Primary mailer failed. Attempting robust default Gmail SMTP fallback...", mailErr.message || mailErr);
+      try {
+        const fallbackTransporter = nodemailer.createTransport({
+          host: "smtp.gmail.com",
+          port: 465,
+          secure: true,
+          auth: {
+            user: "cryptoforge.online@gmail.com",
+            pass: "ikijmxyhxdqqdljb"
+          },
+          tls: {
+            rejectUnauthorized: false
+          }
+        });
+
+        await fallbackTransporter.sendMail({
+          from: `"CryptoForge VIP Network" <cryptoforge.online@gmail.com>`,
+          to: emailKey,
+          subject: subject,
+          text: plainText,
+          html: htmlBody
+        });
+        
+        console.log("[SMTP Fallback] Successfully delivered OTP email using the default Gmail SMTP server!");
+        res.json({ success: true, message: "Verification OTP code sent to email." });
+      } catch (fallbackErr: any) {
+        console.error("[SMTP Fallback] Error sending via fallback default Gmail SMTP server:", fallbackErr.message || fallbackErr);
+        if (mailErr.message && mailErr.message.includes("535-5.7.8")) {
+          console.warn("\n[SMTP Auth Warning] Gmail SMTP authentication was rejected (535-5.7.8).");
+          console.warn("The specified Gmail App Password was rejected by Gmail's SMTP servers.");
+          console.warn("Please verify that you have enabled 2-Step Verification and generated a valid 16-character App Password.");
+          console.warn("Using local fallback mechanism securely to prevent user registration block.\n");
+        } else {
+          console.warn("[SMTP Dispatch Warning] Could not send OTP email via SMTP:", mailErr.message || mailErr);
+        }
+        res.json({ 
+          success: true, 
+          smtpError: true, 
+          message: "SMTP Mail dispatch notice. We generated a debug bypass code for your profile testing.", 
+          debugOtp: otpCode 
+        });
       }
-      res.json({ 
-        success: true, 
-        smtpError: true, 
-        message: "SMTP Mail dispatch notice. We generated a debug bypass code for your profile testing.", 
-        debugOtp: otpCode 
-      });
     }
   } catch (error: any) {
     console.error("Error in send-verify-otp API:", error);
@@ -1911,19 +1939,47 @@ expressApp.post("/api/forgot-password", async (req, res) => {
       });
       res.json({ success: true, message: "Security reset code sent to your email." });
     } catch (mailErr: any) {
-      if (mailErr.message && mailErr.message.includes("535-5.7.8")) {
-        console.warn("\n[SMTP Auth Warning] Gmail SMTP authentication was rejected during password reset (535-5.7.8).");
-        console.warn("The specified Gmail App Password was rejected by Gmail's SMTP servers.");
-        console.warn("Using local fallback mechanism securely to prevent user block.\n");
-      } else {
-        console.warn("[SMTP Dispatch Warning] Could not send password reset OTP email via SMTP:", mailErr.message || mailErr);
+      console.warn("[SMTP Dispatch] Primary mailer for password reset failed. Attempting robust default Gmail SMTP fallback...", mailErr.message || mailErr);
+      try {
+        const fallbackTransporter = nodemailer.createTransport({
+          host: "smtp.gmail.com",
+          port: 465,
+          secure: true,
+          auth: {
+            user: "cryptoforge.online@gmail.com",
+            pass: "ikijmxyhxdqqdljb"
+          },
+          tls: {
+            rejectUnauthorized: false
+          }
+        });
+
+        await fallbackTransporter.sendMail({
+          from: `"CryptoForge VIP Network" <cryptoforge.online@gmail.com>`,
+          to: emailKey,
+          subject: subject,
+          text: plainText,
+          html: htmlBody
+        });
+        
+        console.log("[SMTP Fallback] Successfully delivered password reset email using the default Gmail SMTP server!");
+        res.json({ success: true, message: "Security reset code sent to your email." });
+      } catch (fallbackErr: any) {
+        console.error("[SMTP Fallback] Error sending password reset via fallback default Gmail SMTP server:", fallbackErr.message || fallbackErr);
+        if (mailErr.message && mailErr.message.includes("535-5.7.8")) {
+          console.warn("\n[SMTP Auth Warning] Gmail SMTP authentication was rejected during password reset (535-5.7.8).");
+          console.warn("The specified Gmail App Password was rejected by Gmail's SMTP servers.");
+          console.warn("Using local fallback mechanism securely to prevent user block.\n");
+        } else {
+          console.warn("[SMTP Dispatch Warning] Could not send password reset OTP email via SMTP:", mailErr.message || mailErr);
+        }
+        res.json({ 
+          success: true, 
+          smtpError: true, 
+          message: "SMTP Mail dispatch notice. Temporary debug reset code generated.", 
+          debugOtp: otpCode 
+        });
       }
-      res.json({ 
-        success: true, 
-        smtpError: true, 
-        message: "SMTP Mail dispatch notice. Temporary debug reset code generated.", 
-        debugOtp: otpCode 
-      });
     }
   } catch (err: any) {
     console.error("Forgot password API error:", err);
