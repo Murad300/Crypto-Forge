@@ -351,6 +351,11 @@ export const adminCompat = {
       }
       return { uid: snap.docs[0].id, email };
     },
+    createUser: async (properties: any) => {
+      const auth = getRawAuth();
+      const userCred = await createUserWithEmailAndPassword(auth, properties.email, properties.password);
+      return { uid: userCred.user.uid, email: properties.email };
+    },
     updateUser: async (uid: string, properties: any) => {
       // Client-side authentication performs email verification, so updating Auth properties on DB is sufficient
       console.log(`[Bypassed auth.updateUser for ${uid}]: properties updated`, properties);
