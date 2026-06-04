@@ -1688,9 +1688,9 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
 
 // 2. Verify Email OTP Code
 expressApp.post("/api/verify-otp", async (req, res) => {
-  const { email, otp, userId } = req.body;
-  if (!email || !otp || !userId) {
-    return res.status(400).json({ error: "Email, otp, and userId are required." });
+  const { email, otp, userId, isRegister, registrationData } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ error: "Email and otp are required." });
   }
 
   try {
@@ -1708,6 +1708,69 @@ expressApp.post("/api/verify-otp", async (req, res) => {
     const savedOtp = otpDoc.data()?.otp;
     if (savedOtp !== otp.trim()) {
       return res.status(400).json({ error: "Invalid verification OTP code." });
+    }
+
+    if (isRegister && registrationData) {
+      // 1. Create User using Firebase Admin SDK
+      let userRecord;
+      try {
+        userRecord = await admin.auth().createUser({
+          email: emailKey,
+          password: registrationData.password,
+          displayName: registrationData.fullName,
+          emailVerified: true
+        });
+      } catch (authErr: any) {
+        if (authErr.code === 'auth/email-already-in-use') {
+          return res.status(400).json({ error: "This email is already in use. Please login or use a different email." });
+        }
+        throw authErr;
+      }
+
+      const newUserUid = userRecord.uid;
+
+      // 2. Save user document to Firestore
+      await database.collection("users").doc(newUserUid).set({
+        uid: registrationData.uid,
+        email: emailKey,
+        fullName: registrationData.fullName,
+        phone: registrationData.phone,
+        balance: 0,
+        mainBalance: 0,
+        status: 'active',
+        withdrawPin: '',
+        profileCompleted: false,
+        referredBy: registrationData.referredBy || null,
+        referralCode: registrationData.uid,
+        referralBalance: 0,
+        totalReferralEarned: 0,
+        createdAt: new Date().toISOString(),
+        savedNumbers: [],
+        emailVerified: true
+      });
+
+      // 3. Welcome notification
+      try {
+        await database.collection('notifications').add({
+          userId: newUserUid,
+          title: 'Welcome to CryptoForge!',
+          message: 'Thank you for joining our platform. Start your journey today! Deposit to activate your account.',
+          createdAt: new Date().toISOString(),
+          read: false
+        });
+      } catch (notifErr) {
+        console.warn("Could not create registration welcome notification in backend:", notifErr);
+      }
+
+      // Delete the OTP document after successful verification
+      await database.collection("email_otps").doc(emailKey).delete();
+
+      return res.json({ success: true, message: "Registration successful." });
+    }
+
+    // --- Standard pre-existing post-login verification flow ---
+    if (!userId) {
+      return res.status(400).json({ error: "UserId is required for verification." });
     }
 
     // Mark emailVerified in Firebase Auth
