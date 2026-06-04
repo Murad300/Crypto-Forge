@@ -1,2 +1,0 @@
-/core-engine/*  /public/core-engine/:splat  200
-/*  /index.html  200
