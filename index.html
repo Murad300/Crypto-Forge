@@ -4627,16 +4627,37 @@ onAuthStateChanged(auth, async (user) => {
                     pUIDField.readOnly = true;
                 }
             } else {
-                // RACE CONDITION FIX: If document doesn't exist, wait a bit instead of instant sign-out.
-                // This happens during the split second after registration beforeFirestore doc is written.
-                console.warn("User authenticated but document not found in Firestore. Waiting 2s before considering logout...");
-                setTimeout(async () => {
-                    const checkSnap = await getDoc(doc(db, 'users', user.uid));
-                    if (!checkSnap.exists() && auth.currentUser) {
-                        auth.signOut();
-                        showToast('error', 'Account Error', 'User data not found. Please try again or re-register.');
+                // ROBUST RACE CONDITION RETRY: Slower database syncs or regional delays can cause doc to not exist for a few seconds.
+                console.warn(`[Auth Check] User (${user.uid}) authenticated, but Firestore document not found in first event. Starting retry poller...`);
+                
+                let attempts = 0;
+                const maxAttempts = 5;
+                const interval = 2000; // 2 seconds per check, total 10s window
+
+                const checkInterval = setInterval(async () => {
+                    attempts++;
+                    console.log(`[Auth Check] Checking document existence (Attempt ${attempts}/${maxAttempts}) for user UID: ${user.uid}...`);
+                    
+                    try {
+                        const checkSnap = await getDoc(doc(db, 'users', user.uid));
+                        if (checkSnap.exists()) {
+                            console.log(`[Auth Check] Document found successfully on attempt ${attempts}!`);
+                            clearInterval(checkInterval);
+                            return; // The snapshot listener will automatically receive the update event and handle it!
+                        }
+                    } catch (pollErr) {
+                        console.error(`[Auth Check] Polling error on attempt ${attempts}:`, pollErr);
                     }
-                }, 2000);
+
+                    if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        if (auth.currentUser) {
+                            console.error(`[Auth Check] Fatal: Document not found after ${maxAttempts} attempts. Signing out user to prevent locked state.`);
+                            auth.signOut();
+                            showToast('error', 'Account Error', 'Your account profile was not fully provisioned in the Database. Please contact support or re-register.');
+                        }
+                    }
+                }, interval);
             }
         }, (err) => {
             handleFirestoreError(err, 'get', 'users/' + user.uid);
