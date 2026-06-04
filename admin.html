@@ -711,8 +711,20 @@ body.dark-mode {
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, addDoc, increment, onSnapshot, orderBy, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, initializeFirestore, doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, addDoc, increment, onSnapshot, orderBy, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+window.adminListeners = window.adminListeners || {};
+window.safeOnSnapshot = (listenerKey, refOrQuery, callback, errorCallback) => {
+    if (window.adminListeners[listenerKey]) {
+        try {
+            window.adminListeners[listenerKey]();
+        } catch(e) { console.warn("Unsubscribe failed for " + listenerKey, e); }
+    }
+    const unsub = onSnapshot(refOrQuery, callback, errorCallback || ((err) => console.warn(listenerKey + " snapshot error:", err)));
+    window.adminListeners[listenerKey] = unsub;
+    return unsub;
+};
 
 // Dark Mode Initialization
 const initAdminDarkMode = () => {
@@ -736,7 +748,7 @@ window.toggleAdminDarkMode = () => {
 const adminThemeBtn = document.getElementById('adminThemeToggle');
 if(adminThemeBtn) adminThemeBtn.onclick = window.toggleAdminDarkMode;
 
-window.customPrompt = function(message, title = "Input Required", placeholder = "Type here...") {
+window.customPrompt = function(message, title = "Input Required", placeholder = "Type here...", defaultValue = "") {
     return new Promise((resolve) => {
         const modal = document.getElementById('promptModal');
         const titleEl = document.getElementById('promptTitle');
@@ -747,7 +759,7 @@ window.customPrompt = function(message, title = "Input Required", placeholder = 
 
         titleEl.innerText = title;
         msgEl.innerText = message;
-        inputEl.value = "";
+        inputEl.value = defaultValue;
         inputEl.placeholder = placeholder;
         modal.style.display = 'flex';
         inputEl.focus();
@@ -803,7 +815,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const db = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);
 
 // Test Connection
 (async () => {
@@ -931,17 +943,66 @@ try {
 
 document.getElementById('loginForm').onsubmit = async (e) => {
     e.preventDefault();
+    const emailVal = document.getElementById('adminEmail').value.trim();
+    const passVal = document.getElementById('adminPassword').value;
+    const uEmail = emailVal.toLowerCase();
+    const isSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com' || uEmail === 'admin@smartbd.com';
+    
     try {
-        const cred = await signInWithEmailAndPassword(auth, document.getElementById('adminEmail').value, document.getElementById('adminPassword').value);
-        const uEmail = (cred.user.email || '').toLowerCase().trim();
-        const isSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com' || uEmail === 'admin@smartbd.com'; 
-        const adminDoc = await getDoc(doc(db, 'admins', cred.user.uid));
-        
-        if (!adminDoc.exists() && !isSuperAdmin) { 
-            await signOut(auth); 
-            showToast('Authorization Failed: Your account is not an admin (' + uEmail + ')', 'error'); 
-            return; 
+        let cred;
+        try {
+            cred = await signInWithEmailAndPassword(auth, emailVal, passVal);
+        } catch (signInErr) {
+            if (isSuperAdmin && (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.message?.includes('user-not-found') || signInErr.message?.includes('INVALID_LOGIN_CREDENTIALS') || signInErr.message?.includes('wrong-password') || signInErr.code === 'auth/wrong-password')) {
+                console.log("Self-healing: Admin user not found/invalid in Admin Login. Attempting auto-registration...");
+                try {
+                    cred = await createUserWithEmailAndPassword(auth, emailVal, passVal);
+                    console.log("Successfully registered admin in Auth:", cred.user.uid);
+                } catch (signUpErr) {
+                    throw signInErr;
+                }
+            } else {
+                throw signInErr;
+            }
         }
+        
+        const loggedEmail = (cred.user.email || '').toLowerCase().trim();
+        const isAdminLogged = loggedEmail === 'admin@gmail.com' || loggedEmail === 'admin@cryptoforge.online' || loggedEmail === 'shaikhmdmurad1@gmail.com' || loggedEmail === 'admin@smartbd.com'; 
+        
+        // Self-heal: Ensure user profiles docs exist for SuperAdmin
+        if (isAdminLogged) {
+            try {
+                await setDoc(doc(db, 'users', cred.user.uid), {
+                    uid: 'superadmin', 
+                    email: loggedEmail, 
+                    fullName: 'Super Administrator', 
+                    phone: '01700000000',
+                    balance: 0, 
+                    mainBalance: 99999999,
+                    status: 'active', 
+                    withdrawPin: '', 
+                    profileCompleted: true, 
+                    referredBy: null,
+                    referralCode: 'superadmin',
+                    referralBalance: 0,
+                    totalReferralEarned: 0,
+                    createdAt: new Date().toISOString()
+                }, { merge: true });
+            } catch(e) {
+                console.warn("Self-healing users doc write error (ignoring):", e);
+            }
+
+            try {
+                await setDoc(doc(db, 'admins', cred.user.uid), { 
+                    email: loggedEmail, 
+                    role: 'superadmin', 
+                    lastActive: new Date().toISOString() 
+                }, { merge: true });
+            } catch(e) { 
+                console.warn("Self-healing admins doc write error (ignoring):", e); 
+            }
+        }
+
         showToast('Login Successful');
     } catch (err) { 
         let msg = err.message;
@@ -1032,7 +1093,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
             if(tabId === 'deposits') listenDeposits();
             if(tabId === 'withdraws') listenWithdraws();
             if(tabId === 'history') listenGlobalHistory();
-            if(tabId === 'notifications') loadSentNotifications();
+            if(tabId === 'notifications') { loadGatewayConfig(); loadSentNotifications(); }
             if(tabId === 'system') loadAllBalances();
             
             if(loader) loader.style.display = 'none';
@@ -1211,8 +1272,8 @@ function loadData() {
 
 async function loadStats() {
     try {
-        // Individual listeners for various stats
-        onSnapshot(collection(db, 'users'), (snap) => {
+        // Individual listeners for various stats with unsubscribe logic
+        window.safeOnSnapshot('stats_users', collection(db, 'users'), (snap) => {
             document.getElementById('totalUsers').innerText = snap.size;
             let bal = 0; 
             let suspended = 0;
@@ -1226,36 +1287,37 @@ async function loadStats() {
             if(suspendedEl) suspendedEl.innerText = suspended;
         });
 
-        onSnapshot(query(collection(db, 'deposits'), where('status', '==', 'approved')), (snap) => {
+        window.safeOnSnapshot('stats_deposits', query(collection(db, 'deposits'), where('status', '==', 'approved')), (snap) => {
             let total = 0; snap.forEach(d => total += (d.data().amount || 0));
             const el = document.getElementById('totalApprovedDepo');
             if(el) el.innerText = '৳' + total.toFixed(0);
         });
 
-        onSnapshot(query(collection(db, 'withdraws'), where('status', '==', 'approved')), (snap) => {
+        window.safeOnSnapshot('stats_withdraws', query(collection(db, 'withdraws'), where('status', '==', 'approved')), (snap) => {
             let total = 0; snap.forEach(d => total += (d.data().amount || 0));
             const el = document.getElementById('totalApprovedWithd');
             if(el) el.innerText = '৳' + total.toFixed(0);
         });
 
-        onSnapshot(collection(db, 'work_history'), (snap) => {
+        // Use safe getDocs for work_history to prevent server/browser locks from huge real-time work_history listeners
+        getDocs(collection(db, 'work_history')).then((snap) => {
             let total = 0;
             snap.forEach(d => total += (d.data().earnings || 0));
             const el = document.getElementById('dashTotalMining');
             if(el) el.innerText = '৳' + total.toFixed(0);
-        });
+        }).catch(err => console.warn("Work history stats load failed:", err));
 
-        onSnapshot(query(collection(db, 'user_packages'), where('status', '==', 'active')), (snap) => {
+        window.safeOnSnapshot('stats_active_rigs', query(collection(db, 'user_packages'), where('status', '==', 'active')), (snap) => {
             const el = document.getElementById('dashActiveRigs');
             if(el) el.innerText = snap.size;
         });
 
-        onSnapshot(query(collection(db, 'user_robots'), where('status', '==', 'active')), (snap) => {
+        window.safeOnSnapshot('stats_active_robots', query(collection(db, 'user_robots'), where('status', '==', 'active')), (snap) => {
             const el = document.getElementById('dashActiveRobots');
             if(el) el.innerText = snap.size;
         });
         
-        onSnapshot(collection(db, 'chats'), (snap) => {
+        window.safeOnSnapshot('stats_chats', collection(db, 'chats'), (snap) => {
             const activeChats = snap.docs.filter(d => !d.data().archived).length;
             const el = document.getElementById('dashActiveChats');
             if(el) el.innerText = activeChats;
@@ -1488,44 +1550,21 @@ function listenDeposits() {
 window.handleDeposit = async (id, status, userId, amount) => {
     if(!await window.customConfirm('Are you sure you want to ' + status + ' this deposit?', 'Deposit Action')) return;
     try {
-        const depositRef = doc(db, 'deposits', id);
-        const userRef = doc(db, 'users', userId);
+        const token = await auth.currentUser.getIdToken();
+        const endpoint = status === 'approved' ? '/api/deposit/approve' : '/api/deposit/reject';
         
-        if (status === 'approved') {
-            // Priority: Update balance first
-            await updateDoc(userRef, { 
-                balance: increment(amount),
-                mainBalance: increment(amount),
-                hasDeposit: true 
-            });
-
-            await updateDoc(depositRef, { status: 'approved' });
-
-            await addDoc(collection(db, 'notifications'), {
-                userId,
-                title: 'Deposit Approved',
-                message: `Your deposit of ৳${amount} has been approved.`,
-                createdAt: new Date().toISOString(),
-                read: false
-            });
-
-            await addDoc(collection(db, 'transactions'), {
-                userId,
-                type: 'deposit',
-                amount,
-                source: 'Admin Approved',
-                createdAt: new Date().toISOString()
-            });
-
-        } else {
-            await updateDoc(depositRef, { status: 'rejected' });
-            await addDoc(collection(db, 'notifications'), {
-                userId,
-                title: 'Deposit Rejected',
-                message: `Your deposit of ৳${amount} was rejected.`,
-                createdAt: new Date().toISOString(),
-                read: false
-            });
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ depositId: id })
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Server error occurred');
         }
         
         showToast('Operation Successful', 'success');
@@ -1610,33 +1649,23 @@ function listenWithdraws() {
 window.handleWithdraw = async (id, status, userId, amount) => {
     if(!await window.customConfirm('Are you sure?', 'Withdraw Action')) return;
     try {
-        const withdrawRef = doc(db, 'withdraws', id);
-        const userRef = doc(db, 'users', userId);
-
-        if(status === 'rejected') {
-            await updateDoc(userRef, { 
-                balance: increment(amount),
-                mainBalance: increment(amount)
-            });
-            await updateDoc(withdrawRef, { status: 'rejected' });
-            await addDoc(collection(db, 'notifications'), {
-                userId,
-                title: 'Withdraw Rejected',
-                message: `Your ৳${amount} withdraw was rejected. Amount returned to wallet.`,
-                createdAt: new Date().toISOString(),
-                read: false
-            });
+        const token = await auth.currentUser.getIdToken();
+        const endpoint = status === 'approved' ? '/api/withdraw/approve' : '/api/withdraw/reject';
+        
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ withdrawId: id })
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Server error occurred');
         }
-        if(status === 'approved') {
-            await updateDoc(withdrawRef, { status: 'approved' });
-            await addDoc(collection(db, 'notifications'), {
-                userId,
-                title: 'Withdraw Completed',
-                message: `Congratulations! Your ৳${amount} withdraw request was successful.`,
-                createdAt: new Date().toISOString(),
-                read: false
-            });
-        }
+        
         showToast('Operation Successful', 'success');
         loadStats();
     } catch(err) { 
@@ -1649,7 +1678,7 @@ function loadUsers() {
     const list = document.getElementById('usersList');
     if (!list) return;
 
-    onSnapshot(collection(db, 'users'), (snap) => {
+    window.safeOnSnapshot('users_list', query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(150)), (snap) => {
         list.innerHTML = '';
         if (snap.empty) {
             list.innerHTML = '<p style="text-align:center;padding:20px;color:var(--muted)">No users found in database.</p>';
@@ -1729,13 +1758,34 @@ window.viewUser = async (id) => {
             <button class="btn-sm btn-reje" style="background:#000" onclick="deleteUser('${id}', '${d.fullName}')">Delete Account</button>
         </div>
 
+        <div class="list-card" style="border-left: 4px solid var(--primary); margin-bottom: 20px;">
+            <b style="color:var(--primary)"><i class="fa-solid fa-user-gear"></i> Premium Compliance & Speed Tuning</b>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+                <button class="btn-sm" style="background:${d.withdrawLocked ? 'var(--success)' : 'var(--danger)'};color:#fff;font-size:11px" onclick="toggleWithdrawLock('${id}', ${d.withdrawLocked || false})">
+                    <i class="fa-solid fa-money-bill-transfer"></i> ${d.withdrawLocked ? 'Unlock Withdrawals' : 'Freeze Withdrawals'}
+                </button>
+                <button class="btn-sm" style="background:${d.miningLocked ? 'var(--success)' : 'var(--danger)'};color:#fff;font-size:11px" onclick="toggleMiningLock('${id}', ${d.miningLocked || false})">
+                    <i class="fa-solid fa-bolt"></i> ${d.miningLocked ? 'Unlock Claims' : 'Freeze Claims'}
+                </button>
+                <button class="btn-sm" style="background:#e0a800;color:#000;font-size:11px" onclick="setEarningsMultiplier('${id}', ${d.earningsMultiplier || 1.0})">
+                    <i class="fa-solid fa-gauge-high"></i> Multiply Rate: ${d.earningsMultiplier || 1.0}x
+                </button>
+                <button class="btn-sm" style="background:#6c757d;color:#fff;font-size:11px" onclick="changeWithdrawPinDirectly('${id}', '${d.withdrawPin || ''}')">
+                    <i class="fa-solid fa-key"></i> Force Set PIN
+                </button>
+            </div>
+        </div>
+
         <div class="list-card">
             <b>Customer Statistics & Profile</b>
             <div style="font-size:13px;margin-top:8px;display:flex;flex-direction:column;gap:5px">
                 <div style="display:flex;justify-content:space-between"><span>Registered:</span> <b style="color:var(--text)">${d.createdAt ? new Date(d.createdAt).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : 'N/A'}</b></div>
                 <div style="display:flex;justify-content:space-between"><span>Email:</span> <b style="color:var(--text)">${d.email}</b></div>
                 <div style="display:flex;justify-content:space-between"><span>Phone:</span> <b style="color:var(--text)">${d.phone || 'N/A'}</b></div>
-                <div style="display:flex;justify-content:space-between"><span>Withdraw PIN:</span> <b style="color:var(--primary)">${d.withdrawPin || 'Not Set'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Withdraw PIN:</span> <b style="color:var(--primary); font-family: monospace;">${d.withdrawPin || 'Not Set'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Withdraw Status:</span> <b style="color:${d.withdrawLocked ? 'var(--danger)' : 'var(--success)'}">${d.withdrawLocked ? '❄️ Frozen' : '✅ Active'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Mining Engine Limit:</span> <b style="color:${d.miningLocked ? 'var(--danger)' : 'var(--success)'}">${d.miningLocked ? '❄️ Locked/Audited' : '✅ Normal Speed'}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Speed Multiplier Tuning:</span> <b style="color:#e0a800">${d.earningsMultiplier || 1.0}x Boost Rate</b></div>
                 <div style="display:flex;justify-content:space-between"><span>Referral Code:</span> <b style="color:#fb8c00">${d.referralCode || 'N/A'}</b></div>
                 <div style="display:flex;justify-content:space-between"><span>Direct Referrer:</span> <b style="color:var(--primary)">${d.referredByUID || 'Organic User'}</b></div>
             </div>
@@ -2019,6 +2069,51 @@ window.toggleSuspend = async (id, current) => {
     if(next && !await window.customConfirm('Are you sure you want to suspend this user? They will lose access to most features.', 'Suspend User')) return;
     await updateDoc(doc(db, 'users', id), { isSuspended: next });
     showToast(next ? 'User Suspended' : 'User Unsuspended');
+    closeModal('userModal');
+    loadUsers();
+};
+
+window.toggleWithdrawLock = async (id, current) => {
+    const next = !current;
+    if(next && !await window.customConfirm('Are you sure you want to FREEZE withdrawal requests for this customer?', 'Freeze Withdrawals')) return;
+    await updateDoc(doc(db, 'users', id), { withdrawLocked: next });
+    showToast(next ? 'Withdrawals Audited & Frozen' : 'Withdrawals Resumed');
+    closeModal('userModal');
+    loadUsers();
+};
+
+window.toggleMiningLock = async (id, current) => {
+    const next = !current;
+    if(next && !await window.customConfirm('Are you sure you want to BLOCK daily package claims for this customer?', 'Freeze Claims')) return;
+    await updateDoc(doc(db, 'users', id), { miningLocked: next });
+    showToast(next ? 'Mining Claims Audited & Locked' : 'Mining Claims Resumed');
+    closeModal('userModal');
+    loadUsers();
+};
+
+window.setEarningsMultiplier = async (id, current) => {
+    const newVal = await window.customPrompt("Enter speed multiplier (e.g. 1.0 is standard, 1.5 is +50% earnings speed, 0.5 is half-speed):", "Mining Speed", "e.g. 1.0", current);
+    if (newVal === null) return;
+    const num = parseFloat(newVal);
+    if (isNaN(num) || num < 0) {
+        showToast("Please enter a valid positive multiplier number.", "error");
+        return;
+    }
+    await updateDoc(doc(db, 'users', id), { earningsMultiplier: num });
+    showToast(`Multiplier Updated to ${num}x`);
+    closeModal('userModal');
+    loadUsers();
+};
+
+window.changeWithdrawPinDirectly = async (id, currentPin) => {
+    const newPin = await window.customPrompt("Enter new withdrawal PIN directly for this customer (e.g., 6-digits):", "Update PIN", "PIN text", currentPin);
+    if (newPin === null) return;
+    if (newPin.trim() === '') {
+        showToast("PIN cannot be empty.", "error");
+        return;
+    }
+    await updateDoc(doc(db, 'users', id), { withdrawPin: newPin.trim() });
+    showToast('Withdrawal PIN Adjusted');
     closeModal('userModal');
     loadUsers();
 };
@@ -2585,35 +2680,92 @@ window.deleteTask = async (id) => {
     }
 }
 
-// User search logic
-document.getElementById('userSearch').oninput = async (e) => {
-    const qTerm = e.target.value.toLowerCase();
-    const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+// User search logic (In-memory filtering for absolute performance and 0 database load)
+document.getElementById('userSearch').oninput = (e) => {
+    const qTerm = e.target.value.toLowerCase().trim();
     const list = document.getElementById('usersList');
-    list.innerHTML = '';
-    snap.forEach(dDoc => {
-        const d = dDoc.data();
-        if (d.fullName.toLowerCase().includes(qTerm) || d.uid.toLowerCase().includes(qTerm)) {
-            const card = document.createElement('div');
-            card.className = 'list-card';
-            card.innerHTML = `
-                <div class="list-top">
-                    <div class="list-info"><b>${d.fullName}</b><span>UID: ${d.uid}</span></div>
-                    <div class="list-amount">৳${(d.balance || 0).toFixed(1)}</div>
-                </div>
-                <div class="list-top" style="align-items:center;margin-top:5px;gap:8px">
-                    <span class="status-pill ${(d.status || 'inactive')}">${(d.status || 'inactive')}</span>
-                    <span style="font-size:10px; color:${d.profileCompleted ? 'var(--success)' : 'var(--muted)'}">${d.profileCompleted ? '✓Profile' : '✗Profile'}</span>
-                    <span style="font-size:10px; color:${d.hasDeposit ? 'var(--success)' : 'var(--muted)'}">${d.hasDeposit ? '✓Deposit' : '✗Deposit'}</span>
-                    <div style="display:flex; gap:5px; margin-left:auto">
-                        <button class="btn-sm btn-view" style="width:auto; padding:4px 10px" onclick="viewUser('${dDoc.id}')">Details</button>
-                        <button class="btn-sm btn-reje" style="width:auto; padding:4px 10px" onclick="deleteUser('${dDoc.id}', '${d.fullName}')">Delete</button>
-                    </div>
-                </div>
-            `;
-            list.appendChild(card);
+    if (!list) return;
+    const cards = list.getElementsByClassName('list-card');
+    
+    let visibleCount = 0;
+    for (let card of cards) {
+        // Search inside card's text
+        const text = card.innerText.toLowerCase();
+        if (text.includes(qTerm)) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
         }
-    });
+    }
+    
+    // If no matching records are visible in the currently loaded snapshot, we can fall back to a database query to search everything
+    const noResultsElId = 'noSearchUsersFoundMsg';
+    let noResultsEl = document.getElementById(noResultsElId);
+    
+    if (visibleCount === 0 && qTerm !== "") {
+        if (!noResultsEl) {
+            noResultsEl = document.createElement('p');
+            noResultsEl.id = noResultsElId;
+            noResultsEl.style = 'text-align:center; padding:20px; color:var(--muted);';
+            list.appendChild(noResultsEl);
+        }
+        noResultsEl.innerText = "Searching database...";
+        
+        // Debounce database fallback slightly if needed, but direct search is okay since it's a fallback only
+        const runFallbackSearch = async () => {
+            try {
+                const snap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+                let foundAny = false;
+                snap.forEach(dDoc => {
+                    const d = dDoc.data();
+                    const nameMatch = d.fullName && d.fullName.toLowerCase().includes(qTerm);
+                    const uidMatch = d.uid && d.uid.toLowerCase().includes(qTerm);
+                    if (nameMatch || uidMatch) {
+                        foundAny = true;
+                        // Avoid duplicates if card already exists
+                        let cardExists = false;
+                        for(let existingCard of cards) {
+                            if (existingCard.innerText.includes(d.uid)) {
+                                existingCard.style.display = 'block';
+                                cardExists = true;
+                            }
+                        }
+                        if (!cardExists) {
+                            const card = document.createElement('div');
+                            card.className = 'list-card';
+                            card.innerHTML = `
+                                <div class="list-top">
+                                    <div class="list-info"><b>${d.fullName}</b><span>UID: ${d.uid}</span></div>
+                                    <div class="list-amount">৳${(d.balance || 0).toFixed(1)}</div>
+                                </div>
+                                <div class="list-top" style="align-items:center;margin-top:5px;gap:8px">
+                                    <span class="status-pill ${(d.status || 'inactive')}">${(d.status || 'inactive')}</span>
+                                    <span style="font-size:10px; color:${d.profileCompleted ? 'var(--success)' : 'var(--muted)'}">${d.profileCompleted ? '✓Profile' : '✗Profile'}</span>
+                                    <span style="font-size:10px; color:${d.hasDeposit ? 'var(--success)' : 'var(--muted)'}">${d.hasDeposit ? '✓Deposit' : '✗Deposit'}</span>
+                                    <div style="display:flex; gap:5px; margin-left:auto">
+                                        <button class="btn-sm btn-view" style="width:auto; padding:4px 10px" onclick="viewUser('${dDoc.id}')">Details</button>
+                                        <button class="btn-sm btn-reje" style="width:auto; padding:4px 10px" onclick="deleteUser('${dDoc.id}', '${d.fullName}')">Delete</button>
+                                    </div>
+                                </div>
+                            `;
+                            list.appendChild(card);
+                        }
+                    }
+                });
+                if (foundAny) {
+                    if (noResultsEl) noResultsEl.remove();
+                } else {
+                    if (noResultsEl) noResultsEl.innerText = "No matching users found.";
+                }
+            } catch(err) {
+                if (noResultsEl) noResultsEl.innerText = "Error searching database: " + err.message;
+            }
+        };
+        runFallbackSearch();
+    } else {
+        if (noResultsEl) noResultsEl.remove();
+    }
 };
 
 window.chatArchivedFilter = false;

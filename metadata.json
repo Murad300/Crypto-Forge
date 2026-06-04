@@ -1,0 +1,8 @@
+{
+  "name": "Earning Mining Pro",
+  "description": "A sophisticated mining and earning platform with per-second calculation, automated robot features, and precise balance distribution logic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

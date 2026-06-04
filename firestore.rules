@@ -1,0 +1,182 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "admin@gmail.com" ||
+        request.auth.token.email == "admin@cryptoforge.online" ||
+        request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
+        request.auth.token.email == "admin@smartbd.com" ||
+        request.auth.token.email == "backend-admin@cryptoforge.local" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null; 
+      allow update: if (request.auth != null && request.auth.uid == userId 
+        && !request.resource.data.diff(resource.data).affectedKeys()
+           .hasAny(['mainBalance', 'referralCommissionBalance', 'uplineId'])) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /purchasedPackages/{pkgId} {
+        allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      }
+    }
+    
+    match /email_otps/{otpId} {
+      allow read, write: if request.auth != null && (request.auth.token.email == otpId || request.auth.uid == otpId || isAdmin());
+    }
+    
+    match /user_packages/{pkgId} {
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if (request.auth != null && request.resource.data.userId == request.auth.uid) || isAdmin();
+      allow update: if (request.auth != null && resource.data.userId == request.auth.uid 
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['miningStartTime'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    match /user_robots/{robotId} {
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if (request.auth != null && request.resource.data.userId == request.auth.uid) || isAdmin();
+      allow update: if (request.auth != null && resource.data.userId == request.auth.uid 
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isActivated'])) || isAdmin();
+      allow delete: if isAdmin(); 
+    }
+    
+    match /mining_logs/{logId} {
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      allow write: if isAdmin(); 
+    }
+    
+    match /commission_logs/{logId} {
+      allow read: if (request.auth != null && resource.data.toUser == request.auth.uid) || isAdmin();
+      allow write: if isAdmin(); 
+    }
+    
+    match /transaction_logs/{logId} {
+      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      allow write: if isAdmin(); 
+    }
+
+    // --- Admins ---
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // --- Packages & Configs ---
+    match /packages/{docId} {
+      allow read: if true; 
+      allow write: if false; 
+    }
+    match /robots_config/{docId} {
+      allow read: if true; 
+      allow write: if false;
+    }
+    match /config/{docId} {
+      allow read: if true; 
+      allow write: if false;
+    }
+    match /admin/{docId} {
+      allow read: if true; 
+      allow write: if false;
+    }
+
+    // --- Mining & Work ---
+    match /mining_states/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /work_history/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // --- Financials ---
+    match /deposits/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+    match /withdraws/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+    match /transactions/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // --- Support & Communication ---
+    match /support/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /landing_chats/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /messages/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /chats/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // --- Others ---
+    match /settings/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /notifications/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /tasks/{docId} {
+      allow read: if true; 
+      allow write: if isSignedIn();
+    }
+    match /homepage_tasks/{docId} {
+      allow read: if true; 
+      allow write: if isSignedIn();
+    }
+    match /completed_tasks/{docId} {
+      allow read: if isSignedIn(); 
+      allow write: if isSignedIn();
+    }
+    match /user_tasks/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /referral_earnings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /landing_support/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /support_chats/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+    match /earnings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+  }
+}
