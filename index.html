@@ -4641,9 +4641,33 @@ onAuthStateChanged(auth, async (user) => {
                     try {
                         const checkSnap = await getDoc(doc(db, 'users', user.uid));
                         if (checkSnap.exists()) {
-                            console.log(`[Auth Check] Document found successfully on attempt ${attempts}!`);
+                            console.log(`[Auth Check] Document found successfully on attempt ${attempts}! Self-healing view session...`);
                             clearInterval(checkInterval);
-                            return; // The snapshot listener will automatically receive the update event and handle it!
+                            
+                            // Self-heal: Manually bootstrap active session to prevent any timing or snapshot disconnect issue
+                            const newData = { ...checkSnap.data(), uid_fs: user.uid };
+                            currentUserData = newData;
+                            
+                            // Hide loader and all auth-related views cleanly
+                            const loader = document.getElementById('adminPanelLoading');
+                            if (loader) loader.style.display = 'none';
+                            
+                            document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+                            const verifyView = document.getElementById('verifyView');
+                            if (verifyView) verifyView.classList.remove('active');
+                            
+                            const appView = document.getElementById('appView');
+                            if (appView) appView.classList.add('active');
+                            
+                            // Initialize Home views & listeners
+                            showPage('homePage');
+                            updateHeader();
+                            renderPackages();
+                            renderWork();
+                            loadHomepageTasks();
+                            listenRealTimeBadges(user.uid);
+                            listenNotifications(user.uid);
+                            return;
                         }
                     } catch (pollErr) {
                         console.error(`[Auth Check] Polling error on attempt ${attempts}:`, pollErr);
@@ -6163,10 +6187,8 @@ async function handleVerifyOtp(e) {
             appView.classList.add('active');
         }
         
-        // Reload location to transition safely and fully to home dashboard or page
-        setTimeout(() => {
-            location.reload();
-        }, 1200);
+        // Navigation completed cleanly without location.reload() which can destroy ephemeral sessions in sandbox frames
+        showPage('homePage');
     } catch (err) {
         console.error("Verification Token Auth Error:", err);
         showToast('error', 'Verification Failed', err.message);
