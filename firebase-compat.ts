@@ -199,6 +199,12 @@ export class CompatCollectionReference {
     return new CompatDocumentReference(this.colPath, id, rawRef);
   }
 
+  async add(data: any) {
+    const docRef = this.doc();
+    await docRef.set(data);
+    return docRef;
+  }
+
   where(field: string, op: any, value: any) {
     const mappedOp = op === "===" ? "==" : op;
     const newCol = new CompatCollectionReference(this.colPath);
