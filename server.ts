@@ -377,10 +377,8 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
       const miningRef = database.collection("mining_states").doc(userId);
       const miningSnap = await transaction.get(miningRef);
 
-      // READ: Query if this buyer has already generated an instant_10 commission (10% limit check)
-      const existingCommRef = database.collection("commission_logs").where("fromUser", "==", userId).where("type", "==", "instant_10").limit(1);
-      const existingCommSnap = await transaction.get(existingCommRef);
-      const hasAwarded10 = userData.hasAwardedUpline10 === true || !existingCommSnap.empty;
+      // Check if this buyer has already generated an instant_10 commission (10% limit check under document field)
+      const hasAwarded10 = userData.hasAwardedUpline10 === true;
 
       const currentBal = typeof userData.mainBalance === 'number' ? userData.mainBalance : (userData.balance || 0);
       if (currentBal < pkgData.price) {
@@ -467,8 +465,10 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
         const commission = calculateInstantCommission(newPackageData.price);
         if (commission > 0) {
           const uplineRef = dbCompat.collection("users").doc(effectiveUplineId);
+          // Increment referralCommissionBalance AND totalReferralEarned
           transaction.update(uplineRef, {
-            referralCommissionBalance: admin.firestore.FieldValue.increment(commission)
+            referralCommissionBalance: admin.firestore.FieldValue.increment(commission),
+            totalReferralEarned: admin.firestore.FieldValue.increment(commission)
           });
           transaction.update(userRef, {
             hasAwardedUpline10: true
@@ -483,6 +483,29 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
             baseAmount: newPackageData.price,
             amount: commission,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+
+          // Create Notification for Referrer
+          const uNotifId = `notif_ref_comm_${Date.now()}_${effectiveUplineId}`;
+          const currentBDTimeIso = new Date().toISOString();
+          transaction.set(dbCompat.collection("notifications").doc(uNotifId), {
+            userId: effectiveUplineId,
+            title: "Referral Commission Received ৳",
+            message: `You have received a 10% commission of ৳${commission.toFixed(2)} because your referral has activated their first mining package node!`,
+            type: "referral_commission",
+            timestamp: currentBDTimeIso,
+            read: false
+          });
+
+          // Create Transaction Log for Referrer so it appears in History
+          const uTxId = `tx_ref_comm_${Date.now()}_${effectiveUplineId}`;
+          transaction.set(dbCompat.collection("transactions").doc(uTxId), {
+            userId: effectiveUplineId,
+            amount: commission,
+            type: "commission",
+            timestamp: currentBDTimeIso,
+            createdAt: currentBDTimeIso,
+            description: `10% referral commission from package activation`
           });
         }
       }
@@ -864,10 +887,15 @@ expressApp.post("/api/deposit/approve", verifyAdmin, async (req: any, res: any) 
         approvedAt: new Date().toISOString() 
       });
 
-      // 2. Increment user mainBalance and balance
+      // 2. Increment user mainBalance and balance, and update activation status
+      const userDoc = userSnap.data() || {};
+      const nextStatus = userDoc.profileCompleted === true ? 'active' : 'inactive';
+
       transaction.update(userRef, {
         mainBalance: admin.firestore.FieldValue.increment(amount),
-        balance: admin.firestore.FieldValue.increment(amount)
+        balance: admin.firestore.FieldValue.increment(amount),
+        hasDeposit: true,
+        status: nextStatus
       });
 
       // 3. Log customer transaction history
@@ -1787,9 +1815,10 @@ expressApp.post("/api/verify-otp", async (req, res) => {
         phone: registrationData.phone,
         balance: 0,
         mainBalance: 0,
-        status: 'active',
+        status: 'inactive',
         withdrawPin: '',
         profileCompleted: false,
+        hasDeposit: false,
         referredBy: registrationData.referredBy || null,
         referralCode: registrationData.uid,
         referralBalance: 0,
