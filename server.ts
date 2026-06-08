@@ -1515,7 +1515,10 @@ async function getMailTransporter() {
       },
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 4000,
+      greetingTimeout: 4000,
+      socketTimeout: 4000
     });
   } else {
     currentTransporter = nodemailer.createTransport({
@@ -1528,7 +1531,10 @@ async function getMailTransporter() {
       },
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 4000,
+      greetingTimeout: 4000,
+      socketTimeout: 4000
     });
   }
   return currentTransporter;
@@ -1688,7 +1694,10 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
           },
           tls: {
             rejectUnauthorized: false
-          }
+          },
+          connectionTimeout: 4000,
+          greetingTimeout: 4000,
+          socketTimeout: 4000
         });
 
         await fallbackTransporter.sendMail({
@@ -1953,7 +1962,10 @@ expressApp.post("/api/forgot-password", async (req, res) => {
           },
           tls: {
             rejectUnauthorized: false
-          }
+          },
+          connectionTimeout: 4000,
+          greetingTimeout: 4000,
+          socketTimeout: 4000
         });
 
         await fallbackTransporter.sendMail({
