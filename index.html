@@ -4421,6 +4421,7 @@ onAuthStateChanged(auth, async (user) => {
                     // Auto-trigger OTP send once to avoid spamming the user
                     if (!window.initialVerificationOtpSent) {
                         window.initialVerificationOtpSent = true;
+                        window.resendCount = 0;
                         setTimeout(async () => {
                             try {
                                 const res = await fetch('/api/send-verify-otp', {
@@ -5424,6 +5425,8 @@ function initAppListeners() {
         const user = auth.currentUser;
         if (!user) return showToast('error', 'Error', 'You are not logged in.');
         
+        window.resendCount = 0;
+        
         const btn = document.getElementById('sendVerifyBtn');
         let originalText = btn ? btn.innerText : '';
         if (btn) {
@@ -5940,7 +5943,13 @@ window.showClientOtp = (otpCode) => {
     const container = document.getElementById('verifyOtpDisplayContainer');
     if (!container) return;
     
-    container.style.display = 'block';
+    const showBackup = window.resendCount && window.resendCount >= 1;
+    if (showBackup) {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+    
     container.innerHTML = `
         <div style="background: rgba(30, 41, 59, 0.95); border: 2px solid #3b82f6; border-radius: 14px; padding: 10px 14px; text-align: center; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35); margin-bottom: 15px;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(15, 23, 42, 0.9); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.25);">
@@ -6007,6 +6016,9 @@ window.resendVerificationLink = async () => {
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to send verification email.');
+
+        // Increment retry attempts to show on consecutive sends
+        window.resendCount = (window.resendCount || 0) + 1;
 
         if (data.debugOtp) {
             window.showClientOtp(data.debugOtp);
@@ -6239,6 +6251,7 @@ async function handleRegister(e) {
             referredBy: referrerUidFs
         };
         window.isRegistrationOtpFlow = true;
+        window.resendCount = 0;
 
         // Trigger OTP dispatch on backend
         const res = await fetch('/api/send-verify-otp', {
