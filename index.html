@@ -2605,7 +2605,7 @@ body.dark-mode {
             <div class="list-item-left"><i class="fa-solid fa-robot menu-indigo"></i><div><strong>Robot Management</strong><span>Control your auto-bots</span></div></div>
             <i class="fa-solid fa-chevron-right"></i>
         </div>
-        <div class="list-item hidden" id="adminPanelBtn" onclick="window.open('/admin.html', '_blank')">
+        <div class="list-item hidden" id="adminPanelBtn" onclick="window.open('/portal-manager', '_blank')">
             <div class="list-item-left"><i class="fa-solid fa-user-shield menu-red"></i><div><strong>Admin Panel</strong><span>Management System</span></div></div>
             <i class="fa-solid fa-up-right-from-square"></i>
         </div>
@@ -2667,7 +2667,17 @@ body.dark-mode {
             <i class="fa-solid fa-triangle-exclamation"></i> Developer Console
         </h4>
         <p style="font-size:11px; color:var(--muted); margin-bottom:15px">This tool is for testing purposes only. Clicking the button below will reset ALL customer data to zero (Balance, Packages, Tasks, Transactions).</p>
-        <button onclick="window.technicalResetData()" class="btn" style="background:var(--danger); color:#fff; font-weight:700; padding:12px; border-radius:10px">Admin Reset (Wipe All Data)</button>
+        <button onclick="window.technicalResetData()" class="btn" style="background:var(--danger); color:#fff; font-weight:700; padding:12px; border-radius:10px; margin-bottom:20px">Admin Reset (Wipe All Data)</button>
+        
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(211,47,47,0.2)">
+            <h5 style="color: var(--primary); margin-bottom: 8px; font-size: 12px; display: flex; align-items: center; gap: 6px; font-weight: 700">
+                <i class="fa-solid fa-link"></i> Authorized Admin Paths
+            </h5>
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 11px;">
+                <span style="color:var(--muted)">Secure Portal URL: <a href="/portal-manager" target="_blank" style="color:var(--primary); font-weight: 700; text-decoration: underline;">/portal-manager</a></span>
+                <span style="color:var(--muted)">Shortcut Portal URL: <a href="/admin-panel" target="_blank" style="color:var(--primary); font-weight: 700; text-decoration: underline;">/admin-panel</a></span>
+            </div>
+        </div>
     </div>
 </div>
 <div class="helper-text" style="color:var(--muted);margin-top:10px">Ensure your information matches your NID/Birth Certificate.</div>
