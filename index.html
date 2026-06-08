@@ -4433,10 +4433,11 @@ onAuthStateChanged(auth, async (user) => {
                                 if (data.debugOtp) {
                                     window.showClientOtp(data.debugOtp);
                                 }
-                                if (data.smtpError && data.debugOtp) {
+                                const canShowCode = window.resendCount && window.resendCount >= 1;
+                                if (canShowCode && data.smtpError && data.debugOtp) {
                                     showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
                                     window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor testing, please use this temporary OTP code: ${data.debugOtp}\n\nThis is safely stored in the Database.`);
-                                } else if (res.ok) {
+                                } else {
                                     showToast('success', 'Email Code Sent', 'A verification OTP code has been sent to your email.');
                                 }
                             } catch (e) {
@@ -5451,7 +5452,8 @@ function initAppListeners() {
                 window.showClientOtp(data.debugOtp);
             }
 
-            if (data.smtpError && data.debugOtp) {
+            const canShowCode = window.resendCount && window.resendCount >= 1;
+            if (canShowCode && data.smtpError && data.debugOtp) {
                 showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
                 window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor immediate testing, please use this security OTP code: ${data.debugOtp}\n\nThis has been securely saved to the Database.`);
             } else {
@@ -6265,10 +6267,11 @@ async function handleRegister(e) {
             window.showClientOtp(data.debugOtp);
          }
 
-        if (data.smtpError && data.debugOtp) {
+        const canShowCode = window.resendCount && window.resendCount >= 1;
+        if (canShowCode && data.smtpError && data.debugOtp) {
             showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
             window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor testing, please use this temporary OTP code: ${data.debugOtp}\n\nThis is safely stored in the Database.`);
-        } else if (res.ok) {
+        } else {
             showToast('success', 'Email Code Sent', 'A verification OTP code has been sent to your email.');
         }
 
