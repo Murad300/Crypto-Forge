@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with balance and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "mainBalance": { "type": "number", "description": "Current available balance" },
+        "hasActiveRobot": { "type": "boolean", "description": "Whether the robot auto-starts mining" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "mainBalance", "hasActiveRobot", "status"]
+    },
+    "Package": {
+      "title": "Package",
+      "description": "Mining packages available for purchase",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "dailyProfit": { "type": "number" },
+        "durationDays": { "type": "number" }
+      },
+      "required": ["id", "name", "price", "dailyProfit"]
+    },
+    "UserPackage": {
+      "title": "User Package",
+      "description": "Packages owned by a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "packageId": { "type": "string" },
+        "purchasedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "expired"] }
+      },
+      "required": ["userId", "packageId", "purchasedAt", "status"]
+    },
+    "MiningState": {
+      "title": "Mining State",
+      "description": "Track current mining status for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "lastStartTime": { "type": "number", "description": "Timestamp in ms" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["userId", "lastStartTime", "isActive"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Logs of all balance changes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["deposit", "withdrawal", "purchase", "mining_profit"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" }
+      },
+      "required": ["userId", "amount", "type", "timestamp"]
+    },
+    "SmtpSettings": {
+      "title": "SMTP Settings",
+      "description": "Secure mail routing configuration",
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "number" },
+        "secure": { "type": "boolean" },
+        "user": { "type": "string" },
+        "pass": { "type": "string" }
+      },
+      "required": ["host", "port", "secure", "user", "pass"]
+    }
+  },
+  "firestore": {
+    "/settings/{settingsId}": {
+      "schema": "SmtpSettings",
+      "description": "Dynamic system settings including secure email setup"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Root user documents"
+    },
+    "/packages/{packageId}": {
+      "schema": "Package",
+      "description": "Available packages"
+    },
+    "/user_packages/{userPackageId}": {
+      "schema": "UserPackage",
+      "description": "Mappings of users to packages"
+    },
+    "/mining_states/{userId}": {
+      "schema": "MiningState",
+      "description": "Current mining sessions"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Global transaction log"
+    }
+  }
+}
