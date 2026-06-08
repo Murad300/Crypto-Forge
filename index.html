@@ -3019,8 +3019,9 @@ if (location.protocol === 'http:' && location.hostname !== 'localhost' && !locat
 import { GoogleGenerativeAI as GoogleGenAI } from "https://esm.run/@google/generative-ai";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, increment, onSnapshot, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+window.signInAnonymously = signInAnonymously;
 // Application Data Constants
 window.availableRobots = [
     { id: 'robot_7d', name: 'Smart Bot (7 Days)', price: 150, duration: 7, desc: 'Automates reward collection for 7 days.', color: '#4285F4' },
@@ -4305,6 +4306,10 @@ function listenAdminConfig() {
 // Registration handled by safeOnSubmit in initAppListeners
 onAuthStateChanged(auth, async (user) => {
     if (user) {
+        if (user.isAnonymous) {
+            // It's an anonymous guest support session. Keep views intact and exit.
+            return;
+        }
         listenAdminConfig();
         // Admin exemption for email verification
         const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
@@ -5909,6 +5914,15 @@ window.startSupportChat = async (e) => {
         return showToast('error', 'Incomplete', 'Please provide your name and mobile number.');
     }
     
+    // Authenticate guest user anonymously in background to let firestore rules pass
+    if (!auth.currentUser) {
+        try {
+            await signInAnonymously(auth);
+        } catch(err) {
+            console.warn("Failed anonymous sign-in for guest:", err);
+        }
+    }
+    
     chatGuestName = name;
     chatGuestPhone = phone;
     localStorage.setItem('guestChatName', name);
@@ -5989,6 +6003,15 @@ window.sendSupportMessage = async () => {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
+    
+    // Ensure signed in anonymously if there's no currentUser
+    if (!auth.currentUser) {
+        try {
+            await signInAnonymously(auth);
+        } catch(err) {
+            console.warn("Failed anonymous sign-in on send:", err);
+        }
+    }
     
     const uid = auth.currentUser ? auth.currentUser.uid : guestSessionId;
     if (!uid) {
