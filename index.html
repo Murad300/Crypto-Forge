@@ -1736,6 +1736,9 @@ body.dark-mode {
         <p class="subtitle" id="verifyUserEmail">Verification OTP has been sent to your email.</p>
         <p style="font-size:13px; color:var(--muted); text-align:center; margin-bottom:15px">Please check your inbox or spam folder and enter the 4-digit OTP below:</p>
         
+        <!-- Professional client-side OTP Display with floating copy option -->
+        <div id="verifyOtpDisplayContainer" style="display:none; margin: 15px 0 20px 0; text-align: left; width: 100%;"></div>
+        
         <form id="verifyOtpForm" style="width:100%; margin-bottom:20px;">
             <div class="input-group" style="margin-bottom:15px;">
                 <label>4-Digit Code</label>
@@ -2617,10 +2620,6 @@ body.dark-mode {
             <div class="list-item-left"><i class="fa-solid fa-clock-rotate-left menu-purple"></i><div><strong>Account History</strong><span>All transaction records</span></div></div>
             <i class="fa-solid fa-chevron-right"></i>
         </div>
-        <div class="list-item" onclick="window.openRobotManagementModal()">
-            <div class="list-item-left"><i class="fa-solid fa-robot menu-indigo"></i><div><strong>Robot Management</strong><span>Control your auto-bots</span></div></div>
-            <i class="fa-solid fa-chevron-right"></i>
-        </div>
         <div class="list-item hidden" id="adminPanelBtn" onclick="window.open('/portal-manager', '_blank')">
             <div class="list-item-left"><i class="fa-solid fa-user-shield menu-red"></i><div><strong>Admin Panel</strong><span>Management System</span></div></div>
             <i class="fa-solid fa-up-right-from-square"></i>
@@ -3315,7 +3314,7 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
             const dStr = window.getBDDate(cur);
             // Check if robot was active on this day string
             const robotActive = myActiveRobots && myActiveRobots.some(r => {
-                if (r.status !== 'active' || r.isActivated !== true) return false;
+                if (r.status !== 'active') return false;
                 const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
                 // Active if robot did not expire yet
                 return rExp && rExp > window.getBDMidnight(dStr);
@@ -3332,7 +3331,7 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
 
     // Now analyze the current active day (today)
     const robotActiveToday = myActiveRobots && myActiveRobots.some(r => {
-        if (r.status !== 'active' || r.isActivated !== true) return false;
+        if (r.status !== 'active') return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
         return rExp && rExp > now;
     });
@@ -4383,6 +4382,9 @@ onAuthStateChanged(auth, async (user) => {
                                     body: JSON.stringify({ email: user.email })
                                 });
                                 const data = await res.json();
+                                if (data.debugOtp) {
+                                    window.showClientOtp(data.debugOtp);
+                                }
                                 if (data.smtpError && data.debugOtp) {
                                     showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
                                     window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor testing, please use this temporary OTP code: ${data.debugOtp}\n\nThis is safely stored in the Database.`);
@@ -5383,6 +5385,10 @@ function initAppListeners() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to send verification email.');
 
+            if (data.debugOtp) {
+                window.showClientOtp(data.debugOtp);
+            }
+
             if (data.smtpError && data.debugOtp) {
                 showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
                 window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor immediate testing, please use this security OTP code: ${data.debugOtp}\n\nThis has been securely saved to the Database.`);
@@ -5870,6 +5876,57 @@ function formatAuthError(err) {
     return msg;
 }
 
+window.showClientOtp = (otpCode) => {
+    window.currentClientOtp = otpCode;
+    const container = document.getElementById('verifyOtpDisplayContainer');
+    if (!container) return;
+    
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div style="background: rgba(30, 41, 59, 0.75); border: 2px solid #3b82f6; border-radius: 16px; padding: 18px; text-align: center; box-shadow: 0 4px 25px rgba(59, 130, 246, 0.3); margin-bottom: 20px; border-left-width: 6px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="background: #2563eb; color: #fff; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-shield-halved"></i> SECURE SECURITY CODE
+                </span>
+                <span style="font-size: 12px; color: #60a5fa; font-weight: 700; cursor: pointer;" onclick="window.copyGeneratedOtp()">
+                    <i class="fa-regular fa-copy"></i> Copy Quick
+                </span>
+            </div>
+            
+            <p style="font-size: 12.5px; color: #e2e8f0; line-height: 1.6; margin: 8px 0 14px 0; font-family: sans-serif; text-align: left; font-weight: 500;">
+                ⚠️ <strong style="color: #60a5fa;">Important Notice:</strong> Email delivery can sometimes be delayed or fail due to network congestion or server restrictions. For immediate verification, please click the "Copy Code" button below to instantly copy your security code, paste/enter it into the OTP field, and click "Verify Code & Activate" to submit.
+            </p>
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(15, 23, 42, 0.85); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                <div style="display: flex; flex-direction: column; text-align: left;">
+                    <span style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 2px;">Your Verification Code</span>
+                    <span id="displayOtpValue" style="font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #3b82f6; font-family: monospace; line-height: 1;">${otpCode}</span>
+                </div>
+                <button type="button" onclick="window.copyGeneratedOtp()" class="btn" style="width: auto; height: 42px; padding: 0 18px; font-size: 13px; border-radius: 10px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4);">
+                    <i class="fa-regular fa-copy"></i> Copy Code
+                </button>
+            </div>
+        </div>
+    `;
+};
+
+window.copyGeneratedOtp = () => {
+    const otpVal = window.currentClientOtp;
+    if (!otpVal) return;
+    
+    navigator.clipboard.writeText(otpVal).then(() => {
+        showToast('success', 'Copied!', 'OTP Code copied to clipboard.');
+    }).catch(err => {
+        console.error('Failed to copy code:', err);
+    });
+    
+    const input = document.getElementById('verifyOtpInput');
+    if (input) {
+        input.value = otpVal;
+        showToast('success', 'Auto-filled', 'OTP has been auto-filled successfully! Press Verify to activate.');
+    }
+};
+
 window.resendVerificationLink = async () => {
     let email = "";
     const emailLabel = document.getElementById('verifyUserEmail');
@@ -5905,6 +5962,10 @@ window.resendVerificationLink = async () => {
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to send verification email.');
+
+        if (data.debugOtp) {
+            window.showClientOtp(data.debugOtp);
+        }
 
         if (data.smtpError && data.debugOtp) {
             showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
@@ -6141,6 +6202,10 @@ async function handleRegister(e) {
             body: JSON.stringify({ email: email })
         });
         const data = await res.json();
+
+        if (data.debugOtp) {
+            window.showClientOtp(data.debugOtp);
+         }
 
         if (data.smtpError && data.debugOtp) {
             showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
@@ -6933,7 +6998,6 @@ window.renderWorkElements = () => {
     });
 
     const activeRobotGlobal = window.myActiveRobots && window.myActiveRobots.find(r => {
-        if (r.isActivated !== true) return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
         return rExp && rExp > window.getSyncedNow();
     });
@@ -7026,7 +7090,6 @@ window.renderWorkElements = () => {
         if (isIdle) anyReady = true;
 
         const activeRobot = window.myActiveRobots && window.myActiveRobots.find(r => {
-            if (r.isActivated !== true) return false;
             const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
             return !rExp || rExp > now;
         });
@@ -7271,7 +7334,6 @@ window.updateHomeMiningDashboard = () => {
     window.myLatestClaimableRigs = claimableRigs;
 
     const activeRobot = window.myActiveRobots && window.myActiveRobots.find(r => {
-        if (r.isActivated !== true) return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
         return !rExp || rExp > now;
     });
@@ -7395,7 +7457,6 @@ window.updateHomeMiningDashboard = () => {
 
         // Compute robot presence
         const activeRobot = window.myActiveRobots && window.myActiveRobots.find(r => {
-            if (r.isActivated !== true) return false;
             const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
             return !rExp || rExp > now;
         });
@@ -8312,7 +8373,11 @@ function createRobotControllerDOM() {
 }
 
 function updateRobotUI(targetPageId) {
-    const activeRobot = window.myActiveRobots && window.myActiveRobots.find(r => r.isActivated === true);
+    const now = window.getSyncedNow ? window.getSyncedNow() : new Date();
+    const activeRobot = window.myActiveRobots && window.myActiveRobots.find(r => {
+        const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
+        return r.status === 'active' && (!rExp || rExp > now);
+    });
     const isEnabled = !!activeRobot;
 
     const currentPage = targetPageId || document.querySelector('.page.active')?.id;
@@ -8502,7 +8567,8 @@ function renderMyRobots() {
         div.className = 'card';
         div.style = 'padding:20px; position:relative; overflow:hidden; border:1px solid var(--border);';
         
-        const isActivated = bot.isActivated === true;
+        const rxExp = bot.expiresAt ? new Date(bot.expiresAt) : null;
+        const isActivated = bot.status === 'active' && (!rxExp || rxExp > (window.getSyncedNow ? window.getSyncedNow() : new Date()));
         const expiryDateFormatted = bot.expiresAt ? (() => {
             const d = new Date(bot.expiresAt);
             return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
