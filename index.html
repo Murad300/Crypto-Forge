@@ -177,8 +177,8 @@ body.dark-mode {
 .header-left{display:flex;align-items:center;gap:12px;cursor:pointer}
 .header-left .avatar-container{position:relative}
 .header-left .avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--success));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;object-fit:cover;border:2px solid var(--primary);box-shadow:0 2px 4px rgba(0,0,0,0.1)}
-.header-left .verify-badge{position:absolute;bottom:-2px;right:-2px;background:#fff;border-radius:50%;display:none;width:16px;height:16px;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
-.header-left .verify-badge i{font-size:11px;color:var(--primary)}
+.header-left .verify-badge{position:absolute;bottom:-2px;right:-2px;background:#1da1f2;border-radius:50%;display:none;width:16px;height:16px;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.2);border:1px solid #fff}
+.header-left .verify-badge i{font-size:9px;color:#fff}
 .header-left .uid-info{display:flex;flex-direction:column}
 .header-left .uid-info strong{font-size:14px;font-weight:700;color:var(--text);border-bottom:1.5px solid var(--primary);display:inline-block}
 .status-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;width:fit-content;margin-top:2px}
@@ -2170,7 +2170,7 @@ body.dark-mode {
 <div class="header-left" id="headerProfile" onclick="navigateTo('menuPage')" style="cursor:pointer">
     <div class="avatar-container">
         <div class="avatar" id="headerAvatar" style="width:36px; height:36px; font-size:14px; border-width:1.5px">U</div>
-        <div class="verify-badge" id="headerVerifyBadge" style="width:14px; height:14px; bottom:-1px; right:-1px"><i class="fa-solid fa-check-circle" style="font-size:9px"></i></div>
+        <div class="verify-badge" id="headerVerifyBadge"><i class="fa-solid fa-check"></i></div>
     </div>
     <div class="uid-info" style="margin-left:8px">
         <strong id="headerUID" style="font-size:13px; line-height:1.1; display:block">---</strong>
@@ -2254,27 +2254,43 @@ body.dark-mode {
 <!-- Optimized Mining Dashboard Card Placeholder -->
 <div id="mining-dashboard-mount-point"></div>
 <div id="homeOnboardingSection" style="padding:10px 4px">
-    <div class="card" style="position:relative; overflow:visible !important; padding:24px; border-radius:28px; background:linear-gradient(135deg, #673ab7, #3f51b5); color:white; margin-bottom:20px; box-shadow:0 15px 35px rgba(103,58,183,0.3)">
-        <h2 style="font-size:24px; font-weight:800; margin-bottom:12px">Welcome to Mining Hub and Robot</h2>
-        <p style="font-size:14px; opacity:0.9; line-height:1.6; margin-bottom:20px">Your decentralized node is currently offline. Follow these steps to start your first mining operation.</p>
+    <div class="card" style="position:relative; overflow:visible !important; padding:24px; border-radius:28px; background:linear-gradient(135deg, #1e293b, #0f172a); color:white; margin-bottom:20px; box-shadow:0 15px 35px rgba(15,23,42,0.3); border:1px solid rgba(255,255,255,0.08)">
+        <div style="position:absolute; top:-12px; left:24px; background:#e11d48; color:white; padding:4px 12px; border-radius:12px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px; box-shadow:0 4px 10px rgba(225,29,72,0.4)">
+            <i class="fa-solid fa-triangle-exclamation" style="margin-right:4px"></i> Activation Required
+        </div>
         
-        <div style="display:flex; flex-direction:column; gap:12px">
-            <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.1); padding:12px; border-radius:16px">
-                <div style="width:32px; height:32px; border-radius:50%; background:white; color:#673ab7; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px">1</div>
-                <div style="font-size:13px; font-weight:600">Activate your server account</div>
+        <h2 style="font-size:22px; font-weight:800; margin-top:8px; margin-bottom:8px">Account Setup & Activation Guide</h2>
+        <p style="font-size:13px; opacity:0.8; line-height:1.6; margin-bottom:20px">Your mining account is currently inactive. Complete the following three steps to activate your customer ID and start earning daily profits.</p>
+        
+        <div style="display:flex; flex-direction:column; gap:14px">
+            <!-- Step 1 -->
+            <div style="display:flex; gap:14px; background:rgba(255,255,255,0.04); padding:14px; border-radius:20px; border:1px solid rgba(255,255,255,0.04)">
+                <div style="width:34px; height:34px; border-radius:50%; background:#2563eb; color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; flex-shrink:0">1</div>
+                <div>
+                    <h4 style="font-size:14px; font-weight:700; margin-bottom:4px">Complete KYC Profile Details</h4>
+                    <p style="font-size:12px; opacity:0.75; line-height:1.5">Go to <strong>Menu > My Profile</strong> to update your full name and date of birth. This completes your identity checklist.</p>
+                </div>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.1); padding:12px; border-radius:16px">
-                <div style="width:32px; height:32px; border-radius:50%; background:white; color:#673ab7; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px">2</div>
-                <div style="font-size:13px; font-weight:600">Go to Package Shop</div>
+            <!-- Step 2 -->
+            <div style="display:flex; gap:14px; background:rgba(255,255,255,0.04); padding:14px; border-radius:20px; border:1px solid rgba(255,255,255,0.04)">
+                <div style="width:34px; height:34px; border-radius:50%; background:#7c3aed; color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; flex-shrink:0">2</div>
+                <div>
+                    <h4 style="font-size:14px; font-weight:700; margin-bottom:4px">Deposit Account Balance</h4>
+                    <p style="font-size:12px; opacity:0.75; line-height:1.5">Navigate to <strong>Wallet > Deposit</strong> and add credits via bKash, Nagad, or Rocket. Approved deposit unlocks your account.</p>
+                </div>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.1); padding:12px; border-radius:16px">
-                <div style="width:32px; height:32px; border-radius:50%; background:white; color:#673ab7; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px">3</div>
-                <div style="font-size:13px; font-weight:600">Deploy your first Hardware Node</div>
+            <!-- Step 3 -->
+            <div style="display:flex; gap:14px; background:rgba(255,255,255,0.04); padding:14px; border-radius:20px; border:1px solid rgba(255,255,255,0.04)">
+                <div style="width:34px; height:34px; border-radius:50%; background:#059669; color:white; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; flex-shrink:0">3</div>
+                <div>
+                    <h4 style="font-size:14px; font-weight:700; margin-bottom:4px">Deploy Active Hardware Nodes</h4>
+                    <p style="font-size:12px; opacity:0.75; line-height:1.5">Once active, navigate to the <strong>Package Shop</strong> to activate custom mining nodes (BTC, ETH, BNB) and AI robots for auto-mining!</p>
+                </div>
             </div>
         </div>
 
-        <button onclick="navigateTo('packagePage')" class="btn" style="margin-top:24px; background:white; color:#673ab7; height:52px; border-radius:16px; font-weight:800; box-shadow:0 8px 20px rgba(0,0,0,0.1); border:none; width:100%">
-            Explore Hardware Nodes <i class="fa-solid fa-arrow-right" style="margin-left:8px"></i>
+        <button onclick="navigateTo('profilePage')" class="btn" style="margin-top:24px; background:linear-gradient(135deg, #3b82f6, #1d4ed8); color:white; height:52px; border-radius:18px; font-weight:800; box-shadow:0 8px 20px rgba(29,78,216,0.3); border:none; width:100%; font-size:14px">
+            Configure Profile KYC Now <i class="fa-solid fa-arrow-right" style="margin-left:8px"></i>
         </button>
     </div>
 </div>
@@ -3302,7 +3318,7 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
                 if (r.status !== 'active' || r.isActivated !== true) return false;
                 const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
                 // Active if robot did not expire yet
-                return !rExp || rExp > window.getBDMidnight(dStr);
+                return rExp && rExp > window.getBDMidnight(dStr);
             });
 
             if (robotActive) {
@@ -3318,7 +3334,7 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
     const robotActiveToday = myActiveRobots && myActiveRobots.some(r => {
         if (r.status !== 'active' || r.isActivated !== true) return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-        return !rExp || rExp > now;
+        return rExp && rExp > now;
     });
 
     let sessionStartTime = null;
@@ -4803,7 +4819,7 @@ async function updateHeader() {
         }
     }
     
-    const isActuallyActive = isProfileComplete && isAdminApproved && hasDeposit;
+    const isActuallyActive = (isProfileComplete && (hasDeposit || (currentUserData.mainBalance && currentUserData.mainBalance > 0))) || isAdminApproved;
 
     const badge = document.getElementById('headerVerifyBadge');
     const statusBadge = document.getElementById('headerStatusBadge');
@@ -4937,11 +4953,12 @@ function updateHome() {
     // Toggle Onboarding Visibility
     const onboarding = document.getElementById('homeOnboardingSection');
     if (onboarding) {
-        const hasPackages = myActivePkgs && myActivePkgs.length > 0;
-        const hasRobots = myActiveRobots && myActiveRobots.length > 0;
-        const hasEverBought = currentUserData && currentUserData.hasBoughtPackage;
+        const isProfileComplete = currentUserData.profileCompleted === true;
+        const isAdminApproved = currentUserData.status === 'active';
+        const hasDepositVal = currentUserData.hasDeposit === true || (currentUserData.mainBalance && currentUserData.mainBalance > 0);
+        const isActuallyActive = (isProfileComplete && hasDepositVal) || isAdminApproved;
         
-        if (hasPackages || hasRobots || hasEverBought) {
+        if (isActuallyActive) {
             onboarding.style.display = 'none';
         } else {
             onboarding.style.display = 'block';
@@ -5260,6 +5277,11 @@ if (pSubmitBtn) {
                 dob: dob,
                 profileCompleted: true 
             };
+            
+            // Set account to active if they already made a deposit
+            if (currentUserData.hasDeposit === true || (currentUserData.mainBalance && currentUserData.mainBalance > 0)) {
+                updateProps.status = 'active';
+            }
             
             // Only update phone if it was previously empty/unset
             if (!currentUserData.phone && phone) {
@@ -6913,7 +6935,7 @@ window.renderWorkElements = () => {
     const activeRobotGlobal = window.myActiveRobots && window.myActiveRobots.find(r => {
         if (r.isActivated !== true) return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-        return !rExp || rExp > window.getSyncedNow();
+        return rExp && rExp > window.getSyncedNow();
     });
     const isRobotOn = !!activeRobotGlobal;
 
