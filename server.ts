@@ -891,9 +891,12 @@ expressApp.post("/api/deposit/approve", verifyAdmin, async (req: any, res: any) 
       const userDoc = userSnap.data() || {};
       const nextStatus = userDoc.profileCompleted === true ? 'active' : 'inactive';
 
+      const currentMainBalance = Number(userDoc.mainBalance || 0);
+      const currentBalance = Number(userDoc.balance || 0);
+
       transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(amount),
-        balance: admin.firestore.FieldValue.increment(amount),
+        mainBalance: currentMainBalance + amount,
+        balance: currentBalance + amount,
         hasDeposit: true,
         status: nextStatus
       });
@@ -1051,9 +1054,13 @@ expressApp.post("/api/withdraw/reject", verifyAdmin, async (req: any, res: any) 
       });
 
       // 2. Refund balance
+      const userDoc = userSnap.data() || {};
+      const currentMainBalance = Number(userDoc.mainBalance || 0);
+      const currentBalance = Number(userDoc.balance || 0);
+
       transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(refundAmount),
-        balance: admin.firestore.FieldValue.increment(refundAmount)
+        mainBalance: currentMainBalance + refundAmount,
+        balance: currentBalance + refundAmount
       });
 
       // 3. Create Notification
