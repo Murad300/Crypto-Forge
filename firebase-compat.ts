@@ -98,24 +98,63 @@ export async function authenticateBackendSystem() {
   try {
     const auth = getRawAuth();
     const userCred = await signInWithEmailAndPassword(auth, SYSTEM_EMAIL, SYSTEM_PASSWORD);
-    console.log("✅ Server system auth user connected successfully. UID:", userCred.user.uid);
-    return userCred.user.uid;
+    const uid = userCred.user.uid;
+    console.log("✅ Server system auth user connected successfully. UID:", uid);
+    
+    // Register the system user UID in the admins collection dynamically to satisfy the exists() rule check
+    try {
+      await dbCompat.collection("admins").doc(uid).set({
+        email: SYSTEM_EMAIL,
+        role: "system-admin",
+        createdAt: new Date().toISOString()
+      });
+      console.log("📁 System user dynamically registered in Firestore /admins collection.");
+    } catch (dbErr: any) {
+      console.warn("⚠️ Firestore system registration skipped/already exists:", dbErr.message);
+    }
+    
+    return uid;
   } catch (err: any) {
     console.warn("⚠️ Initial system auth sign-in failed. Error code:", err.code, "Message:", err.message);
     try {
       console.log("Attempting to create system account dynamically...");
       const auth = getRawAuth();
       const userCred = await createUserWithEmailAndPassword(auth, SYSTEM_EMAIL, SYSTEM_PASSWORD);
-      console.log("✅ System account database setup completed! UID:", userCred.user.uid);
-      return userCred.user.uid;
+      const uid = userCred.user.uid;
+      console.log("✅ System account database setup completed! UID:", uid);
+      
+      try {
+        await dbCompat.collection("admins").doc(uid).set({
+          email: SYSTEM_EMAIL,
+          role: "system-admin",
+          createdAt: new Date().toISOString()
+        });
+        console.log("📁 System user registered in Firestore /admins collection on create.");
+      } catch (dbErr: any) {
+        console.warn("⚠️ Firestore registration skipped/already exists:", dbErr.message);
+      }
+      
+      return uid;
     } catch (regErr: any) {
       if (regErr.code === "auth/email-already-in-use") {
         console.log("System account email already exists. Retrying sign-in...");
         try {
           const auth = getRawAuth();
           const userCred = await signInWithEmailAndPassword(auth, SYSTEM_EMAIL, SYSTEM_PASSWORD);
-          console.log("✅ Server system auth user connected successfully on retry. UID:", userCred.user.uid);
-          return userCred.user.uid;
+          const uid = userCred.user.uid;
+          console.log("✅ Server system auth user connected successfully on retry. UID:", uid);
+          
+          try {
+            await dbCompat.collection("admins").doc(uid).set({
+              email: SYSTEM_EMAIL,
+              role: "system-admin",
+              createdAt: new Date().toISOString()
+            });
+          } catch (dbErr: any) {
+            console.warn("⚠️ Firestore registration retry skipped:", dbErr.message);
+          }
+          
+          return uid;
         } catch (retryErr: any) {
           console.error("❌ System auth retry sign-in failed:", retryErr);
           throw retryErr;
