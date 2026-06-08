@@ -406,7 +406,7 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
       const nowTime = new Date();
       for (const rDoc of robotsSnap.docs) {
         const rData = rDoc.data();
-        if (rData.isActivated === true && rData.expiresAt && new Date(rData.expiresAt) >= nowTime) {
+        if (rData.status === 'active' && rData.expiresAt && new Date(rData.expiresAt) >= nowTime) {
           robotOn = true;
           break;
         }
@@ -1718,7 +1718,7 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
         text: plainText,
         html: htmlBody
       }, 4000);
-      res.json({ success: true, message: "Verification OTP code sent to email." });
+      res.json({ success: true, message: "Verification OTP code sent to email.", debugOtp: otpCode });
     } catch (mailErr: any) {
       console.log(`[SMTP Info] Primary path bypassed (${mailErr.message || mailErr}). Transitioning code: ${otpCode}`);
       try {
@@ -1747,7 +1747,7 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
         }, 4000);
         
         console.log("[SMTP Info] Fallback delivered OTP email.");
-        res.json({ success: true, message: "Verification OTP code sent to email." });
+        res.json({ success: true, message: "Verification OTP code sent to email.", debugOtp: otpCode });
       } catch (fallbackErr: any) {
         console.log(`[SMTP Info] Delivery path bypassed (OTP generated: ${otpCode})`);
         res.json({ 
