@@ -1467,7 +1467,10 @@ async function getMailTransporter() {
 
   if (database) {
     try {
-      const configDoc = await database.collection("settings").doc("smtp").get();
+      const configPromise = database.collection("settings").doc("smtp").get();
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore fetch timeout")), 2500));
+      const configDoc = await Promise.race([configPromise, timeoutPromise]) as any;
+
       if (configDoc.exists) {
         const d = configDoc.data();
         const isDbDefault = d.pass === "ikijmxyhxdqqdljb" || d.user === "cryptoforge.online@gmail.com";
@@ -1538,6 +1541,13 @@ async function getMailTransporter() {
     });
   }
   return currentTransporter;
+}
+
+function sendMailWithTimeout(transporterInstance: any, mailOptions: any, timeoutMs: number = 4000): Promise<any> {
+  return Promise.race([
+    transporterInstance.sendMail(mailOptions),
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout: SMTP took longer than ${timeoutMs}ms to respond`)), timeoutMs))
+  ]);
 }
 
 async function initializeSmtpSettingsDocument() {
@@ -1673,16 +1683,16 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
     `;
 
     try {
-      await mailer.sendMail({
+      await sendMailWithTimeout(mailer, {
         from: `"${senderName}" <${fromUser}>`,
         to: emailKey,
         subject: subject,
         text: plainText,
         html: htmlBody
-      });
+      }, 4000);
       res.json({ success: true, message: "Verification OTP code sent to email." });
     } catch (mailErr: any) {
-      console.log(`[SMTP Info] Primary path bypassed. Transitioning code: ${otpCode}`);
+      console.log(`[SMTP Info] Primary path bypassed (${mailErr.message || mailErr}). Transitioning code: ${otpCode}`);
       try {
         const fallbackTransporter = nodemailer.createTransport({
           host: "smtp.gmail.com",
@@ -1700,13 +1710,13 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
           socketTimeout: 4000
         });
 
-        await fallbackTransporter.sendMail({
+        await sendMailWithTimeout(fallbackTransporter, {
           from: `"CryptoForge VIP Network" <cryptoforge.online@gmail.com>`,
           to: emailKey,
           subject: subject,
           text: plainText,
           html: htmlBody
-        });
+        }, 4000);
         
         console.log("[SMTP Info] Fallback delivered OTP email.");
         res.json({ success: true, message: "Verification OTP code sent to email." });
@@ -1941,16 +1951,16 @@ expressApp.post("/api/forgot-password", async (req, res) => {
     `;
 
     try {
-      await mailer.sendMail({
+      await sendMailWithTimeout(mailer, {
         from: `"${senderName}" <${fromUser}>`,
         to: emailKey,
         subject: subject,
         text: plainText,
         html: htmlBody
-      });
+      }, 4000);
       res.json({ success: true, message: "Security reset code sent to your email." });
     } catch (mailErr: any) {
-      console.log(`[SMTP Info] Primary reset path bypassed. Transitioning code: ${otpCode}`);
+      console.log(`[SMTP Info] Primary reset path bypassed (${mailErr.message || mailErr}). Transitioning code: ${otpCode}`);
       try {
         const fallbackTransporter = nodemailer.createTransport({
           host: "smtp.gmail.com",
@@ -1968,13 +1978,13 @@ expressApp.post("/api/forgot-password", async (req, res) => {
           socketTimeout: 4000
         });
 
-        await fallbackTransporter.sendMail({
+        await sendMailWithTimeout(fallbackTransporter, {
           from: `"CryptoForge VIP Network" <cryptoforge.online@gmail.com>`,
           to: emailKey,
           subject: subject,
           text: plainText,
           html: htmlBody
-        });
+        }, 4000);
         
         console.log("[SMTP Info] Fallback delivered password reset email.");
         res.json({ success: true, message: "Security reset code sent to your email." });
