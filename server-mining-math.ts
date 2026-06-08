@@ -125,7 +125,7 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
       const robotActive = myActiveRobots && myActiveRobots.some(r => {
         if (r.status !== 'active' || r.isActivated !== true) return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-        return !rExp || rExp > getBDMidnight(dStr);
+        return rExp && rExp > getBDMidnight(dStr);
       });
       
       if (robotActive) {
@@ -141,7 +141,7 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
   const robotActiveToday = myActiveRobots && myActiveRobots.some(r => {
     if (r.status !== 'active' || r.isActivated !== true) return false;
     const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-    return !rExp || rExp > now;
+    return rExp && rExp > now;
   });
   
   let sessionStartTime = null;
