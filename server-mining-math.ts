@@ -123,7 +123,7 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
     while (cur < yesterdayLimit) {
       const dStr = getBDDate(cur);
       const robotActive = myActiveRobots && myActiveRobots.some(r => {
-        if (r.status !== 'active' || r.isActivated !== true) return false;
+        if (r.status !== 'active') return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
         return rExp && rExp > getBDMidnight(dStr);
       });
@@ -139,7 +139,7 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
   
   // Now analyze the current active day (today)
   const robotActiveToday = myActiveRobots && myActiveRobots.some(r => {
-    if (r.status !== 'active' || r.isActivated !== true) return false;
+    if (r.status !== 'active') return false;
     const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
     return rExp && rExp > now;
   });
