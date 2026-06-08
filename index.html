@@ -1319,6 +1319,33 @@ body.dark-mode {
 </style>
 </head>
 <body>
+<!-- Initial CF Logo Loading Overlay -->
+<div id="cf-init-loader-overlay" style="position:fixed; top:0; left:0; width:100%; height:100vh; background: rgba(13, 13, 13, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:999999; transition: opacity 0.6s ease-out, transform 0.6s ease-out;">
+  <div style="text-align:center;">
+    <div style="margin-bottom:20px; display:inline-block; position:relative;">
+      <svg width="100" height="100" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 15px rgba(247, 147, 26, 0.45));">
+        <defs>
+          <linearGradient id="cf-grad-loader" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FF6B35"/>
+            <stop offset="100%" stop-color="#F7931A"/>
+          </linearGradient>
+        </defs>
+        <g style="transform-origin: center; animation: cf-spin 8s linear infinite;">
+          <circle cx="27" cy="27" r="23" stroke="url(#cf-grad-loader)" stroke-width="2.5" opacity="1"/>
+        </g>
+        <path d="M27 10L41 18L41 34L27 42L13 34L13 18Z" fill="url(#cf-grad-loader)" style="transform-origin: center; animation: cf-pulse 2s ease-in-out infinite;"/>
+        <text x="27" y="32" text-anchor="middle" fill="#0D0D0D" font-size="14" font-weight="900" font-family="'Inter', sans-serif">CF</text>
+      </svg>
+      <style>
+        @keyframes cf-spin { to { transform: rotate(360deg); } }
+        @keyframes cf-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.85; transform: scale(0.93); } }
+      </style>
+    </div>
+    <div style="color: #ffffff; font-family: 'Inter', sans-serif; font-size:14px; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-top:10px; opacity:0.85; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <span>Crypto Forge</span>
+    </div>
+  </div>
+</div>
 <div class="app-wrapper">
 <div id="toastContainer" class="toast-container"></div>
 
@@ -1392,7 +1419,7 @@ body.dark-mode {
         </div>
     </div>
 </div>
-<div id="landingView" class="view-container active" style="background: #fdfdfd">
+<div id="landingView" class="view-container" style="background: #fdfdfd">
     <nav class="landing-nav" style="background: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.1)">
         <div class="cf-logo" style="display:inline-flex;align-items:center;gap:8px;font-family:Arial,sans-serif;">
           <svg width="36" height="36" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2239,20 +2266,7 @@ body.dark-mode {
 
 
 
-    <!-- Activation Notice Container -->
-    <div style="padding:0 16px" id="activationNotice" style="display:none">
-        <div class="alert w" style="border-radius:16px; padding:18px; display:flex; gap:15px; margin-bottom:24px; border:2px solid rgba(251,188,5,0.2); background:rgba(251,188,5,0.05)">
-            <div style="font-size:24px; color:var(--warning)"><i class="fa-solid fa-circle-exclamation"></i></div>
-            <div style="flex:1">
-                <strong id="noticeTitle" style="display:block; margin-bottom:6px; font-size:15px; color:var(--text)">Account Waitlisted</strong>
-                <p id="noticeDesc" style="font-size:12px; line-height:1.5; color:var(--muted)">Your ID is currently in the verification queue. Unlock your mining potential by activating your account through support.</p>
-                <div id="noticeActions" style="display:flex; gap:10px; margin-top:14px">
-                    <button class="btn btn-primary btn-sm" style="flex:1; border-radius:10px" onclick="navigateTo('supportPage')">Contact Admin</button>
-                    <button class="btn btn-outline btn-sm" style="flex:1; border-radius:10px" onclick="navigateTo('packagePage')">View Plans</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
 <!-- Optimized Mining Dashboard Card Placeholder -->
 <div id="mining-dashboard-mount-point"></div>
@@ -3070,6 +3084,35 @@ const db = initializeFirestore(app, { experimentalForceLongPolling: true }, fire
 // Export for non-module scripts
 window.auth = auth;
 window.db = db;
+
+const loaderStartTime = Date.now();
+window.initialLoaderHidden = false;
+window.completeInitialLoading = () => {
+    if (window.initialLoaderHidden) return;
+    const elapsed = Date.now() - loaderStartTime;
+    const minLoadingTime = 2500; // 2.5 seconds minimum show time for smooth branding
+    const delay = Math.max(0, minLoadingTime - elapsed);
+    
+    setTimeout(() => {
+        const overlay = document.getElementById('cf-init-loader-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            overlay.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                window.initialLoaderHidden = true;
+            }, 600);
+        }
+    }, delay);
+};
+
+// Safety fallback
+setTimeout(() => {
+    if (!window.initialLoaderHidden) {
+        console.warn("Safety fallback: Initial loader hidden due to timeout.");
+        window.completeInitialLoading();
+    }
+}, 8000);
 
 // Dynanic system packages fetch & sync framework
 window.loadGlobalPackagesFromDb = async () => {
@@ -4207,8 +4250,12 @@ async function showPage(pageId) {
         return;
     }
 
-    if (pageId !== 'homePage' && currentUserData.status === 'inactive' && !['walletPage', 'menuPage', 'depositPage', 'profilePage', 'securityPage', 'notifPage', 'packagePage', 'supportPage', 'myPackagesPage'].includes(pageId)) {
-        showToast('error', 'Activation Required', 'Please activate your account to use this feature (Complete deposit and profile)');
+    const isProfileComplete = currentUserData.profileCompleted === true;
+    const hasDeposit = currentUserData.hasDeposit === true || (currentUserData.mainBalance && currentUserData.mainBalance > 0);
+    const isActuallyActive = isProfileComplete && hasDeposit;
+
+    if (pageId !== 'homePage' && !isActuallyActive && !['walletPage', 'menuPage', 'depositPage', 'profilePage', 'securityPage', 'notifPage', 'supportPage'].includes(pageId)) {
+        showToast('error', 'Activation Required', 'Please activate your account (Complete Profile KYC and make a Deposit) to access this feature.');
         return;
     }
     
@@ -4395,6 +4442,9 @@ onAuthStateChanged(auth, async (user) => {
                                 console.error("Auto verification send error:", e);
                             }
                         }, 500);
+                    }
+                    if (typeof window.completeInitialLoading === 'function') {
+                        window.completeInitialLoading();
                     }
                     return; // Stop further layout execution for unverified users
                 }
@@ -4663,6 +4713,9 @@ onAuthStateChanged(auth, async (user) => {
                     pUIDField.disabled = true;
                     pUIDField.readOnly = true;
                 }
+                if (typeof window.completeInitialLoading === 'function') {
+                    window.completeInitialLoading();
+                }
             } else {
                 // ROBUST RACE CONDITION RETRY: Slower database syncs or regional delays can cause doc to not exist for a few seconds.
                 console.warn(`[Auth Check] User (${user.uid}) authenticated, but Firestore document not found in first event. Starting retry poller...`);
@@ -4704,6 +4757,9 @@ onAuthStateChanged(auth, async (user) => {
                             loadHomepageTasks();
                             listenRealTimeBadges(user.uid);
                             listenNotifications(user.uid);
+                            if (typeof window.completeInitialLoading === 'function') {
+                                window.completeInitialLoading();
+                            }
                             return;
                         }
                     } catch (pollErr) {
@@ -4758,6 +4814,10 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('forgotView').classList.remove('active');
         const verifyView = document.getElementById('verifyView');
         if (verifyView) verifyView.classList.remove('active');
+        
+        if (typeof window.completeInitialLoading === 'function') {
+            window.completeInitialLoading();
+        }
     }
 });
 
@@ -4821,7 +4881,7 @@ async function updateHeader() {
         }
     }
     
-    const isActuallyActive = (isProfileComplete && (hasDeposit || (currentUserData.mainBalance && currentUserData.mainBalance > 0))) || isAdminApproved;
+    const isActuallyActive = isProfileComplete && (hasDeposit || (currentUserData.mainBalance && currentUserData.mainBalance > 0));
 
     const badge = document.getElementById('headerVerifyBadge');
     const statusBadge = document.getElementById('headerStatusBadge');
@@ -4956,9 +5016,8 @@ function updateHome() {
     const onboarding = document.getElementById('homeOnboardingSection');
     if (onboarding) {
         const isProfileComplete = currentUserData.profileCompleted === true;
-        const isAdminApproved = currentUserData.status === 'active';
         const hasDepositVal = currentUserData.hasDeposit === true || (currentUserData.mainBalance && currentUserData.mainBalance > 0);
-        const isActuallyActive = (isProfileComplete && hasDepositVal) || isAdminApproved;
+        const isActuallyActive = isProfileComplete && hasDepositVal;
         
         if (isActuallyActive) {
             onboarding.style.display = 'none';
@@ -5883,26 +5942,12 @@ window.showClientOtp = (otpCode) => {
     
     container.style.display = 'block';
     container.innerHTML = `
-        <div style="background: rgba(30, 41, 59, 0.75); border: 2px solid #3b82f6; border-radius: 16px; padding: 18px; text-align: center; box-shadow: 0 4px 25px rgba(59, 130, 246, 0.3); margin-bottom: 20px; border-left-width: 6px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <span style="background: #2563eb; color: #fff; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 4px;">
-                    <i class="fa-solid fa-shield-halved"></i> SECURE SECURITY CODE
-                </span>
-                <span style="font-size: 12px; color: #60a5fa; font-weight: 700; cursor: pointer;" onclick="window.copyGeneratedOtp()">
-                    <i class="fa-regular fa-copy"></i> Copy Quick
-                </span>
-            </div>
-            
-            <p style="font-size: 12.5px; color: #e2e8f0; line-height: 1.6; margin: 8px 0 14px 0; font-family: sans-serif; text-align: left; font-weight: 500;">
-                ⚠️ <strong style="color: #60a5fa;">Important Notice:</strong> Email delivery can sometimes be delayed or fail due to network congestion or server restrictions. For immediate verification, please click the "Copy Code" button below to instantly copy your security code, paste/enter it into the OTP field, and click "Verify Code & Activate" to submit.
-            </p>
-            
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(15, 23, 42, 0.85); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                <div style="display: flex; flex-direction: column; text-align: left;">
-                    <span style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 2px;">Your Verification Code</span>
-                    <span id="displayOtpValue" style="font-size: 32px; font-weight: 900; letter-spacing: 8px; color: #3b82f6; font-family: monospace; line-height: 1;">${otpCode}</span>
+        <div style="background: rgba(30, 41, 59, 0.95); border: 2px solid #3b82f6; border-radius: 14px; padding: 10px 14px; text-align: center; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35); margin-bottom: 15px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(15, 23, 42, 0.9); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.25);">
+                <div style="display: flex; align-items: center; gap: 8px; text-align: left;">
+                    <span id="displayOtpValue" style="font-size: 24px; font-weight: 900; letter-spacing: 5px; color: #3b82f6; font-family: monospace; line-height: 1;">${otpCode}</span>
                 </div>
-                <button type="button" onclick="window.copyGeneratedOtp()" class="btn" style="width: auto; height: 42px; padding: 0 18px; font-size: 13px; border-radius: 10px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4);">
+                <button type="button" onclick="window.copyGeneratedOtp()" class="btn" style="width: auto; height: 36px; padding: 0 14px; font-size: 11.5px; border-radius: 8px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; border: none; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; margin: 0; box-shadow: 0 3px 6px rgba(29, 78, 216, 0.35);">
                     <i class="fa-regular fa-copy"></i> Copy Code
                 </button>
             </div>
