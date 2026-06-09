@@ -13,16 +13,48 @@ dotenv.config();
 
 // Load Firebase Config helper
 function getFirebaseConfig() {
+  // 1. Try environment variables
+  if (process.env.FIREBASE_API_KEY) {
+    return {
+      apiKey: process.env.FIREBASE_API_KEY,
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN || "smart-bd365.firebaseapp.com",
+      projectId: process.env.FIREBASE_PROJECT_ID || "smart-bd365",
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "smart-bd365.firebasestorage.app",
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "547646649024",
+      appId: process.env.FIREBASE_APP_ID || "1:547646649024:web:26888ba9bf7a70fce97325",
+      firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || process.env.FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-c29a04c5-e49f-4a2e-b317-b1db3c318d65"
+    };
+  }
+
+  // 1b. Try raw JSON environment variable if provided
+  if (process.env.FIREBASE_CONFIG_JSON) {
+    try {
+      return JSON.parse(process.env.FIREBASE_CONFIG_JSON);
+    } catch (e) {
+      console.error("Error parsing FIREBASE_CONFIG_JSON:", e);
+    }
+  }
+
+  // 2. Try file path
   const configPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(configPath)) {
     try {
       return JSON.parse(fs.readFileSync(configPath, "utf8"));
     } catch (e) {
       console.error("Error parsing firebase-applet-config.json:", e);
-      return null;
     }
   }
-  return null;
+
+  // 3. Static fallback configuration matching standard client-side settings
+  return {
+    apiKey: "AIzaSyD4K1as0o0WUb51nL6WGK5KAknG5oOpBwI",
+    authDomain: "smart-bd365.firebaseapp.com",
+    projectId: "smart-bd365",
+    storageBucket: "smart-bd365.firebasestorage.app",
+    messagingSenderId: "547646649024",
+    appId: "1:547646649024:web:26888ba9bf7a70fce97325",
+    firestoreDatabaseId: "ai-studio-c29a04c5-e49f-4a2e-b317-b1db3c318d65"
+  };
 }
 
 // Initialize Firebase Admin lazily logic
@@ -47,7 +79,7 @@ const verifyToken = async (req: any, res: any, next: any) => {
   }
   const token = authHeader.split(" ")[1];
   try {
-    const config = getFirebaseConfig() || { apiKey: "AIzaSyD4K1as0o0WUb51nL6WGK5KAknG5oOpBwI" };
+    const config = getFirebaseConfig();
     const apiKey = config.apiKey;
     
     const lookupRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
@@ -82,7 +114,7 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
   }
   const token = authHeader.split(" ")[1];
   try {
-    const config = getFirebaseConfig() || { apiKey: "AIzaSyD4K1as0o0WUb51nL6WGK5KAknG5oOpBwI" };
+    const config = getFirebaseConfig();
     const apiKey = config.apiKey;
     
     const lookupRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
@@ -283,6 +315,24 @@ expressApp.get("/api/keepalive", (req, res) => {
     dhakaTime: dhakaTime,
     message: "Google Apps Script ping received. Server is awake."
   });
+});
+
+// Dynamic Client Firebase Config Synchronization
+expressApp.get("/api/config/firebase", (req, res) => {
+  try {
+    const config = getFirebaseConfig();
+    res.json({
+      apiKey: config.apiKey,
+      authDomain: config.authDomain,
+      projectId: config.projectId,
+      storageBucket: config.storageBucket,
+      messagingSenderId: config.messagingSenderId,
+      appId: config.appId,
+      firestoreDatabaseId: config.firestoreDatabaseId
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: "Failed to retrieve firebase configuration", details: error.message });
+  }
 });
 
 // Admin Route - Using a cleaner, non-generic path to avoid security flags
@@ -2114,11 +2164,10 @@ expressApp.post("/api/auth/update-inapp-password", async (req, res) => {
     return res.status(400).json({ error: "Email, current password, and new password are required" });
   }
   try {
-    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-    if (!fs.existsSync(configPath)) {
-      return res.status(503).json({ error: "Config file not found." });
+    const firebaseConfig = getFirebaseConfig();
+    if (!firebaseConfig || !firebaseConfig.apiKey) {
+      return res.status(503).json({ error: "Firebase configuration not found." });
     }
-    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
     const apiKey = firebaseConfig.apiKey;
     
     // Perform secure REST call to verify current password credentials on Google Auth Service
