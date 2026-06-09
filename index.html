@@ -9093,9 +9093,24 @@ function updateNotificationUI() {
                     icon = 'robot';
                 }
                 
-                const dateObj = new Date(n.createdAt);
-                const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                const dateStr = dateObj.toLocaleDateString([], {day:'numeric', month:'short'});
+                const dateObj = n.createdAt && n.createdAt.seconds 
+                    ? new Date(n.createdAt.seconds * 1000) 
+                    : new Date(n.createdAt || Date.now());
+
+                const bdtOptions = { timeZone: 'Asia/Dhaka' };
+                const bdtTimeOptions = { ...bdtOptions, hour: '2-digit', minute: '2-digit', hour12: true };
+                const bdtDateOptions = { ...bdtOptions, day: 'numeric', month: 'short', year: 'numeric' };
+
+                let timeStr = 'N/A';
+                let dateStr = 'N/A';
+                try {
+                    if (!isNaN(dateObj.getTime())) {
+                        timeStr = dateObj.toLocaleTimeString('en-US', bdtTimeOptions);
+                        dateStr = dateObj.toLocaleDateString('en-US', bdtDateOptions);
+                    }
+                } catch (e) {
+                    console.error("Bangladesh Timezone Parse Error:", e);
+                }
 
                 const notifDiv = document.createElement('div');
                 notifDiv.className = `notif-card ${isUnread ? 'unread-active' : ''}`;
@@ -9116,9 +9131,9 @@ function updateNotificationUI() {
                     position: relative;
                 `;
                 
-                // Add micro unread visual notification cue
+                // Add micro unread visual notification cue (shifted slightly left to avoid delete button overlap)
                 const unreadIndicator = isUnread ? `
-                    <span style="position: absolute; top: 18px; right: 18px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6)"></span>
+                    <span style="position: absolute; top: 18px; right: 40px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6)"></span>
                 ` : '';
                 
                 notifDiv.onclick = () => window.viewNotification(n.id, n.title, n.message);
@@ -9146,7 +9161,7 @@ function updateNotificationUI() {
                     ">
                         <i class="fa-solid fa-${icon}" style="color: ${iconColor}; font-size: 16px;"></i>
                     </div>
-                    <div class="notif-details" style="flex: 1; padding-right: 12px;">
+                    <div class="notif-details" style="flex: 1; padding-right: 28px;">
                         <h4 style="font-size: 14px; font-weight: 750; color: #1e293b; margin-top: 2px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
                             ${n.title}
                         </h4>
@@ -9161,6 +9176,24 @@ function updateNotificationUI() {
                             ${isUnread ? '<span style="background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.3px;">NEW</span>' : ''}
                         </div>
                     </div>
+                    <button onclick="event.stopPropagation(); window.deleteNotification('${n.id}')" style="
+                        position: absolute;
+                        top: 14px;
+                        right: 14px;
+                        background: none;
+                        border: none;
+                        color: #94a3b8;
+                        cursor: pointer;
+                        padding: 6px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.2s;
+                        z-index: 10;
+                    " onmouseenter="this.style.color='#ef4444'; this.style.background='#ef444412'" onmouseleave="this.style.color='#94a3b8'; this.style.background='none'">
+                        <i class="fa-solid fa-trash-can" style="font-size: 12px;"></i>
+                    </button>
                     ${unreadIndicator}
                 `;
                 list.appendChild(notifDiv);
@@ -9212,6 +9245,20 @@ window.viewNotification = (id, title, message) => {
     document.getElementById('notifModal').classList.add('show');
     if (id) {
         window.markNotifRead(id);
+    }
+};
+
+window.deleteNotification = async (id) => {
+    if (!id || !auth.currentUser) return;
+    const confirmDelete = await window.customConfirm('Delete this notification permanently?', 'DELETE NOTIFICATION');
+    if (!confirmDelete) return;
+    
+    try {
+        await deleteDoc(doc(db, 'notifications', id));
+        showToast('success', 'Deleted', 'Notification removed successfully.');
+    } catch (err) {
+         console.error('Delete notification failed:', err);
+         showToast('error', 'Delete Failed', err.message);
     }
 };
 
