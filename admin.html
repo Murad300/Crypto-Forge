@@ -803,7 +803,7 @@ window.customConfirm = function(message, title = "Are you sure?") {
     });
 };
 
-const firebaseConfig = {
+let firebaseConfig = {
     apiKey: "AIzaSyD4K1as0o0WUb51nL6WGK5KAknG5oOpBwI",
     authDomain: "smart-bd365.firebaseapp.com",
     projectId: "smart-bd365",
@@ -812,6 +812,22 @@ const firebaseConfig = {
     appId: "1:547646649024:web:26888ba9bf7a70fce97325",
     firestoreDatabaseId: "ai-studio-c29a04c5-e49f-4a2e-b317-b1db3c318d65" 
 };
+
+// Synchronize Firebase Configuration with Backend settings synchronously for custom domain support
+try {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/config/firebase', false);
+    xhr.send(null);
+    if (xhr.status === 200) {
+        const dynamicConfig = JSON.parse(xhr.responseText);
+        if (dynamicConfig && dynamicConfig.apiKey) {
+            firebaseConfig = dynamicConfig;
+            console.log("Admin: Successfully synchronized Firebase config from backend:", firebaseConfig.projectId);
+        }
+    }
+} catch (e) {
+    console.warn("Admin: Synchronous config fetch failed, using built-in defaults:", e);
+}
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
