@@ -594,8 +594,22 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
 
     res.json({ message: "Package purchased successfully" });
   } catch (error: any) {
-    console.error("Purchase error:", error);
-    res.status(400).json({ error: error.message || "Purchase failed", stack: error.stack });
+    console.error("Purchase error caught:", error);
+    const errMsg = error.message || String(error);
+    const isPermissionDenied = errMsg.toLowerCase().includes("permission_denied") || 
+                               errMsg.toLowerCase().includes("permission denied") || 
+                               errMsg.toLowerCase().includes("insufficient permissions") ||
+                               errMsg.toLowerCase().includes("unauthorized");
+    const friendlyMsg = isPermissionDenied 
+      ? "Database transaction failed or permission denied."
+      : (error.message || "Purchase failed");
+    res.status(isPermissionDenied ? 500 : 400).json({ 
+      success: false, 
+      error: friendlyMsg,
+      errorMessage: friendlyMsg,
+      details: errMsg,
+      stack: error.stack 
+    });
   }
 });
 
