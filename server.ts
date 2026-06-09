@@ -291,11 +291,11 @@ expressApp.get("/api/test-admin", (req, res) => {
   });
 });
 
-// Health check with Bangladesh Time info
-expressApp.get("/api/health", (req, res) => {
+// Health check with Bangladesh Time info (supports flexible routes and trailing slashes)
+expressApp.get(["/api/health", "/api/health/", "/health", "/health/"], (req, res) => {
   const now = new Date();
   const dhakaTime = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-  res.json({ 
+  res.status(200).json({ 
     status: "ok", 
     initialized: !!db, 
     serverTime: now.toISOString(),
@@ -305,11 +305,11 @@ expressApp.get("/api/health", (req, res) => {
   });
 });
 
-// Explicit Keep-Alive Endpoint to prevent Render Sleep (Awake Script)
-expressApp.get("/api/keepalive", (req, res) => {
+// Explicit Keep-Alive Endpoints supporting various routes, trailing slashes, and pings to prevent Render Sleep (Awake Script)
+expressApp.get(["/api/keepalive", "/api/keepalive/", "/api/ping", "/api/ping/", "/ping", "/ping/"], (req, res) => {
   const now = new Date();
   const dhakaTime = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-  res.json({
+  res.status(200).json({
     status: "alive",
     timestamp: now.toISOString(),
     dhakaTime: dhakaTime,
