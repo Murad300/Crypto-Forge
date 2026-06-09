@@ -293,8 +293,7 @@ body.dark-mode {
         <div class="nav-item" data-tab="chat" id="nav_chat"><i class="fa-solid fa-comments"></i>Support<span class="badge" id="chatBadge" style="display:none">0</span></div>
         <div class="nav-item" data-tab="notifications" id="tab-notifications"><i class="fa-solid fa-bell"></i>Notice</div>
         <div class="nav-item" data-tab="landing_support" id="tab-landing-support"><i class="fa-solid fa-address-book"></i>Leads<span class="badge" id="leadBadge" style="display:none">0</span></div>
-        <div class="nav-item" data-tab="packages" id="tab-packages"><i class="fa-solid fa-box-open"></i>Packages</div>
-        <div class="nav-item" data-tab="cleardata" id="tab-cleardata"><i class="fa-solid fa-trash-can"></i>Clear Data</div>
+        <div class="nav-item" data-tab="packages" id="tab-packages"><i class="fa-solid fa-box-open"></i>Packages<span class="badge" id="packagesBadge" style="display:none">0</span></div>
         <div class="nav-item" data-tab="gateway" id="tab-gateway"><i class="fa-solid fa-gears"></i>Config</div>
         <div class="nav-item" data-tab="homepage" id="tab-homepage"><i class="fa-solid fa-wand-magic-sparkles"></i>Earning Tasks</div>
         <div class="nav-item" data-tab="system" id="tab-system"><i class="fa-solid fa-screwdriver-wrench"></i>System</div>
@@ -395,26 +394,7 @@ body.dark-mode {
                 </div>
             </div>
 
-            <div class="tab-content" id="cleardataTab">
-                <div style="background:rgba(234,67,53,0.05); padding:20px; border-radius:16px; border:1px solid var(--danger); margin-bottom:20px">
-                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--danger)">Master Reset Control</h3>
-                    <p style="font-size:12px; color:var(--muted); line-height:1.4">Toggle this switch to reset all user balances and wipe transaction history. Use with extreme caution.</p>
-                </div>
 
-                <div class="stat-box" style="margin-bottom:15px; border-color:var(--danger)">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-                        <div>
-                            <h4 style="font-size:14px; color:var(--danger)"><i class="fa-solid fa-trash-can"></i> Global Wipe Toggle</h4>
-                            <p style="font-size:11px; color:var(--muted)">Turn this on to clear all data and zero user balances.</p>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="masterResetToggle" onclick="window.handleMasterResetToggle(this)">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <p style="font-size:10px; color:var(--danger); font-weight:600">Note: Accounts will be kept, but all activity will be lost.</p>
-                </div>
-            </div>
 
             <div class="tab-content" id="gatewayTab">
                 <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1.5px solid var(--border); padding-bottom:10px">
@@ -567,21 +547,8 @@ body.dark-mode {
 
             <div class="tab-content" id="systemTab">
                 <div style="background:rgba(234,67,53,0.05); padding:20px; border-radius:16px; border:1px solid var(--danger); margin-bottom:20px">
-                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--danger)">Danger Zone (Testing Only)</h3>
-                    <p style="font-size:12px; color:var(--muted); line-height:1.4">These tools are for development testing. Actions here are IRREVERSIBLE and will clear production data.</p>
-                </div>
-
-                <div class="stat-box" style="margin-bottom:15px; border-color:var(--danger)">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-                        <div>
-                            <h4 style="font-size:14px; color:var(--danger)"><i class="fa-solid fa-trash-can"></i> Global Wipe Toggle</h4>
-                            <p style="font-size:11px; color:var(--muted)">Turn this on to clear all transactional data and zero user balances (accounts remain).</p>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="masterResetToggleSystem" onclick="window.handleMasterResetToggle(this)">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
+                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--danger)">Danger Zone</h3>
+                    <p style="font-size:12px; color:var(--muted); line-height:1.4">These tools are for administrator management. Actions here are IRREVERSIBLE.</p>
                 </div>
 
                 <div class="stat-box">
@@ -1092,6 +1059,38 @@ document.querySelectorAll('.nav-item').forEach(item => {
         const loader = document.getElementById('adminPanelLoading');
         if(loader) loader.style.display = 'flex';
         
+        // Reset dynamic menu alert states immediately upon clicking
+        if (tabId === 'deposits') {
+            reviewedDeposits = true;
+            const b = document.getElementById('depBadge');
+            if (b) b.style.display = 'none';
+        }
+        if (tabId === 'withdraws') {
+            reviewedWithdraws = true;
+            const b = document.getElementById('witBadge');
+            if (b) b.style.display = 'none';
+        }
+        if (tabId === 'users') {
+            reviewedUsers = true;
+            const b = document.getElementById('userBadge');
+            if (b) b.style.display = 'none';
+        }
+        if (tabId === 'chat') {
+            reviewedSupport = true;
+            const b = document.getElementById('chatBadge');
+            if (b) b.style.display = 'none';
+        }
+        if (tabId === 'landing_support') {
+            reviewedLeads = true;
+            const b = document.getElementById('leadBadge');
+            if (b) b.style.display = 'none';
+        }
+        if (tabId === 'packages') {
+            reviewedPackages = true;
+            const b = document.getElementById('packagesBadge');
+            if (b) b.style.display = 'none';
+        }
+        
         setTimeout(() => {
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -1103,7 +1102,6 @@ document.querySelectorAll('.nav-item').forEach(item => {
             if(tabId === 'users') loadUsers();
             if(tabId === 'chat') loadSupport();
             if(tabId === 'landing_support') loadLandingChats();
-            if(tabId === 'cleardata') { /* No extra load needed, just reset btn */ }
             if(tabId === 'gateway') loadGatewayConfig();
             if(tabId === 'packages') {
                 switchPackageSubTab('rigs');
@@ -1350,85 +1348,171 @@ async function loadStats() {
     } catch(err) { console.error("Stats Load error:", err); }
 }
 
-// Notification badges and counts logic
+// Notification badges and counts logic with reset states on review
 let pendingDepCount = 0;
 let pendingWitCount = 0;
 let pendingSupportCount = 0;
 let pendingUserCount = 0;
 let pendingLeadCount = 0;
+let pendingPackageCount = 0;
+
+let reviewedDeposits = false;
+let reviewedWithdraws = false;
+let reviewedUsers = false;
+let reviewedSupport = false;
+let reviewedLeads = false;
+let reviewedPackages = false;
 
 function listenCounts() {
+    // 1. Deposits Badge
     onSnapshot(query(collection(db, 'deposits'), where('status', '==', 'pending')), (snap) => {
-        const newCount = snap.size;
-        if (newCount > pendingDepCount && pendingDepCount !== 0) {
-            sendBrowserNotify('New Deposit!', 'A new deposit request has arrived.');
-            showToast('New Deposit Request Received', 'info');
+        const currentCount = snap.size;
+        if (currentCount > pendingDepCount) {
+            reviewedDeposits = false; // New requests reset reviewed state
+            if (pendingDepCount !== 0) {
+                sendBrowserNotify('New Deposit!', 'A new deposit request has arrived.');
+                showToast('New Deposit Request Received', 'info');
+            }
         }
-        pendingDepCount = newCount;
+        pendingDepCount = currentCount;
+        
         const depCounter = document.getElementById('pendingDeposits');
-        const depBadge = document.getElementById('depBadge');
-        if (depCounter) depCounter.innerText = pendingDepCount;
-        if (depBadge) {
-            depBadge.innerText = pendingDepCount;
-            depBadge.style.display = pendingDepCount > 0 ? 'flex' : 'none';
+        if (depCounter) depCounter.innerText = currentCount;
+        
+        const badge = document.getElementById('depBadge');
+        if (badge) {
+            if (reviewedDeposits) {
+                badge.style.display = 'none';
+            } else {
+                badge.innerText = currentCount;
+                badge.style.display = currentCount > 0 ? 'flex' : 'none';
+            }
         }
     });
 
+    // 2. Withdraws Badge
     onSnapshot(query(collection(db, 'withdraws'), where('status', '==', 'pending')), (snap) => {
-        const newCount = snap.size;
-        if (newCount > pendingWitCount && pendingWitCount !== 0) {
-            sendBrowserNotify('New Withdraw!', 'A new withdraw request has arrived.');
-            showToast('New Withdrawal Request Received', 'warning');
+        const currentCount = snap.size;
+        if (currentCount > pendingWitCount) {
+            reviewedWithdraws = false;
+            if (pendingWitCount !== 0) {
+                sendBrowserNotify('New Withdraw!', 'A new withdraw request has arrived.');
+                showToast('New Withdrawal Request Received', 'warning');
+            }
         }
-        pendingWitCount = newCount;
+        pendingWitCount = currentCount;
         
         const witCounter = document.getElementById('pendingWithdraws');
-        const witBadge = document.getElementById('witBadge');
-        if (witCounter) witCounter.innerText = pendingWitCount;
-        if (witBadge) {
-            witBadge.innerText = pendingWitCount;
-            witBadge.style.display = pendingWitCount > 0 ? 'flex' : 'none';
+        if (witCounter) witCounter.innerText = currentCount;
+        
+        const badge = document.getElementById('witBadge');
+        if (badge) {
+            if (reviewedWithdraws) {
+                badge.style.display = 'none';
+            } else {
+                badge.innerText = currentCount;
+                badge.style.display = currentCount > 0 ? 'flex' : 'none';
+            }
         }
     });
 
+    // 3. Leads (Landing Page Contacts)
     onSnapshot(query(collection(db, 'landing_chats'), where('status', '==', 'unread')), (snap) => {
-        const newCount = snap.size;
-        if (newCount > pendingLeadCount && pendingLeadCount !== 0) {
-            showToast('New Landing Page Lead!', 'success');
+        const currentCount = snap.size;
+        if (currentCount > pendingLeadCount) {
+            reviewedLeads = false;
+            if (pendingLeadCount !== 0) {
+                showToast('New Landing Page Lead!', 'success');
+            }
         }
-        pendingLeadCount = newCount;
+        pendingLeadCount = currentCount;
+        
         const badge = document.getElementById('leadBadge');
         if (badge) {
-            badge.innerText = pendingLeadCount;
-            badge.style.display = pendingLeadCount > 0 ? 'flex' : 'none';
+            if (reviewedLeads) {
+                badge.style.display = 'none';
+            } else {
+                badge.innerText = currentCount;
+                badge.style.display = currentCount > 0 ? 'flex' : 'none';
+            }
         }
     });
 
-    // Support Unread Messages
+    // 4. Support Tickets
     onSnapshot(query(collection(db, 'support'), where('read', '==', false), where('sender', '==', 'user')), (snap) => {
-        const newCount = snap.size;
-        if (newCount > pendingSupportCount && pendingSupportCount !== 0) {
-            showToast('New Support Message', 'primary');
+        const currentCount = snap.size;
+        if (currentCount > pendingSupportCount) {
+            reviewedSupport = false;
+            if (pendingSupportCount !== 0) {
+                showToast('New Support Message', 'primary');
+            }
         }
-        pendingSupportCount = newCount;
+        pendingSupportCount = currentCount;
+        
         const badge = document.getElementById('chatBadge');
         if (badge) {
-            badge.innerText = pendingSupportCount;
-            badge.style.display = pendingSupportCount > 0 ? 'flex' : 'none';
+            if (reviewedSupport) {
+                badge.style.display = 'none';
+            } else {
+                badge.innerText = currentCount;
+                badge.style.display = currentCount > 0 ? 'flex' : 'none';
+            }
         }
     });
 
-    // Unapproved Users (Profile completed but status not active/suspended)
-    onSnapshot(query(collection(db, 'users'), where('status', '==', 'inactive')), (snap) => {
-        const newCount = snap.docs.filter(d => d.data().profileCompleted).length;
-        if (newCount > pendingUserCount && pendingUserCount !== 0) {
-            showToast('New User Waiting for Approval', 'info');
+    // 5. Brand-new Registered Users
+    let initialUsersLoaded = false;
+    let registeredUsersCount = 0;
+    onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), (snap) => {
+        if (!initialUsersLoaded) {
+            initialUsersLoaded = true;
+            pendingUserCount = snap.size;
+            return;
         }
-        pendingUserCount = newCount;
+        
+        if (snap.size > pendingUserCount) {
+            registeredUsersCount += (snap.size - pendingUserCount);
+            reviewedUsers = false;
+            showToast('New User Registered!', 'info');
+        }
+        pendingUserCount = snap.size;
+        
         const badge = document.getElementById('userBadge');
         if (badge) {
-            badge.innerText = pendingUserCount;
-            badge.style.display = pendingUserCount > 0 ? 'flex' : 'none';
+            if (reviewedUsers) {
+                badge.style.display = 'none';
+            } else {
+                badge.innerText = registeredUsersCount;
+                badge.style.display = registeredUsersCount > 0 ? 'flex' : 'none';
+            }
+        }
+    });
+
+    // 6. User Package Purchases (Mining Packages)
+    let initialPackagesLoaded = false;
+    let newlyPurchasedCount = 0;
+    onSnapshot(query(collection(db, 'user_packages'), orderBy('createdAt', 'desc')), (snap) => {
+        if (!initialPackagesLoaded) {
+            initialPackagesLoaded = true;
+            pendingPackageCount = snap.size;
+            return;
+        }
+        
+        if (snap.size > pendingPackageCount) {
+            newlyPurchasedCount += (snap.size - pendingPackageCount);
+            reviewedPackages = false;
+            showToast('A User Purchased a Package!', 'success');
+        }
+        pendingPackageCount = snap.size;
+        
+        const badge = document.getElementById('packagesBadge');
+        if (badge) {
+            if (reviewedPackages) {
+                badge.style.display = 'none';
+            } else {
+                badge.innerText = newlyPurchasedCount;
+                badge.style.display = newlyPurchasedCount > 0 ? 'flex' : 'none';
+            }
         }
     });
 }
@@ -1720,6 +1804,7 @@ function loadUsers() {
                     ${d.isSuspended ? '<span class="status-pill rejected" style="margin-left:0">Suspended</span>' : ''}
                     <div style="display:flex; gap:5px; margin-left:auto">
                         <button class="btn-sm btn-view" style="width:auto; padding:4px 10px" onclick="viewUser('${dDoc.id}')">Details</button>
+                        <button class="btn-sm btn-appr" style="width:auto; padding:4px 10px; background:#e67e22; border-color:#e67e22" onclick="deactivateUser('${dDoc.id}', '${d.fullName}')">Reset</button>
                         <button class="btn-sm btn-reje" style="width:auto; padding:4px 10px" onclick="deleteUser('${dDoc.id}', '${d.fullName}')">Delete</button>
                     </div>
                 </div>
@@ -1775,6 +1860,7 @@ window.viewUser = async (id) => {
                 ${d.isSuspended ? 'Unsuspend' : 'Suspend'}
             </button>
             <button class="btn-sm btn-view" onclick="adjustBalances('${id}')">Adjust ৳</button>
+            <button class="btn-sm btn-appr" style="background:#e67e22; border-color:#e67e22" onclick="deactivateUser('${id}', '${d.fullName}')">Deactivate / Factory Reset</button>
             <button class="btn-sm btn-reje" style="background:#000" onclick="deleteUser('${id}', '${d.fullName}')">Delete Account</button>
         </div>
 
@@ -2474,86 +2560,76 @@ window.loadSentNotifications = async () => {
     }
 };
 
-window.handleMasterResetToggle = async (el) => {
-    if (!el.checked) return;
-    
-    // Auto uncheck if they cancel
-    const cancel = () => { el.checked = false; };
+window.deactivateUser = async (id, name) => {
+    const conf = await window.customConfirm(`Are you absolutely sure you want to Deactivate / Factory Reset user "${name}"?\n\nThis will hard-delete all their purchase packages, robots, transactions, and notifications. Their wallet balances will be reset to 0, but their account profile will remain.`, 'DEACTIVATE & RESET CUSTOMER');
+    if (!conf) return;
 
-    const conf = await window.customConfirm('WARNING: Activating this toggle will wipe ALL history and zero out all user wallets. Accounts will remain. Continue?', 'MASTER RESET');
-    if (!conf) {
-        cancel();
+    const final = await window.customPrompt(`To confirm, type the User ID (${id.substring(0, 6)}...) below:`, 'FACTORY RESET USER', '');
+    if (!final || !id.startsWith(final)) {
+        showToast('Verification failed. User was not reset.', 'warning');
         return;
     }
 
-    // Call the existing reset function but with a smaller confirmation flow since we already did one
-    await window.resetSystemData(true);
-    cancel();
-};
-
-window.resetSystemData = async (skipPrompt = false) => {
     const loader = document.getElementById('adminPanelLoading');
-    if(loader) loader.style.display = 'flex';
-    
+    if (loader) loader.style.display = 'flex';
+
     try {
-        const COLLECTIONS_TO_WIPE = [
-            'deposits', 'withdraws', 'work_history', 'referral_earnings', 
-            'notifications', 'user_earnings', 'referrals', 
-            'user_packages', 'user_robots', 'transactions', 
-            'support', 'landing_chats', 'completed_tasks', 'earnings',
-            'mining_states', 'chat_messages', 'support_chats', 
-            'landing_support', 'chats', 'messages', 'user_tasks'
+        showToast('Wiping user activity...', 'info');
+        const userCollections = [
+            'user_packages', 'user_robots', 'transactions', 'notifications',
+            'deposits', 'withdraws', 'work_history', 'referral_earnings',
+            'completed_tasks', 'support', 'mining_states'
         ];
-        
-        showToast('Starting system reset...', 'info');
-        
-        for (const colName of COLLECTIONS_TO_WIPE) {
+
+        for (const col of userCollections) {
             try {
-                const snap = await getDocs(collection(db, colName));
-                let count = 0;
+                const snap = await getDocs(query(collection(db, col), where('userId', '==', id)));
                 for (const d of snap.docs) {
                     await deleteDoc(d.ref);
-                    count++;
                 }
-                console.log(`Cleared ${count} docs from ${colName}`);
-            } catch (colErr) {
-                console.warn(`Could not clear ${colName}:`, colErr);
+            } catch (err) {
+                console.warn(`Error clearing collection ${col}:`, err);
             }
         }
 
-        // Reset User Balances & Stats
-        const userSnap = await getDocs(collection(db, 'users'));
-        for (const u of userSnap.docs) {
-            await updateDoc(u.ref, {
-                balance: 0,
-                mainBalance: 0,
-                earningBalance: 0,
-                referralBalance: 0,
-                purchaseCommissionBalance: 0,
-                miningCommissionBalance: 0,
-                totalReferralEarned: 0,
-                referralEarned: 0,
-                totalMined: 0,
-                hasDeposit: false,
-                hasBoughtPackage: false,
-                status: 'inactive',
-                isSuspended: false,
-                miningStartedAt: null,
-                lastClaim: null,
-                activeRigsCount: 0,
-                robotActivated: false,
-                hasActiveRobot: false
-            });
-        }
-        
-        showToast('System Reset Complete.', 'success');
-        setTimeout(() => location.reload(), 1500);
+        // Reset fields inside the user profile document (keep the doc, do not delete)
+        const userRef = doc(db, 'users', id);
+        await updateDoc(userRef, {
+            balance: 0,
+            mainBalance: 0,
+            earningBalance: 0,
+            referralBalance: 0,
+            mainWallet: 0,
+            tasksWallet: 0,
+            referralWallet: 0,
+            purchaseCommissionBalance: 0,
+            miningCommissionBalance: 0,
+            totalReferralEarned: 0,
+            referralEarned: 0,
+            totalMined: 0,
+            hasDeposit: false,
+            hasBoughtPackage: false,
+            status: 'inactive',
+            isSuspended: false,
+            miningStartedAt: null,
+            lastClaim: null,
+            activeRigsCount: 0,
+            robotActivated: false,
+            hasActiveRobot: false
+        });
 
+        showToast('User Reset & Deactivated successfully', 'success');
+        
+        // Hide details modal if open
+        const userModal = document.getElementById('userModal');
+        if (userModal) userModal.classList.remove('show');
+        
+        loadUsers();
     } catch (err) {
-        console.error("System Wipe Error:", err);
-        showToast('Wipe Failed: ' + err.message, 'error');
+        console.error("Factory Reset failed:", err);
+        showToast('Reset Error: ' + err.message, 'error');
     } finally {
-        if(loader) loader.style.display = 'none';
+        if (loader) loader.style.display = 'none';
     }
 };
 
@@ -2765,6 +2841,7 @@ document.getElementById('userSearch').oninput = (e) => {
                                     <span style="font-size:10px; color:${d.hasDeposit ? 'var(--success)' : 'var(--muted)'}">${d.hasDeposit ? '✓Deposit' : '✗Deposit'}</span>
                                     <div style="display:flex; gap:5px; margin-left:auto">
                                         <button class="btn-sm btn-view" style="width:auto; padding:4px 10px" onclick="viewUser('${dDoc.id}')">Details</button>
+                                        <button class="btn-sm btn-appr" style="width:auto; padding:4px 10px; background:#e67e22; border-color:#e67e22" onclick="deactivateUser('${dDoc.id}', '${d.fullName}')">Reset</button>
                                         <button class="btn-sm btn-reje" style="width:auto; padding:4px 10px" onclick="deleteUser('${dDoc.id}', '${d.fullName}')">Delete</button>
                                     </div>
                                 </div>
