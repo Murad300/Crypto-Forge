@@ -3331,8 +3331,10 @@ window.getBDEndOfDay = (dateStr) => {
 
 window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNow()) => {
     const todayStr = window.getBDDate(now);
-    const dailyProfit = Number(pkg.daily || pkg.dailyProfit || 0);
+    const dailyProfit = Number(pkg.daily || pkg.dailyProfit || pkg.dailyProfitAmount || 0);
+    const pkgExpires = new Date(pkg.expiresAt);
 
+    // Parse last claim time (fallback to purchasedAt)
     const lastClaimTimeStr = pkg.lastClaimTime || pkg.purchasedAt;
     let lastClaimDayStr = todayStr;
     try {
@@ -3343,24 +3345,29 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
         lastClaimDayStr = todayStr;
     }
 
-    // Calculate completed dates from the day after last claim up to yesterday
     let unclaimedCompleted = 0;
 
+    // 1. Calculate older completed days starting from (lastClaimDayStr + 1) up to (todayStr - 1)
     try {
-        // Parse date strings to integers to generate date sequences safely
         const cur = new Date(window.getBDMidnight(lastClaimDayStr).getTime());
-        // Move one day forward to start sequence
         cur.setDate(cur.getDate() + 1);
         const yesterdayLimit = new Date(window.getBDMidnight(todayStr).getTime());
 
         while (cur < yesterdayLimit) {
             const dStr = window.getBDDate(cur);
-            // Check if robot was active on this day string
+            const curMidnight = window.getBDMidnight(dStr);
+
+            // Check package validity: if the day starts after package has expired, no profit
+            if (curMidnight >= pkgExpires) {
+                break; 
+            }
+
+            // Check if robot was active on this day
             const robotActive = myActiveRobots && myActiveRobots.some(r => {
                 if (r.status !== 'active') return false;
                 const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-                // Active if robot did not expire yet
-                return rExp && rExp > window.getBDMidnight(dStr);
+                const rCreated = r.createdAt ? new Date(r.createdAt) : null;
+                return rExp && rExp > curMidnight && (!rCreated || rCreated <= window.getBDEndOfDay(dStr));
             });
 
             if (robotActive) {
@@ -3369,111 +3376,93 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
             cur.setDate(cur.getDate() + 1);
         }
     } catch (err) {
-        console.warn("Calculations for previous days completed with warning:", err);
+        console.warn("Error calculating previous days:", err);
     }
 
-    // Now analyze the current active day (today)
+    // 2. Identify the active session (today)
+    let sessionStartTime = null;
+    let sessionEndTime = null;
+    let liveEarnToday = 0;
+    let percent = 0;
+    let isActive = false;
+    let isRobotStarted = false;
+
+    const bdMidnight = window.getBDMidnight(todayStr);
+
+    // Check if robot is active today
     const robotActiveToday = myActiveRobots && myActiveRobots.some(r => {
         if (r.status !== 'active') return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
         return rExp && rExp > now;
     });
 
-    let sessionStartTime = null;
-    let sessionEndTime = null;
-    let totalSessionSeconds = 0;
-    let isRobotStarted = false;
-    let sessionType = 'none';
+    // Package dependency: Robot is only active if package is not expired
+    const isPkgExpiredNow = now >= pkgExpires;
 
-    const bdMidnight = window.getBDMidnight(todayStr);
-
-    if (robotActiveToday) {
-        // AI robots work 24/7, starting from midnight Dhaka time to run the full day
-        sessionStartTime = bdMidnight;
-        sessionEndTime = new Date(bdMidnight.getTime() + 24 * 60 * 60 * 1000); // 12:00 AM next day
-        totalSessionSeconds = 24 * 60 * 60; // 24 hours (86400 seconds)
+    if (robotActiveToday && !isPkgExpiredNow) {
         isRobotStarted = true;
-        sessionType = 'robot';
-    } else if (pkg.lastMiningStartTime) {
-        // Check if there is an active manual session currently running
-        const mStart = new Date(pkg.lastMiningStartTime);
-        const mEnd = new Date(mStart.getTime() + 24 * 60 * 60 * 1000);
-        const isClaimedObj = pkg.lastClaimTime && new Date(pkg.lastClaimTime) >= mStart;
-        
-        if (!isClaimedObj) {
-            if (now < mEnd) {
-                sessionStartTime = mStart;
-                sessionEndTime = mEnd;
-                totalSessionSeconds = 24 * 60 * 60;
-                isRobotStarted = false;
-                sessionType = 'manual';
-            } else {
-                // Completed but unclaimed!
-                unclaimedCompleted += dailyProfit;
-            }
-        }
-    }
-
-    let liveEarnToday = 0;
-    let percent = 0;
-    let isActive = false;
-
-    if (sessionStartTime && !isNaN(sessionStartTime.getTime()) && sessionEndTime && !isNaN(sessionEndTime.getTime()) && totalSessionSeconds > 0) {
-        let lastClaimTimeMs = 0;
-        try {
-            if (lastClaimTimeStr) {
-                lastClaimTimeMs = new Date(lastClaimTimeStr).getTime();
-            }
-        } catch(e) {}
-        if (isNaN(lastClaimTimeMs) || !lastClaimTimeMs) {
-            lastClaimTimeMs = sessionStartTime.getTime();
-        }
-
-        const nowTime = now.getTime();
-        const startVal = sessionStartTime.getTime();
-        const endVal = sessionEndTime.getTime();
-
-        if (nowTime < startVal) {
-            // Clock skew fallback - start ticking immediately with a small initial padding (e.g. 5 seconds) to keep user interface animated
-            isActive = true;
-            let totalSessionElapsed = Math.max(1, 5 + (nowTime - startVal) / 1000);
-            percent = (totalSessionElapsed / totalSessionSeconds) * 100;
-            
-            const earningStartTime = new Date(Math.max(startVal, lastClaimTimeMs));
-            let elapsedAccrualSeconds = Math.max(totalSessionElapsed, (nowTime - earningStartTime.getTime()) / 1000);
-            liveEarnToday = (elapsedAccrualSeconds / totalSessionSeconds) * dailyProfit;
-        } else if (nowTime >= endVal) {
-            percent = 100;
-            isActive = false;
-            const earningStartTime = new Date(Math.max(startVal, lastClaimTimeMs));
-            let elapsedAccrualSeconds = (endVal - earningStartTime.getTime()) / 1000;
-            if (elapsedAccrualSeconds < 0) elapsedAccrualSeconds = 0;
-            liveEarnToday = (elapsedAccrualSeconds / totalSessionSeconds) * dailyProfit;
+        // Check for "Robot First-Day Session Merge" (Guideline 4.4)
+        // If a manual session started today before robot purchase/activation, merge it:
+        if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === todayStr) {
+            sessionStartTime = new Date(pkg.lastMiningStartTime);
         } else {
-            isActive = true;
-            let totalSessionElapsed = (nowTime - startVal) / 1000;
-            if (totalSessionElapsed < 0) totalSessionElapsed = 0;
-            if (totalSessionElapsed > totalSessionSeconds) totalSessionElapsed = totalSessionSeconds;
-            percent = (totalSessionElapsed / totalSessionSeconds) * 100;
-
-            const earningStartTime = new Date(Math.max(startVal, lastClaimTimeMs));
-            const accrualEndTime = new Date(Math.min(nowTime, endVal));
-            let elapsedAccrualSeconds = (accrualEndTime.getTime() - earningStartTime.getTime()) / 1000;
-            if (elapsedAccrualSeconds < 0) elapsedAccrualSeconds = 0;
-            liveEarnToday = (elapsedAccrualSeconds / totalSessionSeconds) * dailyProfit;
+            sessionStartTime = bdMidnight;
         }
+        // Robot session ends after 24 hours of Dhaka time or cap at package expiration
+        sessionEndTime = new Date(bdMidnight.getTime() + 24 * 60 * 60 * 1000);
+    } else if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === todayStr && !isPkgExpiredNow) {
+        // Manual session started today
+        sessionStartTime = new Date(pkg.lastMiningStartTime);
+        // Hard Session Cutoff (Guideline 4.1): Ends at 11:59:59 PM of the startup day
+        sessionEndTime = window.getBDEndOfDay(todayStr);
     }
 
-    if (isNaN(percent) || percent < 0) percent = 0;
-    if (isNaN(liveEarnToday) || liveEarnToday < 0) liveEarnToday = 0;
+    // Cap session end time at package expiration
+    if (sessionEndTime && sessionEndTime > pkgExpires) {
+        sessionEndTime = pkgExpires;
+    }
+
+    // Compute live earnings for active session
+    if (sessionStartTime && sessionEndTime && now < sessionEndTime && now >= sessionStartTime) {
+        isActive = true;
+        const totalSessionMs = sessionEndTime.getTime() - sessionStartTime.getTime();
+        const elapsedSessionMs = now.getTime() - sessionStartTime.getTime();
+        percent = totalSessionMs > 0 ? (elapsedSessionMs / totalSessionMs) * 100 : 0;
+
+        // Daily profit contribution for the elapsed seconds
+        const elapsedSeconds = elapsedSessionMs / 1000;
+        liveEarnToday = (elapsedSeconds / 86400) * dailyProfit;
+    } else if (sessionStartTime && sessionEndTime && now >= sessionEndTime) {
+        // Session is completed but unclaimed
+        const totalSessionMs = sessionEndTime.getTime() - sessionStartTime.getTime();
+        const elapsedSeconds = totalSessionMs / 1000;
+        liveEarnToday = (elapsedSeconds / 86400) * dailyProfit;
+        isActive = false;
+        percent = 100;
+    }
+
+    // Ensure multipliers / limit checks
+    let mult = 1;
+    if (window.currentUserData && typeof window.currentUserData.earningsMultiplier === 'number' && window.currentUserData.earningsMultiplier > 0) {
+        mult = window.currentUserData.earningsMultiplier;
+    }
+
+    const unclaimedCompletedMul = Number((unclaimedCompleted * mult).toFixed(2));
+    const liveEarnTodayMul = Number((liveEarnToday * mult).toFixed(2));
+    const totalClaimable = Number((unclaimedCompletedMul + liveEarnTodayMul).toFixed(2));
+
+    // Determine claim status today
+    const hasClaimedToday = pkg.lastClaimTime ? (window.getBDDate(new Date(pkg.lastClaimTime)) === todayStr) : false;
+    const isSessionOver = sessionEndTime ? (now.getTime() >= sessionEndTime.getTime()) : true;
+    const isClaimedToday = hasClaimedToday && (isSessionOver || liveEarnToday === 0);
 
     const activeSession = sessionStartTime ? {
         isActive,
         startTime: sessionStartTime,
         endTime: sessionEndTime,
         elapsedSeconds: sessionStartTime ? (now.getTime() - sessionStartTime.getTime()) / 1000 : 0,
-        liveEarnings: liveEarnToday,
-        percent,
+        liveEarnings: liveEarnTodayMul,
+        percent: percent > 100 ? 100 : percent,
         maxPotential: dailyProfit,
         isRobotStarted
     } : {
@@ -3481,28 +3470,10 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
         maxPotential: dailyProfit
     };
 
-    const totalClaimable = unclaimedCompleted + liveEarnToday;
-
-    const hasClaimedToday = pkg.lastClaimTime ? (window.getBDDate(new Date(pkg.lastClaimTime)) === todayStr) : false;
-    const isSessionOver = sessionEndTime ? (now.getTime() >= sessionEndTime.getTime()) : true;
-    const isClaimedToday = hasClaimedToday && (isSessionOver || liveEarnToday === 0);
-
-    let mult = 1;
-    if (window.currentUserData && typeof window.currentUserData.earningsMultiplier === 'number' && window.currentUserData.earningsMultiplier > 0) {
-        mult = window.currentUserData.earningsMultiplier;
-    }
-    const finalUnclaimedCompleted = Number((unclaimedCompleted * mult).toFixed(2));
-    const finalLiveEarnToday = Number((liveEarnToday * mult).toFixed(2));
-    const finalTotalClaimable = Number((totalClaimable * mult).toFixed(2));
-
-    if (activeSession) {
-        activeSession.liveEarnings = finalLiveEarnToday;
-    }
-
     return {
-        unclaimedCompleted: finalUnclaimedCompleted,
+        unclaimedCompleted: unclaimedCompletedMul,
         activeSession,
-        totalClaimable: finalTotalClaimable,
+        totalClaimable: totalClaimable,
         isClaimedToday
     };
 };
@@ -3525,6 +3496,25 @@ let availablePackages = window.availablePackages || [];
 
 window.syncPackagesFallback = async () => {
     if (!auth.currentUser) return;
+
+    // Background autopush routine for automatic accrual of expired packages
+    if (!window.hasTriggeredAutoPush) {
+        window.hasTriggeredAutoPush = true;
+        fetch('/api/mining/autopush', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: auth.currentUser.uid })
+        }).then(res => res.json()).then(data => {
+            if (data.processed && data.processed.length > 0) {
+                console.log("Background autopush processed packages:", data.processed);
+                const totalClaimed = data.processed.reduce((acc, p) => acc + (p.claimed || 0), 0);
+                if (totalClaimed > 0) {
+                    showToast('success', 'Protected Earnings Accrued', `Brought ৳${totalClaimed.toFixed(2)} from expired packages safely to your Main Balance!`);
+                }
+            }
+        }).catch(err => console.warn("Background autopush check failed:", err));
+    }
+
     try {
         const pkgsQ = query(collection(db, 'users', auth.currentUser.uid, 'purchasedPackages'), where('status', '==', 'active'));
         const pSnap = await getDocs(pkgsQ);
@@ -3927,6 +3917,11 @@ let workListener = null;
 window.buyPackage = async function(pid) {
     if(!pid) return;
     
+    if (window.isPurchasingPackage) {
+        showToast('warning', 'Please wait', 'Your previous purchase request is being processed.');
+        return;
+    }
+    
     if (!currentUserData) {
         showToast('error', 'Error', 'Please login first');
         return;
@@ -3937,10 +3932,10 @@ window.buyPackage = async function(pid) {
         return;
     }
 
-
-
     const p = availablePackages.find(x => x.id === pid);
     if (!p) return showToast('error', 'Error', 'Package not found.');
+
+    window.isPurchasingPackage = true;
 
     // Monthly Purchase Limit Check: "A package can only be purchased once a month"
     try {
@@ -4002,6 +3997,8 @@ window.buyPackage = async function(pid) {
             handleFirestoreError(err, 'write', 'buyPackage/' + pid);
             showToast('error', 'Purchase Failed', 'Unable to buy package: ' + err.message, toastId);
         }
+    } finally {
+        window.isPurchasingPackage = false;
     }
 };
 
@@ -8747,45 +8744,54 @@ window.toggleRobot = async (botId, isEnabled) => {
 window.startWork = startWork;
 
 window.buyRobot = async (rid) => {
+    if (window.isPurchasingRobot) {
+        showToast('warning', 'Please wait', 'Your previous robot purchase is still processing.');
+        return;
+    }
+
     if (currentUserData && currentUserData.isSuspended) {
         return showToast('error', 'Suspended', 'Your account is currently suspended.');
     }
 
-    // Purchase Limit Logic: 1 active robot at a time
-    const activeBots = (myActiveRobots || []).filter(b => {
-        const exp = b.expiresAt ? new Date(b.expiresAt) : null;
-        return b.status === 'active' && (!exp || exp > new Date());
-    });
-
-    if (activeBots.length > 0) {
-        return showToast('warning', 'Purchase Limited', 'You can only have one active robot. You can buy a new one once your current robot expires.');
-    }
-
-    // Ensure availableRobots is valid
-    // Explicit fallback search
-    let r = (window.availableRobots || []).find(x => x.id === rid);
-    if (!r) {
-        const staticDefaults = [
-            { id: 'robot_7d', name: 'Smart Bot (7 Days)', price: 150, duration: 7, desc: 'Automates reward collection for 7 days.', color: '#4285F4' },
-            { id: 'robot_15d', name: 'Pro Bot (15 Days)', price: 300, duration: 15, desc: 'Automates reward collection for 15 days.', color: '#9C27B0' },
-            { id: 'robot_30d', name: 'Ultra Bot (30 Days)', price: 500, duration: 30, desc: 'Automates reward collection for 30 days.', color: '#FF9800' }
-        ];
-        r = staticDefaults.find(x => x.id === rid);
-    }
-
-    if (!r) {
-        console.error("Robot Buy Failed: ID not found", rid, "Available:", window.availableRobots);
-        return showToast('error', 'Error', `Robot configuration not found (${rid}). Please refresh.`);
-    }
-
-    if (!await window.customConfirm(`Purchase ${r.name} for ৳${r.price}?`, 'Buy Auto-Robot')) return;
-
-    const userBal = typeof currentUserData.mainBalance === 'number' ? currentUserData.mainBalance : (currentUserData.balance || 0);
-    if (userBal < r.price) {
-        return showToast('error', 'Insufficient Balance', `You need ৳${r.price} to purchase this robot.`);
-    }
-
+    window.isPurchasingRobot = true;
     try {
+        // Purchase Limit Logic: 1 active robot at a time
+        const activeBots = (myActiveRobots || []).filter(b => {
+            const exp = b.expiresAt ? new Date(b.expiresAt) : null;
+            return b.status === 'active' && (!exp || exp > new Date());
+        });
+
+        if (activeBots.length > 0) {
+            showToast('warning', 'Purchase Limited', 'You can only have one active robot. You can buy a new one once your current robot expires.');
+            return;
+        }
+
+        // Ensure availableRobots is valid
+        // Explicit fallback search
+        let r = (window.availableRobots || []).find(x => x.id === rid);
+        if (!r) {
+            const staticDefaults = [
+                { id: 'robot_7d', name: 'Smart Bot (7 Days)', price: 150, duration: 7, desc: 'Automates reward collection for 7 days.', color: '#4285F4' },
+                { id: 'robot_15d', name: 'Pro Bot (15 Days)', price: 300, duration: 15, desc: 'Automates reward collection for 15 days.', color: '#9C27B0' },
+                { id: 'robot_30d', name: 'Ultra Bot (30 Days)', price: 500, duration: 30, desc: 'Automates reward collection for 30 days.', color: '#FF9800' }
+            ];
+            r = staticDefaults.find(x => x.id === rid);
+        }
+
+        if (!r) {
+            console.error("Robot Buy Failed: ID not found", rid, "Available:", window.availableRobots);
+            showToast('error', 'Error', `Robot configuration not found (${rid}). Please refresh.`);
+            return;
+        }
+
+        if (!await window.customConfirm(`Purchase ${r.name} for ৳${r.price}?`, 'Buy Auto-Robot')) return;
+
+        const userBal = typeof currentUserData.mainBalance === 'number' ? currentUserData.mainBalance : (currentUserData.balance || 0);
+        if (userBal < r.price) {
+            showToast('error', 'Insufficient Balance', `You need ৳${r.price} to purchase this robot.`);
+            return;
+        }
+
         showToast('info', 'Processing', 'Connecting to secure node...');
         
         // Active Robot check before creating user_robots
@@ -8824,6 +8830,8 @@ window.buyRobot = async (rid) => {
         setTimeout(() => navigateTo('myPackagesPage'), 1500);
     } catch (err) {
         showToast('error', 'Purchase Failed', err.message);
+    } finally {
+        window.isPurchasingRobot = false;
     }
 };
 
