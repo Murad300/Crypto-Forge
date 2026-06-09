@@ -3952,41 +3952,42 @@ window.buyPackage = async function(pid) {
     if (!p) return showToast('error', 'Error', 'Package not found.');
 
     window.isPurchasingPackage = true;
+    let toastId = null;
 
-    // Monthly Purchase Limit Check: "A package can only be purchased once a month"
     try {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        
-        const qCount = query(
-            collection(db, 'user_packages'),
-            where('userId', '==', auth.currentUser.uid),
-            where('packageId', '==', pid),
-            where('createdAt', '>=', startOfMonth)
-        );
-        const existingSnap = await getDocs(qCount);
-        if (!existingSnap.empty) {
-            showToast('error', 'Monthly Limit', 'You can only purchase this package once per month.');
+        // Monthly Purchase Limit Check: "A package can only be purchased once a month"
+        try {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+            
+            const qCount = query(
+                collection(db, 'user_packages'),
+                where('userId', '==', auth.currentUser.uid),
+                where('packageId', '==', pid),
+                where('createdAt', '>=', startOfMonth)
+            );
+            const existingSnap = await getDocs(qCount);
+            if (!existingSnap.empty) {
+                showToast('error', 'Monthly Limit', 'You can only purchase this package once per month.');
+                return;
+            }
+        } catch (err) {
+            console.error("Limit check error:", err);
+        }
+
+        const bal = typeof currentUserData.mainBalance === 'number' ? currentUserData.mainBalance : (typeof currentUserData.balance === 'number' ? currentUserData.balance : 0);
+        const userBalance = Number(bal);
+        const packagePrice = Number(p.price);
+        const confirmation = await window.customConfirm(`Purchase "${p.name}"?\n\nPrice: ৳${packagePrice}\n\nYour Balance: ৳${userBalance}\n\nConfirm purchase?`, 'Confirm Purchase');
+        if (!confirmation) return;
+        if (userBalance < packagePrice) {
+            if (await window.customConfirm(`Insufficient Balance! Deposit now?`, 'Low Balance')) {
+                navigateTo('depositPage');
+            }
             return;
         }
-    } catch (err) {
-        console.error("Limit check error:", err);
-    }
-
-    const bal = typeof currentUserData.mainBalance === 'number' ? currentUserData.mainBalance : (typeof currentUserData.balance === 'number' ? currentUserData.balance : 0);
-    const userBalance = Number(bal);
-    const packagePrice = Number(p.price);
-    const confirmation = await window.customConfirm(`Purchase "${p.name}"?\n\nPrice: ৳${packagePrice}\n\nYour Balance: ৳${userBalance}\n\nConfirm purchase?`, 'Confirm Purchase');
-    if (!confirmation) return;
-    if (userBalance < packagePrice) {
-        if (await window.customConfirm(`Insufficient Balance! Deposit now?`, 'Low Balance')) {
-            navigateTo('depositPage');
-        }
-        return;
-    }
-    
-    const toastId = showToast('info', 'Processing', 'Starting package purchase...');
-    try {
+        
+        toastId = showToast('info', 'Processing', 'Starting package purchase...');
         const token = await auth.currentUser.getIdToken();
         const res = await fetch('/api/package/purchase', {
             method: 'POST',
