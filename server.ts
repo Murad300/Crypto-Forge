@@ -273,6 +273,18 @@ expressApp.get("/api/health", (req, res) => {
   });
 });
 
+// Explicit Keep-Alive Endpoint to prevent Render Sleep (Awake Script)
+expressApp.get("/api/keepalive", (req, res) => {
+  const now = new Date();
+  const dhakaTime = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+  res.json({
+    status: "alive",
+    timestamp: now.toISOString(),
+    dhakaTime: dhakaTime,
+    message: "Google Apps Script ping received. Server is awake."
+  });
+});
+
 // Admin Route - Using a cleaner, non-generic path to avoid security flags
 // This helps prevent "Dangerous Site" warnings often triggered by generic "/admin" paths on new domains
 expressApp.get("/portal-manager", (req, res) => {
@@ -461,17 +473,15 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
       const buyerData = userData;
       const effectiveUplineId = buyerData.referredBy || buyerData.uplineId;
 
-      if (buyerData && effectiveUplineId && !hasAwarded10) {
+      if (buyerData && effectiveUplineId) {
         const commission = calculateInstantCommission(newPackageData.price);
         if (commission > 0) {
           const uplineRef = dbCompat.collection("users").doc(effectiveUplineId);
-          // Increment referralCommissionBalance AND totalReferralEarned
+          // Increment referralCommissionBalance AND referralCommissions AND totalReferralEarned
           transaction.update(uplineRef, {
             referralCommissionBalance: admin.firestore.FieldValue.increment(commission),
+            referralCommissions: admin.firestore.FieldValue.increment(commission),
             totalReferralEarned: admin.firestore.FieldValue.increment(commission)
-          });
-          transaction.update(userRef, {
-            hasAwardedUpline10: true
           });
           const comLogRef = dbCompat.collection("commission_logs").doc();
           transaction.set(comLogRef, {
@@ -726,26 +736,48 @@ expressApp.post("/api/wallet/transfer", verifyToken, async (req: any, res: any) 
       return res.status(400).json({ error: "Balances can only be transferred to the Main Balance on the 1st day of each month." });
     }
 
-    let balanceKey = '';
     let label = '';
-    if (type === 'earning') { balanceKey = 'earningBalance'; label = 'Tasks'; }
-    else if (type === 'mining') { balanceKey = 'referralCommissionBalance'; label = 'Referral Commissions (10% + 2.5%)'; }
-    else { balanceKey = 'referralBalance'; label = 'Legacy Referrals'; }
-
     await database.runTransaction(async (transaction) => {
       const userRef = database.collection("users").doc(userId);
       const userSnap = await transaction.get(userRef);
       if (!userSnap.exists) throw new Error("User record not found");
       const userData = userSnap.data()!;
 
-      const currentAmount = userData[balanceKey] || 0;
+      let currentAmount = 0;
+      let updates: any = {};
+
+      if (type === 'earning') {
+        const amt1 = Number(userData.tasksBalance || 0);
+        const amt2 = Number(userData.earningBalance || 0);
+        currentAmount = Math.max(amt1, amt2);
+        updates = {
+          tasksBalance: 0,
+          earningBalance: 0
+        };
+        label = 'Tasks';
+      } else if (type === 'mining') {
+        const amt1 = Number(userData.referralCommissions || 0);
+        const amt2 = Number(userData.referralCommissionBalance || 0);
+        currentAmount = Math.max(amt1, amt2);
+        updates = {
+          referralCommissions: 0,
+          referralCommissionBalance: 0
+        };
+        label = 'Referral Commissions (10% + 2.5%)';
+      } else {
+        currentAmount = Number(userData.referralBalance || 0);
+        updates = {
+          referralBalance: 0
+        };
+        label = 'Legacy Referrals';
+      }
+
       if (currentAmount <= 0) throw new Error("No balance available to transfer.");
 
-      transaction.update(userRef, {
-        balance: admin.firestore.FieldValue.increment(currentAmount),
-        mainBalance: admin.firestore.FieldValue.increment(currentAmount),
-        [balanceKey]: 0
-      });
+      updates.balance = admin.firestore.FieldValue.increment(currentAmount);
+      updates.mainBalance = admin.firestore.FieldValue.increment(currentAmount);
+
+      transaction.update(userRef, updates);
 
       const txId = `transfer_${Date.now()}_${userId}`;
       const nowIso = new Date().toISOString();
@@ -1260,6 +1292,7 @@ expressApp.post("/api/mining/claim", async (req, res) => {
         if (l1CommissionAmount > 0) {
           transaction.update(l1Ref, {
             referralCommissionBalance: admin.firestore.FieldValue.increment(l1CommissionAmount),
+            referralCommissions: admin.firestore.FieldValue.increment(l1CommissionAmount),
             referralEarned: admin.firestore.FieldValue.increment(l1CommissionAmount)
           });
 
@@ -1295,6 +1328,155 @@ expressApp.post("/api/mining/claim", async (req, res) => {
 
     res.json(claimResult);
   } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Automatic Mining Accrual and Eviction for Expired Packages
+expressApp.post("/api/mining/autopush", async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "Missing userId parameter" });
+
+  const database = ensureDb();
+  if (!database) return res.status(503).json({ error: "Database not connected" });
+
+  try {
+    const now = new Date();
+    const todayStr = getBDDate(now);
+
+    // Fetch active user robots to check for automation
+    const robotsSnap = await database.collection("user_robots")
+      .where("userId", "==", userId)
+      .where("status", "==", "active")
+      .get();
+
+    const myActiveRobots = robotsSnap.docs.map((doc: any) => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    // Find all active purchased packages that are expired
+    const pkgsSnap = await database.collection("users").doc(userId).collection("purchasedPackages")
+      .where("status", "==", "active")
+      .get();
+
+    const expiredPackagesToProcess: any[] = [];
+    pkgsSnap.docs.forEach((doc: any) => {
+      const data = doc.data();
+      const expAt = new Date(data.expiresAt);
+      if (expAt <= now) {
+        expiredPackagesToProcess.push({
+          id: doc.id,
+          ...data
+        });
+      }
+    });
+
+    if (expiredPackagesToProcess.length === 0) {
+      return res.json({ message: "No expired packages found under active status.", processed: [] });
+    }
+
+    const processedResults: any[] = [];
+
+    // Loop through each expired package and process it atomically
+    for (const pkg of expiredPackagesToProcess) {
+      const userPackageId = pkg.id;
+
+      const claimResult = await database.runTransaction(async (transaction) => {
+        const userRef = database.collection("users").doc(userId);
+        const pkgRef = database.collection("users").doc(userId).collection("purchasedPackages").doc(userPackageId);
+        const globalPkgRef = database.collection("user_packages").doc(userPackageId);
+
+        const [userSnap] = await Promise.all([
+          transaction.get(userRef)
+        ]);
+
+        if (!userSnap.exists) throw new Error("User record not found");
+        const userData = userSnap.data()!;
+
+        // Fetch L1 Referrer info BEFORE any writes to satisfy transaction locks
+        let l1ReferrerId = userData.referredBy || null;
+        let l1Snap = null;
+        let l1Ref = null;
+
+        if (l1ReferrerId) {
+          l1Ref = database.collection("users").doc(l1ReferrerId);
+          l1Snap = await transaction.get(l1Ref);
+        }
+
+        const accrual = calculateAccruedEarnings(pkg, myActiveRobots, now);
+        
+        let claimAmount = accrual.unclaimedCompleted;
+        if (typeof userData.earningsMultiplier === 'number' && userData.earningsMultiplier > 0) {
+          claimAmount = Number((claimAmount * userData.earningsMultiplier).toFixed(2));
+        }
+
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const yesterdayStr = getBDDate(yesterday);
+        const lastClaimTimeStr = getBDMidnight(yesterdayStr).toISOString();
+
+        const updates: any = {
+          status: "expired",
+          lastClaimTime: lastClaimTimeStr,
+          lastClaimDate: todayStr
+        };
+
+        transaction.update(pkgRef, updates);
+        transaction.update(globalPkgRef, updates);
+
+        if (claimAmount > 0) {
+          transaction.update(userRef, {
+            mainBalance: admin.firestore.FieldValue.increment(claimAmount),
+            balance: admin.firestore.FieldValue.increment(claimAmount),
+            totalEarned: admin.firestore.FieldValue.increment(claimAmount)
+          });
+
+          const txId = `tx_auto_push_${Date.now()}_${userId}_${userPackageId}`;
+          const nowIsoStr = now.toISOString();
+          transaction.set(database.collection("transactions").doc(txId), {
+            userId,
+            amount: claimAmount,
+            type: "mining_claim",
+            timestamp: nowIsoStr,
+            createdAt: nowIsoStr,
+            description: `Automated safety accrual from expired package ${pkg.packageName || "Rig"}`
+          });
+
+          // Award 2.5% passive commission to referrer if exists
+          let l1CommissionAmount = 0;
+          if (l1Snap && l1Snap.exists && l1Ref) {
+            l1CommissionAmount = claimAmount * 0.025;
+            if (l1CommissionAmount > 0) {
+              transaction.update(l1Ref, {
+                referralCommissionBalance: admin.firestore.FieldValue.increment(l1CommissionAmount),
+                referralCommissions: admin.firestore.FieldValue.increment(l1CommissionAmount),
+                referralEarned: admin.firestore.FieldValue.increment(l1CommissionAmount)
+              });
+
+              const refTxId = `tx_ref_auto_push_${Date.now()}_${l1ReferrerId}`;
+              transaction.set(database.collection("transactions").doc(refTxId), {
+                userId: l1ReferrerId,
+                amount: l1CommissionAmount,
+                type: "referral_mining_commission",
+                timestamp: nowIsoStr,
+                createdAt: nowIsoStr,
+                description: `Automated 2.5% downline claim commission from ${userData.fullName || userData.email || userId}`
+              });
+            }
+          }
+
+          return { packageId: userPackageId, claimed: claimAmount, status: "expired" };
+        } else {
+          return { packageId: userPackageId, claimed: 0, status: "expired" };
+        }
+      });
+
+      processedResults.push(claimResult);
+    }
+
+    res.json({ message: "Expired packages auto-processed and evicted.", processed: processedResults });
+  } catch (error: any) {
+    console.error("Autopush routine warning:", error);
     res.status(400).json({ error: error.message });
   }
 });
@@ -1367,8 +1549,8 @@ expressApp.post("/api/jobs/claim", async (req, res) => {
       const reward = 10; // Default flat reward for tasks
 
       transaction.update(userRef, {
-        mainBalance: admin.firestore.FieldValue.increment(reward),
-        balance: admin.firestore.FieldValue.increment(reward)
+        tasksBalance: admin.firestore.FieldValue.increment(reward),
+        earningBalance: admin.firestore.FieldValue.increment(reward)
       });
 
       transaction.set(logRef, {
@@ -1414,12 +1596,15 @@ expressApp.post("/api/referral/claim", async (req, res) => {
       if (!userSnap.exists) throw new Error("User not found");
       const userData = userSnap.data()!;
 
-      const referralComm = userData.referralCommissionBalance || 0;
+      const rComm1 = Number(userData.referralCommissions || 0);
+      const rComm2 = Number(userData.referralCommissionBalance || 0);
+      const referralComm = Math.max(rComm1, rComm2);
       if (referralComm <= 0) throw new Error("No referral commissions available to claim.");
 
       transaction.update(userRef, {
         mainBalance: admin.firestore.FieldValue.increment(referralComm),
-        referralCommissionBalance: 0
+        referralCommissionBalance: 0,
+        referralCommissions: 0
       });
 
       const txId = `claim_ref_${Date.now()}_${userId}`;
@@ -1461,7 +1646,9 @@ expressApp.post("/api/claim-referral", verifyToken, async (req: any, res: any) =
       const userRef = dbCompat.collection("users").doc(userId);
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists) throw new Error("User not found.");
-      const balance = userDoc.data().referralCommissionBalance || 0;
+      const rComm1 = Number(userDoc.data().referralCommissions || 0);
+      const rComm2 = Number(userDoc.data().referralCommissionBalance || 0);
+      const balance = Math.max(rComm1, rComm2);
       
       if (balance <= 0) {
         throw new Error("No referral balance available to claim.");
@@ -1469,7 +1656,8 @@ expressApp.post("/api/claim-referral", verifyToken, async (req: any, res: any) =
 
       transaction.update(userRef, {
         mainBalance: admin.firestore.FieldValue.increment(balance),
-        referralCommissionBalance: 0
+        referralCommissionBalance: 0,
+        referralCommissions: 0
       });
 
       const logRef = dbCompat.collection("transaction_logs").doc();
