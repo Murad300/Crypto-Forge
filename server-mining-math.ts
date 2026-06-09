@@ -91,170 +91,143 @@ export function getDhakaDate(date: Date = new Date()): Date {
   }
 }
 
-// Mirror of calculations
 export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: Date = new Date()) {
   const todayStr = getBDDate(now);
   const dailyProfit = Number(pkg.daily || pkg.dailyProfit || pkg.dailyProfitAmount || 0);
-  
-  const lastClaimTimeStr = pkg.lastClaimTime || pkg.purchasedAt || pkg.purchasedAtTime;
+  const pkgExpires = new Date(pkg.expiresAt);
+
+  // Parse last claim time (fallback to purchasedAt)
+  const lastClaimTimeStr = pkg.lastClaimTime || pkg.purchasedAt;
   let lastClaimDayStr = todayStr;
   try {
     if (lastClaimTimeStr) {
-      const d = new Date(lastClaimTimeStr);
-      if (!pkg.lastClaimDate) {
-        const shifted = new Date(d.getTime() - 24 * 60 * 60 * 1000);
-        lastClaimDayStr = getBDDate(shifted);
-      } else {
-        lastClaimDayStr = getBDDate(d);
-      }
+      lastClaimDayStr = getBDDate(new Date(lastClaimTimeStr));
     }
-  } catch(e) {
+  } catch (e) {
     lastClaimDayStr = todayStr;
   }
-  
+
   let unclaimedCompleted = 0;
-  
+
+  // 1. Calculate older completed days starting from (lastClaimDayStr + 1) up to (todayStr - 1)
   try {
-    // Calculate completed dates from the day after last claim up to yesterday
     const cur = new Date(getBDMidnight(lastClaimDayStr).getTime());
     cur.setDate(cur.getDate() + 1);
     const yesterdayLimit = new Date(getBDMidnight(todayStr).getTime());
-    
+
     while (cur < yesterdayLimit) {
       const dStr = getBDDate(cur);
+      const curMidnight = getBDMidnight(dStr);
+
+      // Check package validity: if the day starts after package has expired, no profit
+      if (curMidnight >= pkgExpires) {
+        break; 
+      }
+
+      // Check if robot was active on this day
       const robotActive = myActiveRobots && myActiveRobots.some(r => {
         if (r.status !== 'active') return false;
         const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-        return rExp && rExp > getBDMidnight(dStr);
+        const rCreated = r.createdAt ? new Date(r.createdAt) : null;
+        return rExp && rExp > curMidnight && (!rCreated || rCreated <= getBDEndOfDay(dStr));
       });
-      
+
       if (robotActive) {
         unclaimedCompleted += dailyProfit;
       }
       cur.setDate(cur.getDate() + 1);
     }
-  } catch(err) {
-    console.warn("Server calculation warn for older days:", err);
+  } catch (err) {
+    console.warn("Error calculating previous days:", err);
   }
-  
-  // Now analyze the current active day (today)
+
+  // 2. Identify the active session (today)
+  let sessionStartTime: Date | null = null;
+  let sessionEndTime: Date | null = null;
+  let liveEarnToday = 0;
+  let percent = 0;
+  let isActive = false;
+  let isRobotStarted = false;
+
+  const bdMidnight = getBDMidnight(todayStr);
+
+  // Check if robot is active today
   const robotActiveToday = myActiveRobots && myActiveRobots.some(r => {
     if (r.status !== 'active') return false;
     const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
     return rExp && rExp > now;
   });
-  
-  let sessionStartTime = null;
-  let sessionEndTime = null;
-  let totalSessionSeconds = 0;
-  let isRobotStarted = false;
-  let sessionType = 'none';
-  
-  const bdMidnight = getBDMidnight(todayStr);
-  
-  if (robotActiveToday) {
-    // AI robots work 24/7, starting from midnight Dhaka time to run the full day
-    sessionStartTime = bdMidnight;
-    sessionEndTime = new Date(bdMidnight.getTime() + 24 * 60 * 60 * 1000); // 12:00 AM next day
-    totalSessionSeconds = 24 * 60 * 60; // 24 hours (86400 seconds)
+
+  // Package dependency: Robot is only active if package is not expired
+  const isPkgExpiredNow = now >= pkgExpires;
+
+  if (robotActiveToday && !isPkgExpiredNow) {
     isRobotStarted = true;
-    sessionType = 'robot';
-  } else if (pkg.lastMiningStartTime) {
-    // Check if there is an active manual session currently running
-    const mStart = new Date(pkg.lastMiningStartTime);
-    const mEnd = new Date(mStart.getTime() + 24 * 60 * 60 * 1000);
-    const isClaimedObj = pkg.lastClaimTime && new Date(pkg.lastClaimTime) >= mStart;
-    
-    if (!isClaimedObj) {
-      if (now.getTime() < (mEnd.getTime() - 300000)) { // 5-minute grace period to eliminate small clock skew errors
-        sessionStartTime = mStart;
-        sessionEndTime = mEnd;
-        totalSessionSeconds = 24 * 60 * 60;
-        isRobotStarted = false;
-        sessionType = 'manual';
-      } else {
-        // Completed but unclaimed!
-        unclaimedCompleted += dailyProfit;
-      }
-    }
-  }
-  
-  let liveEarnToday = 0;
-  let percent = 0;
-  let isActive = false;
-  
-  if (sessionStartTime && !isNaN(sessionStartTime.getTime()) && sessionEndTime && !isNaN(sessionEndTime.getTime()) && totalSessionSeconds > 0) {
-    let lastClaimTimeMs = 0;
-    try {
-      if (lastClaimTimeStr) {
-        lastClaimTimeMs = new Date(lastClaimTimeStr).getTime();
-      }
-    } catch(e) {}
-    if (isNaN(lastClaimTimeMs) || !lastClaimTimeMs) {
-      lastClaimTimeMs = sessionStartTime.getTime();
-    }
-    
-    const nowTime = now.getTime();
-    const startVal = sessionStartTime.getTime();
-    const endVal = sessionEndTime.getTime();
-    
-    if (nowTime < startVal) {
-      // Clock skew fallback - start ticking immediately with a small initial padding (e.g. 5 seconds) to keep user interface animated
-      isActive = true;
-      let totalSessionElapsed = Math.max(1, 5 + (nowTime - startVal) / 1000);
-      percent = (totalSessionElapsed / totalSessionSeconds) * 100;
-      
-      const earningStartTime = new Date(Math.max(startVal, lastClaimTimeMs));
-      let elapsedAccrualSeconds = Math.max(totalSessionElapsed, (nowTime - earningStartTime.getTime()) / 1000);
-      liveEarnToday = (elapsedAccrualSeconds / totalSessionSeconds) * dailyProfit;
-    } else if (nowTime >= endVal) {
-      percent = 100;
-      isActive = false;
-      const earningStartTime = new Date(Math.max(startVal, lastClaimTimeMs));
-      let elapsedAccrualSeconds = (endVal - earningStartTime.getTime()) / 1000;
-      if (elapsedAccrualSeconds < 0) elapsedAccrualSeconds = 0;
-      liveEarnToday = (elapsedAccrualSeconds / totalSessionSeconds) * dailyProfit;
+    // Check for "Robot First-Day Session Merge" (Guideline 4.4)
+    // If a manual session started today before robot purchase/activation, merge it:
+    if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === todayStr) {
+      sessionStartTime = new Date(pkg.lastMiningStartTime);
     } else {
-      isActive = true;
-      let totalSessionElapsed = (nowTime - startVal) / 1000;
-      if (totalSessionElapsed < 0) totalSessionElapsed = 0;
-      if (totalSessionElapsed > totalSessionSeconds) totalSessionElapsed = totalSessionSeconds;
-      percent = (totalSessionElapsed / totalSessionSeconds) * 100;
-      
-      const earningStartTime = new Date(Math.max(startVal, lastClaimTimeMs));
-      const accrualEndTime = new Date(Math.min(nowTime, endVal));
-      let elapsedAccrualSeconds = (accrualEndTime.getTime() - earningStartTime.getTime()) / 1000;
-      if (elapsedAccrualSeconds < 0) elapsedAccrualSeconds = 0;
-      liveEarnToday = (elapsedAccrualSeconds / totalSessionSeconds) * dailyProfit;
+      sessionStartTime = bdMidnight;
     }
+    // Robot session ends after 24 hours of Dhaka time or cap at package expiration
+    sessionEndTime = new Date(bdMidnight.getTime() + 24 * 60 * 60 * 1000);
+  } else if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === todayStr && !isPkgExpiredNow) {
+    // Manual session started today
+    sessionStartTime = new Date(pkg.lastMiningStartTime);
+    // Hard Session Cutoff (Guideline 4.1): Ends at 11:59:59 PM of the startup day
+    sessionEndTime = getBDEndOfDay(todayStr);
   }
-  
-  if (isNaN(percent) || percent < 0) percent = 0;
-  if (isNaN(liveEarnToday) || liveEarnToday < 0) liveEarnToday = 0;
-  
-  const activeSession = sessionStartTime ? {
-    isActive,
-    startTime: sessionStartTime,
-    endTime: sessionEndTime,
-    elapsedSeconds: sessionStartTime ? (now.getTime() - sessionStartTime.getTime()) / 1000 : 0,
-    liveEarnings: liveEarnToday,
-    percent,
-    maxPotential: dailyProfit,
-    isRobotStarted
-  } : {
-    isActive: false,
-    maxPotential: dailyProfit
-  };
-  
-  const totalClaimable = unclaimedCompleted + liveEarnToday;
-  
+
+  // Cap session end time at package expiration
+  if (sessionEndTime && sessionEndTime > pkgExpires) {
+    sessionEndTime = pkgExpires;
+  }
+
+  // Compute live earnings for active session
+  if (sessionStartTime && sessionEndTime && now < sessionEndTime && now >= sessionStartTime) {
+    isActive = true;
+    const totalSessionMs = sessionEndTime.getTime() - sessionStartTime.getTime();
+    const elapsedSessionMs = now.getTime() - sessionStartTime.getTime();
+    percent = totalSessionMs > 0 ? (elapsedSessionMs / totalSessionMs) * 100 : 0;
+
+    // Daily profit contribution for the elapsed seconds
+    const elapsedSeconds = elapsedSessionMs / 1000;
+    liveEarnToday = (elapsedSeconds / 86400) * dailyProfit;
+  } else if (sessionStartTime && sessionEndTime && now >= sessionEndTime) {
+    // Session is completed but unclaimed
+    const totalSessionMs = sessionEndTime.getTime() - sessionStartTime.getTime();
+    const elapsedSeconds = totalSessionMs / 1000;
+    liveEarnToday = (elapsedSeconds / 86400) * dailyProfit;
+    isActive = false;
+    percent = 100;
+  }
+
+  // Ensure multipliers / limit checks
+  let mult = 1;
+  const userMultiplier = pkg.earningsMultiplier || 1; // Can be custom passed or looked up
+
+  const unclaimedCompletedMul = Number((unclaimedCompleted * userMultiplier).toFixed(2));
+  const liveEarnTodayMul = Number((liveEarnToday * userMultiplier).toFixed(2));
+  const totalClaimable = Number((unclaimedCompletedMul + liveEarnTodayMul).toFixed(2));
+
+  // Determine claim status today
   const hasClaimedToday = pkg.lastClaimTime ? (getBDDate(new Date(pkg.lastClaimTime)) === todayStr) : false;
   const isSessionOver = sessionEndTime ? (now.getTime() >= sessionEndTime.getTime()) : true;
   const isClaimedToday = hasClaimedToday && (isSessionOver || liveEarnToday === 0);
-  
+
   return {
-    unclaimedCompleted,
-    activeSession,
+    unclaimedCompleted: unclaimedCompletedMul,
+    activeSession: {
+      isActive,
+      startTime: sessionStartTime,
+      endTime: sessionEndTime,
+      elapsedSeconds: sessionStartTime ? (now.getTime() - sessionStartTime.getTime()) / 1000 : 0,
+      liveEarnings: liveEarnTodayMul,
+      percent: percent > 100 ? 100 : percent,
+      maxPotential: dailyProfit,
+      isRobotStarted
+    },
     totalClaimable,
     isClaimedToday
   };
