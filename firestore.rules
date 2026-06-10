@@ -118,6 +118,12 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    match /unique_trx_ids/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
     // --- Support & Communication ---
     match /support/{docId} {
       allow read: if true;
