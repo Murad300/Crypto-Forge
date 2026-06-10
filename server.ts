@@ -140,9 +140,9 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
     if (!database) return res.status(503).json({ error: "Backend not configured" });
     
     const adminDoc = await database.collection("admins").doc(uid).get();
-    const isHardcodedAdmin = ["admin@gmail.com", "admin@cryptoforge.online", "shaikhmdmurad1@gmail.com", "admin@smartbd.com", "backend-admin@cryptoforge.local"].includes(email);
+    const isHardcodedAdmin = email?.toLowerCase() === "shaikhmdmurad1@gmail.com";
     
-    if (adminDoc.exists || isHardcodedAdmin) {
+    if ((adminDoc.exists && email?.toLowerCase() === "shaikhmdmurad1@gmail.com") || isHardcodedAdmin) {
       req.user = { uid, email };
       return next();
     } else {
@@ -2263,12 +2263,101 @@ expressApp.post("/api/auth/update-inapp-password", async (req, res) => {
   }
 });
 
+async function initializeSuperAdminUser() {
+  const emailVal = "shaikhmdmurad1@gmail.com";
+  const passVal = "Admin@murad";
+  try {
+    const database = ensureDb();
+    if (!database) {
+      console.warn("[Admin Setup] Database not connected. Cannot initialize super admin.");
+      return;
+    }
+    
+    let userRecord;
+    try {
+      userRecord = await admin.auth().getUserByEmail(emailVal);
+      // Ensure the correct password is programmatically set and synced
+      await admin.auth().updateUser(userRecord.uid, {
+        password: passVal,
+        emailVerified: true,
+        displayName: "Super Admin"
+      });
+      console.log(`[Admin Setup] Successfully synced Super Admin credentials in Firebase Auth.`);
+    } catch (authErr: any) {
+      if (authErr.code === 'auth/user-not-found') {
+        userRecord = await admin.auth().createUser({
+          email: emailVal,
+          password: passVal,
+          displayName: "Super Admin",
+          emailVerified: true
+        });
+        console.log(`[Admin Setup] Created new Super Admin Auth record:`, userRecord.uid);
+      } else {
+        throw authErr;
+      }
+    }
+
+    const uid = userRecord.uid;
+
+    // Set users database document
+    const userDocRef = database.collection("users").doc(uid);
+    const userDocSnap = await userDocRef.get();
+    if (!userDocSnap.exists) {
+      await userDocRef.set({
+        uid: "admin_murad",
+        email: emailVal,
+        fullName: "Super Admin",
+        phone: "01700000000",
+        balance: 0,
+        mainBalance: 0,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        emailVerified: true,
+        profileCompleted: true
+      });
+      console.log(`[Admin Setup] Created users document for Super Admin UID:`, uid);
+    } else {
+      await userDocRef.update({
+        status: "active",
+        emailVerified: true,
+        email: emailVal
+      });
+    }
+
+    // Set admins database document
+    await database.collection("admins").doc(uid).set({
+      email: emailVal,
+      role: "superadmin",
+      lastActive: new Date().toISOString()
+    }, { merge: true });
+    console.log(`[Admin Setup] Verified /admins/ collection contains superadmin document.`);
+
+    // Enforce safety: Delete any other records in the "admins" collection, or any other user possessing administrative credentials automatically
+    const adminsSnap = await database.collection("admins").get();
+    for (const doc of adminsSnap.docs) {
+      if (doc.id !== uid) {
+        console.log(`[Admin Security] Strictly deleting unauthorized admin doc: ${doc.id} (${doc.data()?.email})`);
+        await database.collection("admins").doc(doc.id).delete();
+      }
+    }
+  } catch (err: any) {
+    console.error("[Admin Setup Error] Super Admin initialization error:", err);
+  }
+}
+
 // Vite Middleware
 async function startServer() {
   try {
     await authenticateBackendSystem();
   } catch (err) {
     console.error("⚠️ Failed to authenticate backend system account on startup:", err);
+  }
+
+  // Set up & enforce Murad as the exclusive super admin dynamically
+  try {
+    await initializeSuperAdminUser();
+  } catch (err) {
+    console.error("⚠️ Failed to run initializeSuperAdminUser on startup:", err);
   }
 
   try {
