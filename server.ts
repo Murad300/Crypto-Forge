@@ -187,12 +187,14 @@ async function distributeReferralCommission(database: any, userId: string, pkgPr
 
         // Notification for L1
         const notifId = `notif_${Date.now()}_${l1ReferrerId}`;
+        const nowIsoStr = new Date().toISOString();
         tx.set(database.collection("notifications").doc(notifId), {
           userId: l1ReferrerId,
           title: "Referral Commission",
           message: `You earned BDT ${l1Commission.toFixed(2)} from your referral's purchase!`,
           type: "referral",
-          timestamp: new Date().toISOString(),
+          timestamp: nowIsoStr,
+          createdAt: nowIsoStr,
           read: false
         });
       }
@@ -554,6 +556,7 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
             message: `You have received a 10% commission of ৳${commission.toFixed(2)} because your referral has activated their first mining package node!`,
             type: "referral_commission",
             timestamp: currentBDTimeIso,
+            createdAt: currentBDTimeIso,
             read: false
           });
 
@@ -800,10 +803,21 @@ expressApp.post("/api/wallet/transfer", verifyToken, async (req: any, res: any) 
       return res.status(400).json({ error: "Balances can only be transferred to the Main Balance on the 1st day of each month." });
     }
 
+    const dateId = `${dhakaNow.getFullYear()}_${dhakaNow.getMonth() + 1}_${dhakaNow.getDate()}`;
     let label = '';
     await database.runTransaction(async (transaction) => {
       const userRef = database.collection("users").doc(userId);
-      const userSnap = await transaction.get(userRef);
+      const lockRef = database.collection("claim_locks").doc(`transfer_${userId}_${type}_${dateId}`);
+
+      const [userSnap, lockSnap] = await Promise.all([
+        transaction.get(userRef),
+        transaction.get(lockRef)
+      ]);
+
+      if (lockSnap.exists) {
+        throw new Error("This balance transfer has already been processed today.");
+      }
+
       if (!userSnap.exists) throw new Error("User record not found");
       const userData = userSnap.data()!;
 
@@ -843,8 +857,17 @@ expressApp.post("/api/wallet/transfer", verifyToken, async (req: any, res: any) 
 
       transaction.update(userRef, updates);
 
-      const txId = `transfer_${Date.now()}_${userId}`;
       const nowIso = new Date().toISOString();
+
+      // Write safety lock to prevent double entries on concurrent clicks
+      transaction.set(lockRef, {
+        userId,
+        type,
+        processedAt: nowIso,
+        amount: currentAmount
+      });
+
+      const txId = `transfer_${Date.now()}_${userId}`;
       transaction.set(database.collection("transactions").doc(txId), {
         userId,
         type: 'transfer',
@@ -935,6 +958,7 @@ expressApp.post("/api/wallet/withdraw", verifyToken, async (req: any, res: any) 
         message: `Your withdrawal request of ৳${cleanAmount} has been accepted. A withdrawal fee of 1.5% (৳${fee}) applies. It may take 24-48 hours to process.`,
         type: "withdrawal",
         read: false,
+        timestamp: now,
         createdAt: now
       });
 
@@ -1011,12 +1035,14 @@ expressApp.post("/api/deposit/approve", verifyAdmin, async (req: any, res: any) 
 
       // 4. Create Notification
       const notifId = `notif_dep_${Date.now()}_${userId}`;
+      const notifTime = new Date().toISOString();
       transaction.set(database.collection("notifications").doc(notifId), {
         userId,
         title: "Deposit Approved",
         message: `Your deposit of BDT ${amount.toFixed(2)} has been approved and credited.`,
         type: "deposit",
-        timestamp: new Date().toISOString(),
+        timestamp: notifTime,
+        createdAt: notifTime,
         read: false
       });
 
@@ -1056,12 +1082,14 @@ expressApp.post("/api/deposit/reject", verifyAdmin, async (req: any, res: any) =
 
       // 2. Create Notification
       const notifId = `notif_dep_rej_${Date.now()}_${userId}`;
+      const notifTimeRej = new Date().toISOString();
       transaction.set(database.collection("notifications").doc(notifId), {
         userId,
         title: "Deposit Rejected",
         message: `Your deposit of ৳${amount} was rejected.`,
         type: "deposit_rejection",
-        timestamp: new Date().toISOString(),
+        timestamp: notifTimeRej,
+        createdAt: notifTimeRej,
         read: false
       });
 
@@ -1101,12 +1129,14 @@ expressApp.post("/api/withdraw/approve", verifyAdmin, async (req: any, res: any)
 
       // 2. Create Notification
       const notifId = `notif_wit_app_${Date.now()}_${userId}`;
+      const notifTimeWitApp = new Date().toISOString();
       transaction.set(database.collection("notifications").doc(notifId), {
         userId,
         title: "Withdraw Completed",
         message: `Congratulations! Your ৳${amount} withdraw request was successful.`,
         type: "withdrawal",
-        timestamp: new Date().toISOString(),
+        timestamp: notifTimeWitApp,
+        createdAt: notifTimeWitApp,
         read: false
       });
 
@@ -1161,12 +1191,14 @@ expressApp.post("/api/withdraw/reject", verifyAdmin, async (req: any, res: any) 
 
       // 3. Create Notification
       const notifId = `notif_wit_rej_${Date.now()}_${userId}`;
+      const notifTimeWitRej = new Date().toISOString();
       transaction.set(database.collection("notifications").doc(notifId), {
         userId,
         title: "Withdraw Rejected",
         message: `Your ৳${amount} withdraw was rejected. Amount returned to wallet.`,
         type: "withdrawal_rejection",
-        timestamp: new Date().toISOString(),
+        timestamp: notifTimeWitRej,
+        createdAt: notifTimeWitRej,
         read: false
       });
 
@@ -1257,11 +1289,17 @@ expressApp.post("/api/mining/claim", async (req, res) => {
       const userRef = database.collection("users").doc(userId);
       const pkgRef = database.collection("users").doc(userId).collection("purchasedPackages").doc(userPackageId);
       const globalPkgRef = database.collection("user_packages").doc(userPackageId);
+      const lockRef = database.collection("claim_locks").doc(`${userPackageId}_${todayStr}`);
 
-      const [userSnap, pkgSnap] = await Promise.all([
+      const [userSnap, pkgSnap, lockSnap] = await Promise.all([
         transaction.get(userRef),
-        transaction.get(pkgRef)
+        transaction.get(pkgRef),
+        transaction.get(lockRef)
       ]);
+
+      if (lockSnap.exists) {
+        throw new Error("This mining reward has already been claimed for today. Please wait until tomorrow.");
+      }
 
       if (!userSnap.exists) throw new Error("User not found");
       if (!pkgSnap.exists) throw new Error("Package not found");
@@ -1340,6 +1378,15 @@ expressApp.post("/api/mining/claim", async (req, res) => {
         totalEarned: admin.firestore.FieldValue.increment(claimAmount)
       });
 
+      // Write safety lock for the claimed package for today to prevent double claims from rapid parallel clicks
+      transaction.set(lockRef, {
+        userId,
+        userPackageId,
+        todayStr,
+        claimedAt: now.toISOString(),
+        amount: claimAmount
+      });
+
       const txId = `tx_mining_claim_${Date.now()}_${userId}_${userPackageId}`;
       const nowIsoStr = now.toISOString();
       transaction.set(database.collection("transactions").doc(txId), {
@@ -1371,12 +1418,14 @@ expressApp.post("/api/mining/claim", async (req, res) => {
           });
 
           const refNotifId = `notif_ref_mining_${Date.now()}_${l1ReferrerId}`;
+          const refNotifTime = now.toISOString();
           transaction.set(database.collection("notifications").doc(refNotifId), {
             userId: l1ReferrerId,
             title: "Mining Commission Received",
             message: `You earned 2.5% downline mining commission of BDT ${l1CommissionAmount.toFixed(2)} from ${userData.fullName || 'your referral'}.`,
             type: "referral",
-            timestamp: now.toISOString(),
+            timestamp: refNotifTime,
+            createdAt: refNotifTime,
             read: false
           });
         }
