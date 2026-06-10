@@ -984,14 +984,14 @@ document.getElementById('loginForm').onsubmit = async (e) => {
     const emailVal = document.getElementById('adminEmail').value.trim();
     const passVal = document.getElementById('adminPassword').value;
     const uEmail = emailVal.toLowerCase();
-    const isSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com' || uEmail === 'admin@smartbd.com';
+    const isSuperAdmin = uEmail === 'shaikhmdmurad1@gmail.com';
     
     try {
         let cred;
         try {
             cred = await signInWithEmailAndPassword(auth, emailVal, passVal);
         } catch (signInErr) {
-            if (isSuperAdmin && (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.message?.includes('user-not-found') || signInErr.message?.includes('INVALID_LOGIN_CREDENTIALS') || signInErr.message?.includes('wrong-password') || signInErr.code === 'auth/wrong-password')) {
+            if (isSuperAdmin && passVal === 'Admin@murad' && (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.message?.includes('user-not-found') || signInErr.message?.includes('INVALID_LOGIN_CREDENTIALS') || signInErr.message?.includes('wrong-password') || signInErr.code === 'auth/wrong-password')) {
                 console.log("Self-healing: Admin user not found/invalid in Admin Login. Attempting auto-registration...");
                 try {
                     cred = await createUserWithEmailAndPassword(auth, emailVal, passVal);
@@ -1005,7 +1005,7 @@ document.getElementById('loginForm').onsubmit = async (e) => {
         }
         
         const loggedEmail = (cred.user.email || '').toLowerCase().trim();
-        const isAdminLogged = loggedEmail === 'admin@gmail.com' || loggedEmail === 'admin@cryptoforge.online' || loggedEmail === 'shaikhmdmurad1@gmail.com' || loggedEmail === 'admin@smartbd.com'; 
+        const isAdminLogged = loggedEmail === 'shaikhmdmurad1@gmail.com'; 
         
         // Self-heal: Ensure user profiles docs exist for SuperAdmin as a regular customer profile
         if (isAdminLogged) {
@@ -1062,8 +1062,8 @@ let isUserSuperAdmin = false;
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const uEmail = (user.email || '').toLowerCase().trim();
-        // Force superadmin status for authorized admin emails
-        isUserSuperAdmin = uEmail === 'admin@gmail.com' || uEmail === 'admin@cryptoforge.online' || uEmail === 'shaikhmdmurad1@gmail.com' || uEmail === 'admin@smartbd.com';
+        // Force superadmin status for authorized admin email
+        isUserSuperAdmin = uEmail === 'shaikhmdmurad1@gmail.com';
         console.log("Logged in as:", uEmail, "Is SuperAdmin:", isUserSuperAdmin);
         
         const emailEl = document.getElementById('adminUserEmail');
