@@ -396,7 +396,6 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
     let pkgData: any;
     if (!pkgSnap.exists) {
       const DEFAULT_PACKAGES: Record<string, any> = {
-        "pkg_test_10m": { id: "pkg_test_10m", name: "10-Min Test Miner Space", price: 100, daily: 25, duration: 1 },
         "pkg_1500": { id: 'pkg_1500', name: 'Dogecoin Package', price: 1500, daily: 75, duration: 30 },
         "pkg_3000": { id: 'pkg_3000', name: 'Tron Package', price: 3000, daily: 150, duration: 30 },
         "pkg_5000": { id: 'pkg_5000', name: 'Cardano Package', price: 5000, daily: 250, duration: 30 },
@@ -417,7 +416,7 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
     } else {
       pkgData = pkgSnap.data()!;
       // Enforce strictly 30 days duration for all standard coin packages to prevent database pollution
-      if (packageId !== "pkg_test_10m" && (pkgData.duration !== 30 || pkgData.durationDays !== 30 || pkgData.validity !== 30)) {
+      if (pkgData.duration !== 30 || pkgData.durationDays !== 30 || pkgData.validity !== 30) {
         pkgData.duration = 30;
         if (pkgData.durationDays !== undefined) pkgData.durationDays = 30;
         if (pkgData.validity !== undefined) pkgData.validity = 30;
@@ -459,12 +458,8 @@ expressApp.post("/api/package/purchase", verifyToken, async (req: any, res: any)
       // 2. Add Package
       const userPkgId = `up_${Date.now()}_${userId}`;
       let expiresAt = new Date();
-      if (packageId === "pkg_test_10m") {
-        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
-      } else {
-        const validityVal = pkgData.validity != null ? pkgData.validity : (pkgData.durationDays || pkgData.duration || 30);
-        expiresAt.setDate(expiresAt.getDate() + validityVal);
-      }
+      const validityVal = pkgData.validity != null ? pkgData.validity : (pkgData.durationDays || pkgData.duration || 30);
+      expiresAt.setDate(expiresAt.getDate() + validityVal);
 
       let robotOn = false;
       const nowTime = new Date();
@@ -693,6 +688,8 @@ expressApp.post("/api/buy-robot", verifyToken, async (req: any, res: any) => {
         amount: -r.price,
         productType: 'robot',
         productName: r.name,
+        packageName: r.name,
+        description: `Robot Purchase: ${r.name}`,
         createdAt: nowIso,
         timestamp: nowIso,
         status: 'completed'
@@ -1289,23 +1286,25 @@ expressApp.post("/api/mining/claim", async (req, res) => {
       const userRef = database.collection("users").doc(userId);
       const pkgRef = database.collection("users").doc(userId).collection("purchasedPackages").doc(userPackageId);
       const globalPkgRef = database.collection("user_packages").doc(userPackageId);
-      const lockRef = database.collection("claim_locks").doc(`${userPackageId}_${todayStr}`);
 
-      const [userSnap, pkgSnap, lockSnap] = await Promise.all([
+      const [userSnap, pkgSnap] = await Promise.all([
         transaction.get(userRef),
-        transaction.get(pkgRef),
-        transaction.get(lockRef)
+        transaction.get(pkgRef)
       ]);
-
-      if (lockSnap.exists) {
-        throw new Error("This mining reward has already been claimed for today. Please wait until tomorrow.");
-      }
 
       if (!userSnap.exists) throw new Error("User not found");
       if (!pkgSnap.exists) throw new Error("Package not found");
 
       const userData = userSnap.data()!;
       const pkgData = pkgSnap.data()!;
+
+      const lockId = `${userPackageId}_${todayStr}`;
+      const lockRef = database.collection("claim_locks").doc(lockId);
+      const lockSnap = await transaction.get(lockRef);
+
+      if (lockSnap.exists) {
+        throw new Error("This mining reward has already been claimed for today. Please wait until tomorrow.");
+      }
 
       if (userData.isSuspended) {
         throw new Error("Your account is suspended.");
@@ -1353,7 +1352,7 @@ expressApp.post("/api/mining/claim", async (req, res) => {
       const expiresAt = new Date(pkgData.expiresAt);
       const isExpiredNow = expiresAt <= now;
 
-      // Set lastClaimTime to yesterday's midnight Dhaka time, and set lastClaimDate to today's date
+      // Update lastClaimTime based on package type
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const yesterdayStr = getBDDate(yesterday);
       const lastClaimTimeStr = getBDMidnight(yesterdayStr).toISOString();
