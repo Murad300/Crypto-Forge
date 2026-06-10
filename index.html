@@ -1366,6 +1366,22 @@ body.dark-mode {
     </div>
 </div>
 
+<!-- Multiple Login Alert Overlay -->
+<div id="multipleLoginOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.98); z-index:110000; align-items:center; justify-content:center; flex-direction:column; color:white; padding:40px; text-align:center; backdrop-filter:blur(20px)">
+    <div style="background:linear-gradient(135deg, #f59e0b, #d97706); width:95px; height:95px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:24px; box-shadow:0 15px 40px rgba(245,158,11,0.35); animation: pulse 2s infinite">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:42px; color:white"></i>
+    </div>
+    <h1 style="font-size:28px; font-weight:900; margin-bottom:12px; letter-spacing:-0.5px; color:#f59e0b; text-transform:uppercase">Multiple login detected.</h1>
+    <p style="font-size:16px; opacity:0.85; line-height:1.6; max-width:440px; margin-bottom:32px; font-weight:500; color:#e2e8f0">
+        Another device or active session has signed in using this account. To protect your security, this session has been disconnected.
+    </p>
+    <div style="display:flex; flex-direction:column; gap:14px; width:100%; max-width:320px">
+        <button onclick="window.confirmMultipleLoginLogout()" class="btn" style="background:#f59e0b; color:black; height:54px; border-radius:16px; font-weight:900; border:none; width:100%; cursor:pointer; font-size:16px; transition:all 0.3s ease; box-shadow:0 10px 25px rgba(245,158,11,0.2)">
+            Logout current session
+        </button>
+    </div>
+</div>
+
 <!-- Custom Confirm Modal -->
 <div id="confirmModal" class="confirm-modal">
     <div class="confirm-card">
@@ -2949,6 +2965,31 @@ window.handleBackToLogin = async () => {
     }
 };
 
+window.confirmMultipleLoginLogout = async () => {
+    try {
+        const overlay = document.getElementById('multipleLoginOverlay');
+        if (overlay) overlay.style.display = 'none';
+        if (window.auth) {
+            await window.auth.signOut();
+        }
+    } catch (err) {
+        console.error("Error signing out from multiple login:", err);
+    } finally {
+        location.reload();
+    }
+};
+
+window.triggerMultipleLoginWarning = () => {
+    // Show multiple login warning overlay
+    const overlay = document.getElementById('multipleLoginOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    } else {
+        alert("Multiple login detected. Logout current session.");
+        if (window.auth) window.auth.signOut().then(() => location.reload());
+    }
+};
+
 window.toggleChat = () => {
     const chat = document.getElementById('supportChatWidget');
     const chevron = document.getElementById('chatChevron');
@@ -2997,6 +3038,22 @@ if (location.protocol === 'http:' && location.hostname !== 'localhost' && !locat
 }
 </script>
 <script>
+// Suppress internal Firebase BloomFilter error logs that are entirely benign but logged as console.error by the SDK
+(function() {
+    const originalError = console.error;
+    console.error = function(...args) {
+        const isFirestoreBloomFilter = args.some(arg => 
+            arg && typeof arg === 'string' && 
+            (arg.includes('BloomFilter') || arg.includes('BloomFilterError'))
+        );
+        if (isFirestoreBloomFilter) {
+            console.warn("[Benign Suppressed Warning]", ...args);
+            return;
+        }
+        originalError.apply(console, args);
+    };
+})();
+
 // Prevent any circular reference serialization crash in the whole document, including Firebase SDK error reports
 (function() {
     const originalStringify = JSON.stringify;
@@ -3029,7 +3086,7 @@ if (location.protocol === 'http:' && location.hostname !== 'localhost' && !locat
 import { GoogleGenerativeAI as GoogleGenAI } from "https://esm.run/@google/generative-ai";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signInWithCustomToken, signInAnonymously, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, initializeFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, increment, onSnapshot, orderBy, limit, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 window.signInAnonymously = signInAnonymously;
 // Application Data Constants
@@ -3076,6 +3133,7 @@ try {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn("Failed to set explicit local persistence:", e));
 const db = initializeFirestore(app, { experimentalForceLongPolling: true }, firebaseConfig.firestoreDatabaseId);
 
 // Export for non-module scripts
@@ -3133,6 +3191,7 @@ window.loadGlobalPackagesFromDb = async () => {
             // Filter out duplicate packages (by case-insensitive name & price)
             const seenKeys = new Set();
             const uniqueList = [];
+
             listObj.forEach(p => {
                 const uniqKey = `${p.name.toLowerCase().trim()}_${p.price}`;
                 if (!seenKeys.has(uniqKey)) {
@@ -4427,6 +4486,42 @@ onAuthStateChanged(auth, async (user) => {
             if (docSnap.exists()) {
                 const newData = { ...docSnap.data(), uid_fs: user.uid };
 
+                // ---- Robust Concurrent Multi-Login Check ----
+                let mySessionToken = sessionStorage.getItem('active_session_token_' + user.uid);
+                if (!mySessionToken) {
+                    // If no token exists in this tab's sessionStorage, check if Firestore document already has one
+                    if (newData.currentSessionId) {
+                        // Inherit the existing session ID so we don't trigger a circular logout when refreshing or opening a parallel tab
+                        mySessionToken = newData.currentSessionId;
+                        sessionStorage.setItem('active_session_token_' + user.uid, mySessionToken);
+                        console.log("[Session Engine] Inherited session from Firestore:", mySessionToken);
+                    } else {
+                        // Generate a brand new one if none exists in Firestore either
+                        mySessionToken = 'sess_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+                        sessionStorage.setItem('active_session_token_' + user.uid, mySessionToken);
+                        console.log("[Session Engine] Generated initial session token:", mySessionToken);
+                        
+                        // Async set it in Firestore
+                        (async () => {
+                            try {
+                                const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+                                await updateDoc(doc(db, 'users', user.uid), { currentSessionId: mySessionToken });
+                            } catch (e) {
+                                console.warn("[Session Engine] Failed to write initial session ID:", e);
+                            }
+                        })();
+                    }
+                } else {
+                    // A session token exists in this tab. Validate against Firestore!
+                    if (newData.currentSessionId && newData.currentSessionId !== mySessionToken) {
+                        console.warn("[Session Engine] Multiple login detected! Client token:", mySessionToken, "vs Firestore token:", newData.currentSessionId);
+                        // Trigger immediate, elegant logout modal block and abort further processing
+                        if (loader) loader.style.display = 'none';
+                        window.triggerMultipleLoginWarning();
+                        return; // Abort further setup/view updates for this session
+                    }
+                }
+
                 // Enforce strict email verification. Admin emails are exempt.
                 const isVerified = isUserAdmin || (newData.emailVerified === true);
 
@@ -4516,7 +4611,7 @@ onAuthStateChanged(auth, async (user) => {
                             const raw = dDoc.data();
                             
                             // Visual & Database auto-correction for 365-day lifespans
-                            if (raw.purchasedAt && raw.expiresAt && raw.packageId !== 'pkg_test_10m') {
+                            if (raw.purchasedAt && raw.expiresAt) {
                                 const pTime = new Date(raw.purchasedAt).getTime();
                                 const eTime = new Date(raw.expiresAt).getTime();
                                 const diffDays = (eTime - pTime) / (1000 * 60 * 60 * 24);
@@ -4558,7 +4653,7 @@ onAuthStateChanged(auth, async (user) => {
                             const raw = d.data();
                             
                             // Apply visual healing instantly to prevent layout flashes
-                            if (raw.purchasedAt && raw.expiresAt && raw.packageId !== 'pkg_test_10m') {
+                            if (raw.purchasedAt && raw.expiresAt) {
                                 const pTime = new Date(raw.purchasedAt).getTime();
                                 const eTime = new Date(raw.expiresAt).getTime();
                                 const diffDays = (eTime - pTime) / (1000 * 60 * 60 * 24);
@@ -5935,6 +6030,19 @@ async function handleLogin(e) {
             } catch(e) { 
                 console.warn("Self-healing admins doc write error (ignoring):", e); 
             }
+        }
+
+        // Setup new session ID and overwrite Firestore setting to trigger active session logout elsewhere
+        const mySessionToken = 'sess_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+        sessionStorage.setItem('active_session_token_' + userCred.user.uid, mySessionToken);
+        try {
+            await updateDoc(doc(db, 'users', userCred.user.uid), {
+                currentSessionId: mySessionToken,
+                lastLoginAt: new Date().toISOString()
+            });
+            console.log("[Login Engine] Registered brand new session ID in Firestore:", mySessionToken);
+        } catch (e) {
+            console.warn("[Login Engine] Failed to record session ID in Firestore:", e);
         }
 
         showToast('success', 'Welcome', 'Login successful');
@@ -8238,7 +8346,16 @@ async function renderEarnings() {
             const color = isAdded ? '#2E7D32' : '#D32F2F'; // Green for added (+), Red for spent (-)
             const prefix = isAdded ? '+' : '-';
             const icon = isAdded ? 'fa-arrow-up-right' : 'fa-cart-shopping';
-            const label = d.packageName ? `Purchase: ${d.packageName}` : (d.source || d.description || 'Income');
+            let label = d.packageName ? `Purchase: ${d.packageName}` : (d.source || d.description);
+            if (!label) {
+                if (d.type === 'purchase' || d.productType === 'robot') {
+                    label = d.productName ? `Robot Purchased: ${d.productName}` : 'Robot Purchase';
+                } else if (amountNum < 0) {
+                    label = 'Deduction/Purchase';
+                } else {
+                    label = 'Income';
+                }
+            }
             const formattedDate = new Date(d.createdAt).toLocaleString('en-US', { 
                 year: 'numeric', 
                 month: 'short', 
