@@ -91,10 +91,104 @@ export function getDhakaDate(date: Date = new Date()): Date {
   }
 }
 
+export function calculateDailySegment(
+  dStr: string,
+  pkg: any,
+  myActiveRobots: any[],
+  dailyProfit: number,
+  now: Date
+) {
+  const curMidnight = getBDMidnight(dStr);
+  const curEndOfDay = getBDEndOfDay(dStr);
+  const pkgExpires = new Date(pkg.expiresAt);
+
+  // If the day starts after the package has expired, zero profit
+  if (curMidnight >= pkgExpires) {
+    return { elapsedSeconds: 0, startTime: null, endTime: null, isActive: false, isRobotStarted: false };
+  }
+
+  // Cap dayEnd at package expiration if it expires during this day
+  let dayEnd = curEndOfDay;
+  if (pkgExpires < curEndOfDay) {
+    dayEnd = pkgExpires;
+  }
+
+  // Check if robot was active on this day
+  const robot = myActiveRobots && myActiveRobots.find(r => {
+    if (r.status !== 'active') return false;
+    const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
+    const rCreated = r.createdAt ? new Date(r.createdAt) : null;
+    return rExp && rExp > curMidnight && (!rCreated || rCreated <= curEndOfDay);
+  });
+  const hasRobot = !!robot;
+
+  let dayStart: Date | null = null;
+  let isRobotStarted = false;
+
+  if (hasRobot) {
+    isRobotStarted = true;
+    const isPkgFirstDay = getBDDate(new Date(pkg.purchasedAt)) === dStr;
+    const isRobotFirstDay = robot && robot.createdAt && (getBDDate(new Date(robot.createdAt)) === dStr);
+
+    if (isPkgFirstDay || isRobotFirstDay) {
+      if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === dStr) {
+        dayStart = new Date(pkg.lastMiningStartTime);
+      } else if (isRobotFirstDay && robot.createdAt) {
+        dayStart = new Date(robot.createdAt);
+      } else {
+        dayStart = new Date(pkg.purchasedAt);
+      }
+    } else {
+      dayStart = curMidnight;
+    }
+  } else {
+    // Manual session
+    const isManualStarted = pkg.lastMiningStartDay === dStr && pkg.lastMiningStartTime;
+    if (isManualStarted) {
+      dayStart = new Date(pkg.lastMiningStartTime);
+    } else {
+      dayStart = null;
+    }
+  }
+
+  if (!dayStart) {
+    return { elapsedSeconds: 0, startTime: null, endTime: null, isActive: false, isRobotStarted: false };
+  }
+
+  if (dayStart < curMidnight) {
+    dayStart = curMidnight;
+  }
+  if (dayStart > dayEnd) {
+    return { elapsedSeconds: 0, startTime: dayStart, endTime: dayEnd, isActive: false, isRobotStarted };
+  }
+
+  let isActive = false;
+  let elapsedMs = 0;
+
+  if (now < dayStart) {
+    elapsedMs = 0;
+    isActive = false;
+  } else if (now >= dayStart && now < dayEnd) {
+    elapsedMs = now.getTime() - dayStart.getTime();
+    isActive = true;
+  } else {
+    elapsedMs = dayEnd.getTime() - dayStart.getTime();
+    isActive = false;
+  }
+
+  const elapsedSeconds = elapsedMs / 1000;
+  return {
+    elapsedSeconds: elapsedSeconds < 0 ? 0 : elapsedSeconds,
+    startTime: dayStart,
+    endTime: dayEnd,
+    isActive,
+    isRobotStarted
+  };
+}
+
 export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: Date = new Date()) {
   const todayStr = getBDDate(now);
   const dailyProfit = Number(pkg.daily || pkg.dailyProfit || pkg.dailyProfitAmount || 0);
-  const pkgExpires = new Date(pkg.expiresAt);
 
   // Parse last claim time (fallback to purchasedAt)
   const lastClaimTimeStr = pkg.lastClaimTime || pkg.purchasedAt;
@@ -117,24 +211,9 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
 
     while (cur < yesterdayLimit) {
       const dStr = getBDDate(cur);
-      const curMidnight = getBDMidnight(dStr);
-
-      // Check package validity: if the day starts after package has expired, no profit
-      if (curMidnight >= pkgExpires) {
-        break; 
-      }
-
-      // Check if robot was active on this day
-      const robotActive = myActiveRobots && myActiveRobots.some(r => {
-        if (r.status !== 'active') return false;
-        const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-        const rCreated = r.createdAt ? new Date(r.createdAt) : null;
-        return rExp && rExp > curMidnight && (!rCreated || rCreated <= getBDEndOfDay(dStr));
-      });
-
-      if (robotActive) {
-        unclaimedCompleted += dailyProfit;
-      }
+      const curEndOfDay = getBDEndOfDay(dStr);
+      const segment = calculateDailySegment(dStr, pkg, myActiveRobots, dailyProfit, curEndOfDay);
+      unclaimedCompleted += (segment.elapsedSeconds / 86400) * dailyProfit;
       cur.setDate(cur.getDate() + 1);
     }
   } catch (err) {
@@ -142,69 +221,25 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
   }
 
   // 2. Identify the active session (today)
-  let sessionStartTime: Date | null = null;
-  let sessionEndTime: Date | null = null;
-  let liveEarnToday = 0;
+  const segmentToday = calculateDailySegment(todayStr, pkg, myActiveRobots, dailyProfit, now);
+  const sessionStartTime = segmentToday.startTime;
+  const sessionEndTime = segmentToday.endTime;
+  const liveEarnToday = (segmentToday.elapsedSeconds / 86400) * dailyProfit;
+  const isActive = segmentToday.isActive;
+  const isRobotStarted = segmentToday.isRobotStarted;
+
   let percent = 0;
-  let isActive = false;
-  let isRobotStarted = false;
-
-  const bdMidnight = getBDMidnight(todayStr);
-
-  // Check if robot is active today
-  const robotActiveToday = myActiveRobots && myActiveRobots.some(r => {
-    if (r.status !== 'active') return false;
-    const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-    return rExp && rExp > now;
-  });
-
-  // Package dependency: Robot is only active if package is not expired
-  const isPkgExpiredNow = now >= pkgExpires;
-
-  if (robotActiveToday && !isPkgExpiredNow) {
-    isRobotStarted = true;
-    // Check for "Robot First-Day Session Merge" (Guideline 4.4)
-    // If a manual session started today before robot purchase/activation, merge it:
-    if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === todayStr) {
-      sessionStartTime = new Date(pkg.lastMiningStartTime);
-    } else {
-      sessionStartTime = bdMidnight;
+  if (sessionStartTime && sessionEndTime) {
+    const totalSessionMs = sessionEndTime.getTime() - sessionStartTime.getTime();
+    const elapsedMs = now.getTime() - sessionStartTime.getTime();
+    if (totalSessionMs > 0) {
+      percent = (elapsedMs / totalSessionMs) * 100;
+      if (percent < 0) percent = 0;
+      if (percent > 100) percent = 100;
     }
-    // Robot session ends after 24 hours of Dhaka time or cap at package expiration
-    sessionEndTime = new Date(bdMidnight.getTime() + 24 * 60 * 60 * 1000);
-  } else if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === todayStr && !isPkgExpiredNow) {
-    // Manual session started today
-    sessionStartTime = new Date(pkg.lastMiningStartTime);
-    // Hard Session Cutoff (Guideline 4.1): Ends at 11:59:59 PM of the startup day
-    sessionEndTime = getBDEndOfDay(todayStr);
-  }
-
-  // Cap session end time at package expiration
-  if (sessionEndTime && sessionEndTime > pkgExpires) {
-    sessionEndTime = pkgExpires;
-  }
-
-  // Compute live earnings for active session
-  if (sessionStartTime && sessionEndTime && now < sessionEndTime && now >= sessionStartTime) {
-    isActive = true;
-    const totalSessionMs = sessionEndTime.getTime() - sessionStartTime.getTime();
-    const elapsedSessionMs = now.getTime() - sessionStartTime.getTime();
-    percent = totalSessionMs > 0 ? (elapsedSessionMs / totalSessionMs) * 100 : 0;
-
-    // Daily profit contribution for the elapsed seconds
-    const elapsedSeconds = elapsedSessionMs / 1000;
-    liveEarnToday = (elapsedSeconds / 86400) * dailyProfit;
-  } else if (sessionStartTime && sessionEndTime && now >= sessionEndTime) {
-    // Session is completed but unclaimed
-    const totalSessionMs = sessionEndTime.getTime() - sessionStartTime.getTime();
-    const elapsedSeconds = totalSessionMs / 1000;
-    liveEarnToday = (elapsedSeconds / 86400) * dailyProfit;
-    isActive = false;
-    percent = 100;
   }
 
   // Ensure multipliers / limit checks
-  let mult = 1;
   const userMultiplier = pkg.earningsMultiplier || 1; // Can be custom passed or looked up
 
   const unclaimedCompletedMul = Number((unclaimedCompleted * userMultiplier).toFixed(2));
