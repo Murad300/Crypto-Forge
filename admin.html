@@ -2,6 +2,7 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="same-origin">
 <title>CryptoForge | Secure Access Management</title>
@@ -211,6 +212,56 @@ body.dark-mode {
 .list-card:hover .pkg-bg-logo { 
     opacity: 0.55; 
     transform: translate(-50%, -50%) scale(1.1); 
+}
+
+@media (max-width: 500px) {
+    .admin-wrapper {
+        margin: 0 auto !important;
+        border-radius: 0 !important;
+        border: none !important;
+        min-height: 100vh !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        padding-top: calc(var(--header-h) + 130px) !important;
+        padding-bottom: 20px !important;
+    }
+    .admin-header {
+        border-radius: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-top: none !important;
+        left: 0 !important;
+        transform: none !important;
+    }
+    .top-nav {
+        border-radius: 0 !important;
+        top: var(--header-h) !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-left: none !important;
+        border-right: none !important;
+        left: 0 !important;
+        transform: none !important;
+        height: 115px !important;
+    }
+    .admin-container {
+        padding: 12px !important;
+    }
+    .stats-row {
+        gap: 8px !important;
+        margin-bottom: 16px !important;
+    }
+    .stat-box {
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
+    .stat-box .val {
+        font-size: 16px !important;
+    }
 }
 </style>
 </head>
@@ -956,25 +1007,30 @@ document.getElementById('loginForm').onsubmit = async (e) => {
         const loggedEmail = (cred.user.email || '').toLowerCase().trim();
         const isAdminLogged = loggedEmail === 'admin@gmail.com' || loggedEmail === 'admin@cryptoforge.online' || loggedEmail === 'shaikhmdmurad1@gmail.com' || loggedEmail === 'admin@smartbd.com'; 
         
-        // Self-heal: Ensure user profiles docs exist for SuperAdmin
+        // Self-heal: Ensure user profiles docs exist for SuperAdmin as a regular customer profile
         if (isAdminLogged) {
             try {
-                await setDoc(doc(db, 'users', cred.user.uid), {
-                    uid: 'superadmin', 
-                    email: loggedEmail, 
-                    fullName: 'Super Administrator', 
-                    phone: '01700000000',
-                    balance: 0, 
-                    mainBalance: 99999999,
-                    status: 'active', 
-                    withdrawPin: '', 
-                    profileCompleted: true, 
-                    referredBy: null,
-                    referralCode: 'superadmin',
-                    referralBalance: 0,
-                    totalReferralEarned: 0,
-                    createdAt: new Date().toISOString()
-                }, { merge: true });
+                const userDocSnap = await getDoc(doc(db, 'users', cred.user.uid));
+                if (!userDocSnap.exists()) {
+                    const cleanUid = 'admin_' + cred.user.uid.substring(0, 5);
+                    await setDoc(doc(db, 'users', cred.user.uid), {
+                        uid: cleanUid, 
+                        email: loggedEmail, 
+                        fullName: 'Super Admin Tester', 
+                        phone: '01700000000',
+                        balance: 0, 
+                        mainBalance: 0, 
+                        status: 'inactive', 
+                        withdrawPin: '', 
+                        profileCompleted: false, 
+                        referredBy: null,
+                        referralCode: cleanUid,
+                        referralBalance: 0,
+                        totalReferralEarned: 0,
+                        createdAt: new Date().toISOString(),
+                        emailVerified: true
+                    });
+                }
             } catch(e) {
                 console.warn("Self-healing users doc write error (ignoring):", e);
             }
@@ -2561,7 +2617,7 @@ window.loadSentNotifications = async () => {
 };
 
 window.deactivateUser = async (id, name) => {
-    const conf = await window.customConfirm(`Are you absolutely sure you want to Deactivate / Factory Reset user "${name}"?\n\nThis will hard-delete all their purchase packages, robots, transactions, and notifications. Their wallet balances will be reset to 0, but their account profile will remain.`, 'DEACTIVATE & RESET CUSTOMER');
+    const conf = await window.customConfirm(`Are you absolutely sure you want to Deactivate / Factory Reset user "${name}"?\n\nThis will hard-delete all their purchase packages (including subcollections), robots, transactions, work history, chat logs, and notifications. Their wallet balances, saved numbers, PIN, and completed profile status will be completely reset to brand-new standards.`, 'DEACTIVATE & RESET CUSTOMER');
     if (!conf) return;
 
     const final = await window.customPrompt(`To confirm, type the User ID (${id.substring(0, 6)}...) below:`, 'FACTORY RESET USER', '');
@@ -2574,7 +2630,7 @@ window.deactivateUser = async (id, name) => {
     if (loader) loader.style.display = 'flex';
 
     try {
-        showToast('Wiping user activity...', 'info');
+        showToast('Wiping user activity collections...', 'info');
         const userCollections = [
             'user_packages', 'user_robots', 'transactions', 'notifications',
             'deposits', 'withdraws', 'work_history', 'referral_earnings',
@@ -2592,6 +2648,19 @@ window.deactivateUser = async (id, name) => {
             }
         }
 
+        showToast('Wiping nested subcollections...', 'info');
+        try {
+            // Delete all subcollection documents under users/{id}/purchasedPackages
+            const subPkgRef = collection(db, 'users', id, 'purchasedPackages');
+            const subPkgSnap = await getDocs(subPkgRef);
+            for (const subPkgDoc of subPkgSnap.docs) {
+                await deleteDoc(subPkgDoc.ref);
+            }
+        } catch (subErr) {
+            console.warn("Error clearing purchasedPackages subcollection:", subErr);
+        }
+
+        showToast('Resetting profile properties...', 'info');
         // Reset fields inside the user profile document (keep the doc, do not delete)
         const userRef = doc(db, 'users', id);
         await updateDoc(userRef, {
@@ -2613,10 +2682,30 @@ window.deactivateUser = async (id, name) => {
             isSuspended: false,
             miningStartedAt: null,
             lastClaim: null,
+            lastClaimTime: null,
+            lastMiningStartTime: null,
+            lastMiningStartDay: null,
             activeRigsCount: 0,
             robotActivated: false,
-            hasActiveRobot: false
+            hasActiveRobot: false,
+            profileCompleted: false,
+            withdrawPin: '',
+            savedNumbers: [],
+            emailVerified: true
         });
+
+        // Add brand-new welcome notification representing newly registered status
+        try {
+            await addDoc(collection(db, 'notifications'), {
+                userId: id,
+                title: 'Welcome to CryptoForge!',
+                message: 'Thank you for joining our platform. Start your journey today! Deposit to activate your account.',
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        } catch (notifErr) {
+            console.warn("Could not create registration welcome notification in reset:", notifErr);
+        }
 
         showToast('User Reset & Deactivated successfully', 'success');
         
