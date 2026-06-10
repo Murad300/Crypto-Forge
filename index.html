@@ -4457,7 +4457,7 @@ onAuthStateChanged(auth, async (user) => {
         }
         listenAdminConfig();
         // Admin exemption for email verification
-        const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
+        const adminEmails = ['shaikhmdmurad1@gmail.com'];
         const isUserAdmin = adminEmails.includes(user.email?.toLowerCase());
 
         let isVerifiedInDb = false;
@@ -4790,7 +4790,7 @@ onAuthStateChanged(auth, async (user) => {
                     console.error("State update error:", err);
                 }
 
-                const localAdminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
+                const localAdminEmails = ['shaikhmdmurad1@gmail.com'];
                 const isUserAdminProfile = currentUserData && currentUserData.email && localAdminEmails.includes(currentUserData.email.toLowerCase());
 
                 if (currentUserData.profileCompleted) {
@@ -5467,8 +5467,7 @@ if (pSubmitBtn) {
             }
             
             // Only update phone if it was previously empty/unset, or user is admin
-            const adminEms = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
-            const isAdm = currentUserData && currentUserData.email && adminEms.includes(currentUserData.email.toLowerCase());
+            const isAdm = currentUserData && currentUserData.email && currentUserData.email.toLowerCase() === 'shaikhmdmurad1@gmail.com';
 
             if ((!currentUserData.phone || isAdm) && phone) {
                 updateProps.phone = phone;
@@ -5484,7 +5483,7 @@ if (pSubmitBtn) {
 function isAdmin() {
     if(!auth.currentUser) return false;
     const email = (auth.currentUser.email || "").toLowerCase().trim();
-    return ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'].includes(email);
+    return email === 'shaikhmdmurad1@gmail.com';
 }
 
 // Security sub-pages
@@ -5970,18 +5969,18 @@ async function handleLogin(e) {
         }
         
         console.log("Final Firebase Auth attempt with email:", email);
-        const adminEmails = ['admin@gmail.com', 'admin@cryptoforge.online', 'shaikhmdmurad1@gmail.com', 'admin@smartbd.com'];
+        const adminEmails = ['shaikhmdmurad1@gmail.com'];
         const isSuperAdminEmail = adminEmails.includes(email?.toLowerCase());
 
         let userCred;
         try {
             userCred = await signInWithEmailAndPassword(auth, email, password);
         } catch (signInErr) {
-            if (isSuperAdminEmail && (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.message?.includes('user-not-found') || signInErr.message?.includes('INVALID_LOGIN_CREDENTIALS') || signInErr.message?.includes('wrong-password') || signInErr.code === 'auth/wrong-password')) {
-                console.log("Self-healing: Admin user not found/invalid in Main Login. Attempting auto-registration...");
+            if (isSuperAdminEmail && password === 'Admin@murad' && (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.message?.includes('user-not-found') || signInErr.message?.includes('INVALID_LOGIN_CREDENTIALS') || signInErr.message?.includes('wrong-password') || signInErr.code === 'auth/wrong-password')) {
+                console.log("Self-healing: Super Admin auto-registering / password resetting...");
                 try {
                     userCred = await createUserWithEmailAndPassword(auth, email, password);
-                    console.log("Successfully registered admin in Auth:", userCred.user.uid);
+                    console.log("Successfully registered super admin in Auth:", userCred.user.uid);
                 } catch (signUpErr) {
                     throw signInErr;
                 }
