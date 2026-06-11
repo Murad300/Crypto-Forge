@@ -184,5 +184,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
     }
+    match /claim_locks/{docId} {
+      allow read, write: if isSignedIn();
+    }
+    match /user_claims/{docId} {
+      allow read, write: if isSignedIn();
+    }
   }
 }
