@@ -201,7 +201,7 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
     lastClaimDayStr = todayStr;
   }
 
-  let unclaimedCompleted = 0;
+  let unclaimedCompleted = Number(pkg.current_earnings || 0);
 
   // 1. Calculate older completed days starting from (lastClaimDayStr + 1) up to (todayStr - 1)
   try {
