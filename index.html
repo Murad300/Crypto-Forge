@@ -3482,8 +3482,15 @@ window.calculateAccruedEarnings = (pkg, myActiveRobots, now = window.getSyncedNo
     const lastClaimTimeStr = pkg.lastClaimTime || pkg.purchasedAt;
     let lastClaimDayStr = todayStr;
     try {
-        if (lastClaimTimeStr) {
-            lastClaimDayStr = window.getBDDate(new Date(lastClaimTimeStr));
+        if (pkg.lastClaimDate) {
+            if (lastClaimTimeStr) {
+                lastClaimDayStr = window.getBDDate(new Date(lastClaimTimeStr));
+            }
+        } else if (pkg.purchasedAt) {
+            // Never claimed before, so step back 1 day from purchase day so purchase day itself is counted as a completed day
+            const purchaseDate = new Date(pkg.purchasedAt);
+            const prevDay = new Date(purchaseDate.getTime() - (24 * 60 * 60 * 1000));
+            lastClaimDayStr = window.getBDDate(prevDay);
         }
     } catch(e) {
         lastClaimDayStr = todayStr;
@@ -4607,20 +4614,17 @@ onAuthStateChanged(auth, async (user) => {
                             { id: 'pkg_30000', name: 'Bitcoin Package', price: 30000, daily: 1500, duration: 30 }
                         ];
 
-                        pSnap.docs.forEach(async (dDoc) => {
+                        pSnap.docs.forEach((dDoc) => {
                             const raw = dDoc.data();
                             
-                            // Visual & Database auto-correction for 365-day lifespans
+                            // Visual auto-correction for 365-day lifespans
                             if (raw.purchasedAt && raw.expiresAt) {
                                 const pTime = new Date(raw.purchasedAt).getTime();
                                 const eTime = new Date(raw.expiresAt).getTime();
                                 const diffDays = (eTime - pTime) / (1000 * 60 * 60 * 24);
                                 if (diffDays > 31) {
                                     const correctExpiresAt = new Date(pTime + 30 * 24 * 60 * 60 * 1000).toISOString();
-                                    console.log("Correcting database package lifespan to 30 days for:", dDoc.id, correctExpiresAt);
-                                    const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-                                    await updateDoc(doc(db, 'users', user.uid, 'purchasedPackages', dDoc.id), { expiresAt: correctExpiresAt }).catch(e => console.warn(e));
-                                    await updateDoc(doc(db, 'user_packages', dDoc.id), { expiresAt: correctExpiresAt }).catch(e => console.warn(e));
+                                    console.log("Corrected visual package lifespan to 30 days locally:", dDoc.id, correctExpiresAt);
                                     raw.expiresAt = correctExpiresAt;
                                 }
                             }
@@ -4639,12 +4643,9 @@ onAuthStateChanged(auth, async (user) => {
                                     : { totalClaimable: 0 };
                                 
                                 if (accrual.totalClaimable <= 0) {
-                                    console.log("Updating expired package (no remaining claimable rewards):", dDoc.id);
-                                    const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-                                    await updateDoc(doc(db, 'users', user.uid, 'purchasedPackages', dDoc.id), { status: 'expired' }).catch(e => console.warn(e));
-                                    await updateDoc(doc(db, 'user_packages', dDoc.id), { status: 'expired' }).catch(e => console.warn(e));
+                                    console.log("Visual expired package (no remaining claimable rewards):", dDoc.id);
                                 } else {
-                                    console.log("Keeping expired package status active until user claims rewards of:", accrual.totalClaimable);
+                                    console.log("Keeping expired package active in UI until user claims rewards of:", accrual.totalClaimable);
                                 }
                             }
                         });
@@ -8429,6 +8430,13 @@ async function claimMiningReward(docId) {
         return showToast('error', 'Suspended', 'Your account is currently suspended.');
     }
 
+    // Client-side execution state block to prevent concurrent clicking / double calls
+    window.currentlyClaiming = window.currentlyClaiming || {};
+    if (window.currentlyClaiming[docId]) {
+        console.warn("Claim already in progress for package:", docId);
+        return;
+    }
+
     // Safeguard: Block if there are no completed profit earnings to claim yet
     const rigs = window.myActivePkgs || [];
     const myRig = rigs.find(r => r.id === docId);
@@ -8444,10 +8452,26 @@ async function claimMiningReward(docId) {
         }
     }
 
-    try {
-        const btn = document.getElementById(`claimBtnDetail_${docId}`) || document.getElementById(`homeClaimBtn_${docId}`);
-        if (btn) btn.disabled = true;
+    window.currentlyClaiming[docId] = true;
 
+    // Immediately disable and decorate all potential claim triggers for this specific package item to halt rapid multi-clicks
+    const buttonIds = [
+        `claimBtnDetail_${docId}`,
+        `homeClaimBtn_${docId}`,
+        `workBtnDetail_${docId}`,
+        `homeWorkBtn_${docId}`
+    ];
+    buttonIds.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.disabled = true;
+            btn.setAttribute('disabled', 'true');
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+        }
+    });
+
+    try {
         showToast('info', 'Processing Claim...', 'Connecting to servers, please wait.');
 
         const res = await fetch('/api/mining/claim', {
@@ -8459,7 +8483,17 @@ async function claimMiningReward(docId) {
         const data = await res.json();
         if (data.error) {
             showToast('error', 'Claim Failed', data.error);
-            if (btn) btn.disabled = false;
+            // Re-enable on failure
+            buttonIds.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.removeAttribute('disabled');
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                }
+            });
+            window.currentlyClaiming[docId] = false;
             return;
         }
 
@@ -8472,6 +8506,18 @@ async function claimMiningReward(docId) {
         if (typeof updateHomeMiningDashboard === 'function') updateHomeMiningDashboard();
     } catch (err) {
         showToast('error', 'Connection Error', err.message);
+        // Re-enable on network exception
+        buttonIds.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.disabled = false;
+                btn.removeAttribute('disabled');
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
+        });
+    } finally {
+        window.currentlyClaiming[docId] = false;
     }
 }
 window.claimMiningReward = claimMiningReward;
