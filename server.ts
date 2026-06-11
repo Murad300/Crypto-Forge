@@ -1246,6 +1246,22 @@ expressApp.post("/api/mining/start", async (req, res) => {
         throw new Error("Package has expired");
       }
 
+      // Fetch active robots inside start endpoint to calculate and carry forward raw unmatched manual completed balance
+      const robotsSnap = await database.collection("user_robots")
+        .where("userId", "==", userId)
+        .where("status", "==", "active")
+        .get();
+
+      const myActiveRobots = robotsSnap.docs.map((doc: any) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Calculate accrued earnings prior to today's start
+      const accrual = calculateAccruedEarnings(pkgData, myActiveRobots, now);
+      const userMultiplier = pkgData.earningsMultiplier || 1;
+      const rawUnclaimed = accrual.unclaimedCompleted / userMultiplier;
+
       const midnightEnd = getBDEndOfDay(todayStr);
       const totalSecondsInSession = (midnightEnd.getTime() - now.getTime()) / 1000;
       const dailyProfit = Number(pkgData.daily || 0);
@@ -1255,7 +1271,8 @@ expressApp.post("/api/mining/start", async (req, res) => {
         miningStatus: "active",
         lastMiningStartTime: now.toISOString(),
         lastMiningStartDay: todayStr,
-        currentPotentialEarning: currentPotentialEarning
+        currentPotentialEarning: currentPotentialEarning,
+        current_earnings: Number(rawUnclaimed.toFixed(6))
       };
 
       transaction.update(pkgRef, updates);
@@ -1359,7 +1376,8 @@ expressApp.post("/api/mining/claim", async (req, res) => {
 
       const updates: any = {
         lastClaimTime: lastClaimTimeStr,
-        lastClaimDate: todayStr
+        lastClaimDate: todayStr,
+        current_earnings: 0
       };
 
       if (isExpiredNow) {
