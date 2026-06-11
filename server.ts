@@ -804,19 +804,15 @@ expressApp.post("/api/wallet/transfer", verifyToken, async (req: any, res: any) 
     let label = '';
     await database.runTransaction(async (transaction) => {
       const userRef = database.collection("users").doc(userId);
-      const lockRef = database.collection("claim_locks").doc(`transfer_${userId}_${type}_${dateId}`);
 
-      const [userSnap, lockSnap] = await Promise.all([
-        transaction.get(userRef),
-        transaction.get(lockRef)
-      ]);
-
-      if (lockSnap.exists) {
-        throw new Error("This balance transfer has already been processed today.");
-      }
+      const userSnap = await transaction.get(userRef);
 
       if (!userSnap.exists) throw new Error("User record not found");
       const userData = userSnap.data()!;
+
+      if (userData.lastTransferDates && userData.lastTransferDates[type] === dateId) {
+        throw new Error("This balance transfer has already been processed today.");
+      }
 
       let currentAmount = 0;
       let updates: any = {};
@@ -851,18 +847,11 @@ expressApp.post("/api/wallet/transfer", verifyToken, async (req: any, res: any) 
 
       updates.balance = admin.firestore.FieldValue.increment(currentAmount);
       updates.mainBalance = admin.firestore.FieldValue.increment(currentAmount);
+      updates[`lastTransferDates.${type}`] = dateId;
 
       transaction.update(userRef, updates);
 
       const nowIso = new Date().toISOString();
-
-      // Write safety lock to prevent double entries on concurrent clicks
-      transaction.set(lockRef, {
-        userId,
-        type,
-        processedAt: nowIso,
-        amount: currentAmount
-      });
 
       const txId = `transfer_${Date.now()}_${userId}`;
       transaction.set(database.collection("transactions").doc(txId), {
@@ -1315,11 +1304,7 @@ expressApp.post("/api/mining/claim", async (req, res) => {
       const userData = userSnap.data()!;
       const pkgData = pkgSnap.data()!;
 
-      const lockId = `${userPackageId}_${todayStr}`;
-      const lockRef = database.collection("claim_locks").doc(lockId);
-      const lockSnap = await transaction.get(lockRef);
-
-      if (lockSnap.exists) {
+      if (pkgData.lastClaimDate === todayStr) {
         throw new Error("This mining reward has already been claimed for today. Please wait until tomorrow.");
       }
 
@@ -1387,21 +1372,12 @@ expressApp.post("/api/mining/claim", async (req, res) => {
       // Keep miningStatus and start time unchanged so the active session continues to run and accrue remaining balance pro-rata
 
       transaction.update(pkgRef, updates);
-      transaction.update(globalPkgRef, updates);
+      transaction.set(globalPkgRef, updates, { merge: true });
 
       transaction.update(userRef, {
         mainBalance: admin.firestore.FieldValue.increment(claimAmount),
         balance: admin.firestore.FieldValue.increment(claimAmount),
         totalEarned: admin.firestore.FieldValue.increment(claimAmount)
-      });
-
-      // Write safety lock for the claimed package for today to prevent double claims from rapid parallel clicks
-      transaction.set(lockRef, {
-        userId,
-        userPackageId,
-        todayStr,
-        claimedAt: now.toISOString(),
-        amount: claimAmount
       });
 
       const txId = `tx_mining_claim_${Date.now()}_${userId}_${userPackageId}`;
@@ -2350,11 +2326,12 @@ async function initializeSuperAdminUser() {
     }, { merge: true });
     console.log(`[Admin Setup] Verified /admins/ collection contains superadmin document.`);
 
-    // Enforce safety: Delete any other records in the "admins" collection, or any other user possessing administrative credentials automatically
+    // Enforce safety: Delete any other records in the "admins" collection, or any other user possessing administrative credentials automatically (preserving system-admin)
     const adminsSnap = await database.collection("admins").get();
     for (const doc of adminsSnap.docs) {
-      if (doc.id !== uid) {
-        console.log(`[Admin Security] Strictly deleting unauthorized admin doc: ${doc.id} (${doc.data()?.email})`);
+      const email = doc.data()?.email;
+      if (doc.id !== uid && email !== "backend-admin@cryptoforge.local") {
+        console.log(`[Admin Security] Strictly deleting unauthorized admin doc: ${doc.id} (${email})`);
         await database.collection("admins").doc(doc.id).delete();
       }
     }
