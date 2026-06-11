@@ -194,8 +194,15 @@ export function calculateAccruedEarnings(pkg: any, myActiveRobots: any[], now: D
   const lastClaimTimeStr = pkg.lastClaimTime || pkg.purchasedAt;
   let lastClaimDayStr = todayStr;
   try {
-    if (lastClaimTimeStr) {
-      lastClaimDayStr = getBDDate(new Date(lastClaimTimeStr));
+    if (pkg.lastClaimDate) {
+      if (lastClaimTimeStr) {
+        lastClaimDayStr = getBDDate(new Date(lastClaimTimeStr));
+      }
+    } else if (pkg.purchasedAt) {
+      // Never claimed before, so step back 1 day from purchase day so purchase day itself is counted as a completed day
+      const purchaseDate = new Date(pkg.purchasedAt);
+      const prevDay = new Date(purchaseDate.getTime() - (24 * 60 * 60 * 1000));
+      lastClaimDayStr = getBDDate(prevDay);
     }
   } catch (e) {
     lastClaimDayStr = todayStr;
