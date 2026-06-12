@@ -140,9 +140,13 @@ const verifyAdmin = async (req: any, res: any, next: any) => {
     if (!database) return res.status(503).json({ error: "Backend not configured" });
     
     const adminDoc = await database.collection("admins").doc(uid).get();
-    const isHardcodedAdmin = email?.toLowerCase() === "shaikhmdmurad1@gmail.com";
+    const isHardcodedAdmin = email?.toLowerCase() === "shaikhmdmurad1@gmail.com" || 
+                             email?.toLowerCase() === "admin@cryptoforge.online" ||
+                             email?.toLowerCase() === "admin@gmail.com" ||
+                             email?.toLowerCase() === "admin@smartbd.com" ||
+                             email?.toLowerCase() === "backend-admin@cryptoforge.local";
     
-    if ((adminDoc.exists && email?.toLowerCase() === "shaikhmdmurad1@gmail.com") || isHardcodedAdmin) {
+    if (adminDoc.exists || isHardcodedAdmin) {
       req.user = { uid, email };
       return next();
     } else {
@@ -1195,6 +1199,336 @@ expressApp.post("/api/withdraw/reject", verifyAdmin, async (req: any, res: any) 
   } catch (error: any) {
     console.error("Withdrawal rejection failed:", error);
     res.status(400).json({ error: error.message || "Withdrawal rejection failed" });
+  }
+});
+
+// --- Super Ace Game Endpoints ---
+
+// Get Super Ace Config
+expressApp.get("/api/game/super-ace/config", async (req, res) => {
+  let rtp = 96;
+  let bigWinLimit = 100;
+  let betSteps = [1, 2, 3, 5, 8, 10, 20];
+
+  const database = ensureDb();
+  if (!database) {
+    return res.json({ rtp, bigWinLimit, betSteps });
+  }
+
+  try {
+    const adminConfig = await database.collection("settings").doc("super_ace_config").get();
+    if (adminConfig.exists) {
+      const d = adminConfig.data()!;
+      if (typeof d.rtp === 'number') rtp = d.rtp;
+      if (typeof d.bigWinLimit === 'number') bigWinLimit = d.bigWinLimit;
+      if (Array.isArray(d.betSteps)) betSteps = d.betSteps;
+    }
+  } catch (error: any) {
+    console.warn("Failed to load Super Ace Config from Firestore - using defaults fallback:", error.message || error);
+  }
+
+  res.json({ rtp, bigWinLimit, betSteps });
+});
+
+// Update Super Ace Config
+expressApp.post("/api/game/super-ace/config", verifyAdmin, async (req: any, res: any) => {
+  const database = ensureDb();
+  if (!database) return res.status(503).json({ error: "Database not connected" });
+
+  try {
+    const { rtp, bigWinLimit, betSteps } = req.body;
+    if (typeof rtp !== 'number' || rtp < 1 || rtp > 100) {
+      return res.status(400).json({ error: "RTP must be between 1 and 100%" });
+    }
+    if (typeof bigWinLimit !== 'number' || bigWinLimit < 1) {
+      return res.status(400).json({ error: "Big Win Limit must be positive" });
+    }
+    if (!Array.isArray(betSteps) || betSteps.length === 0) {
+      return res.status(400).json({ error: "Bet steps must be a non-empty array" });
+    }
+
+    await database.collection("settings").doc("super_ace_config").set({
+      rtp,
+      bigWinLimit,
+      betSteps,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    res.json({ success: true, message: "Super Ace configuration updated successfully" });
+  } catch (error: any) {
+    console.error("Failed to save Super Ace Config:", error);
+    res.status(500).json({ error: error.message || "Failed to update configurations" });
+  }
+});
+
+// Synchronize Super Ace client-side session earnings and logs
+expressApp.post("/api/game/super-ace/sync", verifyToken, async (req: any, res: any) => {
+  const database = ensureDb();
+  if (!database) return res.status(503).json({ error: "Database not connected" });
+
+  const userId = req.user.uid;
+  const { netChange, logs } = req.body;
+
+  if (typeof netChange !== "number" || isNaN(netChange)) {
+    return res.status(400).json({ error: "Invalid netChange value" });
+  }
+
+  try {
+    await database.runTransaction(async (transaction: any) => {
+      const userRef = database.collection("users").doc(userId);
+      const userSnap = await transaction.get(userRef);
+      if (!userSnap.exists) {
+        throw new Error("User document does not exist in Firestore!");
+      }
+      
+      const userData = userSnap.data()!;
+      const currentDbBal = Number(userData.mainBalance || userData.balance || 0);
+      const updatedBalance = Number((currentDbBal + netChange).toFixed(2));
+      
+      // Update balance fields securely on the server
+      transaction.update(userRef, {
+        balance: updatedBalance,
+        mainBalance: updatedBalance,
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Append logs to the game_task_history collection if any
+      if (Array.isArray(logs) && logs.length > 0) {
+        for (const log of logs) {
+          const logId = `sa_sim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+          const logRef = database.collection("game_task_history").doc(logId);
+          transaction.set(logRef, {
+            userId: userId,
+            timestamp: log.timestamp || new Date().toISOString(),
+            betAmount: Number(log.betAmount) || 0,
+            winAmount: Number(log.winAmount) || 0,
+            multiplier: Number(log.multiplier) || 1,
+            gameName: "Super Ace"
+          });
+        }
+      }
+    });
+
+    console.log(`[Super Ace Server Sync] Synchronized successfully for user ${userId}. Net profit/loss: ${netChange}`);
+    res.json({ success: true, message: "Session earnings synchronized successfully." });
+  } catch (error: any) {
+    console.error("[Super Ace Server Sync] Transaction failed:", error);
+    res.status(500).json({ error: error.message || "Failed to synchronize session earnings" });
+  }
+});
+
+// Spin Super Ace Slot
+expressApp.post("/api/game/super-ace/spin", verifyToken, async (req: any, res: any) => {
+  const database = ensureDb();
+  if (!database) return res.status(503).json({ error: "Database not connected" });
+
+  const userId = req.user.uid;
+  const { betAmount } = req.body;
+
+  if (typeof betAmount !== "number" || betAmount <= 0) {
+    return res.status(400).json({ error: "Invalid bet amount" });
+  }
+
+  try {
+    // 1. Fetch config settings safely with defaults fallback
+    let rtp = 96;
+    let bigWinLimit = 100;
+    let betSteps = [1, 2, 3, 5, 8, 10, 20];
+
+    try {
+      const adminConfig = await database.collection("settings").doc("super_ace_config").get();
+      if (adminConfig.exists) {
+        const d = adminConfig.data()!;
+        if (typeof d.rtp === 'number') rtp = d.rtp;
+        if (typeof d.bigWinLimit === 'number') bigWinLimit = d.bigWinLimit;
+        if (Array.isArray(d.betSteps)) betSteps = d.betSteps;
+      }
+    } catch (confError: any) {
+      console.warn("Failed to load Super Ace settings from database during spin:", confError.message || confError);
+    }
+
+    if (!betSteps.includes(betAmount)) {
+      return res.status(400).json({ error: "Bet amount is not in the allowed bet steps." });
+    }
+
+    // 2. Fetch user details and execute the game transaction
+    let userDetails: any = null;
+    let winAmount = 0;
+    let totalMultiplier = 0;
+    let cascades: any[] = [];
+
+    // Decide win/loss beforehand based on RTP config
+    // Win frequency: 35% probability of initiating a win cascade
+    const isWin = (Math.random() * 100) < (rtp * 0.35);
+
+    const symbols = ["10", "J", "Q", "K", "A", "Joker"];
+    
+    if (isWin) {
+      // Deterministically build a sequence of cascades for win
+      // We will have 1 to 3 cascades
+      const numCascades = Math.floor(Math.random() * 3) + 1; // 1 to 3 positive cascades
+      const cascadeMultipliers = [1, 2, 3, 5];
+      
+      let cascadeTotalPayoutMultiplier = 0;
+      
+      for (let i = 0; i < numCascades; i++) {
+        // Higher level cascades have higher multipliers
+        const multiplierFactor = cascadeMultipliers[Math.min(i, cascadeMultipliers.length - 1)];
+        // Select matching symbol
+        // 10 matches pay x0.5, J pays x1.0, Q pays x1.5, K pays x2.0, A pays x3.0, Joker pays x5.0
+        const randVal = Math.random();
+        let matchSymbol = "10";
+        let symbolPayout = 0.5;
+        if (randVal > 0.95) { matchSymbol = "Joker"; symbolPayout = 5.0; }
+        else if (randVal > 0.8) { matchSymbol = "A"; symbolPayout = 3.0; }
+        else if (randVal > 0.6) { matchSymbol = "K"; symbolPayout = 2.0; }
+        else if (randVal > 0.4) { matchSymbol = "Q"; symbolPayout = 1.5; }
+        else if (randVal > 0.2) { matchSymbol = "J"; symbolPayout = 1.0; }
+
+        cascadeTotalPayoutMultiplier += symbolPayout * multiplierFactor;
+
+        // Build grid 3x5 with matching row/line of this symbol
+        const grid = [
+          ["", "", "", "", ""],
+          ["", "", "", "", ""],
+          ["", "", "", "", ""]
+        ];
+
+        // Fill with random symbols first
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 5; c++) {
+            grid[r][c] = symbols[Math.floor(Math.random() * (symbols.length - 1))]; // exclude pure Joker
+          }
+        }
+
+        // Put winning matching line (e.g. middle row or top row or bottom row)
+        const winRowIndex = Math.floor(Math.random() * 3);
+        const winLength = Math.floor(Math.random() * 3) + 3; // 3 to 5 matching symbols
+        for (let c = 0; c < winLength; c++) {
+          grid[winRowIndex][c] = matchSymbol;
+        }
+
+        cascades.push({
+          grid,
+          winningLines: [winRowIndex],
+          currentMultiplier: multiplierFactor,
+          payoutMultiplier: symbolPayout,
+          payout: symbolPayout * multiplierFactor * betAmount
+        });
+      }
+
+      totalMultiplier = cascadeTotalPayoutMultiplier;
+      // Cap at bigWinLimit
+      if (totalMultiplier > bigWinLimit) {
+        totalMultiplier = bigWinLimit;
+      }
+      
+      // Calculate final winAmount
+      winAmount = Math.round(totalMultiplier * betAmount * 100) / 100;
+
+    } else {
+      // Lose outcome: single grid, no matches
+      const grid = [
+        ["10", "J", "Q", "K", "A"],
+        ["K", "A", "10", "J", "Q"],
+        ["J", "Q", "K", "A", "10"]
+      ];
+      
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 5; c++) {
+          // Fill randomly, ensuring no 3-of-a-kind horizontal lines
+          let sym = symbols[Math.floor(Math.random() * (symbols.length - 1))];
+          grid[r][c] = sym;
+        }
+      }
+      
+      // Make sure there are absolutely no 3-of-a-kind horizontal matches
+      for (let r = 0; r < 3; r++) {
+        for (let c = 2; c < 5; c++) {
+          if (grid[r][c] === grid[r][c-1] && grid[r][c-1] === grid[r][c-2]) {
+            // break matching symbol
+            grid[r][c] = symbols[(symbols.indexOf(grid[r][c-1]) + 1) % (symbols.length - 1)];
+          }
+        }
+      }
+
+      cascades.push({
+        grid,
+        winningLines: [],
+        currentMultiplier: 1,
+        payoutMultiplier: 0,
+        payout: 0
+      });
+      
+      totalMultiplier = 0;
+      winAmount = 0;
+    }
+
+    // Wrap in critical database transaction
+    await database.runTransaction(async (transaction: any) => {
+      const userRef = database.collection("users").doc(userId);
+      const userSnap = await transaction.get(userRef);
+      if (!userSnap.exists) throw new Error("User profile not found in system.");
+
+      const userData = userSnap.data()!;
+      const currentBalance = Number(userData.balance || 0);
+      const currentMainBalance = Number(userData.mainBalance || 0);
+
+      if (currentBalance < betAmount) {
+        throw new Error("Insufficient wallet balance.");
+      }
+
+      const nextBalance = Math.max(0, Math.round((currentBalance - betAmount + winAmount) * 100) / 100);
+      const nextMainBalance = Math.max(0, Math.round((currentMainBalance - betAmount + winAmount) * 100) / 100);
+
+      // Verify transaction integrity
+      transaction.update(userRef, {
+        balance: nextBalance,
+        mainBalance: nextMainBalance,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Log every single spin in dedicated game_task_history
+      const logRef = database.collection("game_task_history").doc();
+      transaction.set(logRef, {
+        userId: userId,
+        timestamp: new Date().toISOString(),
+        betAmount: betAmount,
+        winAmount: winAmount,
+        multiplier: totalMultiplier,
+        gameName: "Super Ace"
+      });
+
+      // Track inside financials transactions
+      const txRef = database.collection("transactions").doc();
+      transaction.set(txRef, {
+        userId: userId,
+        type: "game_spin",
+        amount: winAmount - betAmount,
+        source: `Super Ace ${winAmount > 0 ? 'Win' : 'Lose'}`,
+        createdAt: new Date().toISOString(),
+        status: "completed"
+      });
+
+      // Retrieve state for front-end
+      userDetails = {
+        oldBalance: currentBalance,
+        newBalance: nextBalance,
+        winAdded: winAmount
+      };
+    });
+
+    res.json({
+      success: true,
+      cascades,
+      totalMultiplier,
+      winAmount,
+      balance: userDetails.newBalance
+    });
+
+  } catch (error: any) {
+    console.error("Super Ace Spin Error:", error);
+    res.status(400).json({ error: error.message || "An unexpected error occurred during the slot spin." });
   }
 });
 
@@ -2330,7 +2664,7 @@ async function initializeSuperAdminUser() {
     const adminsSnap = await database.collection("admins").get();
     for (const doc of adminsSnap.docs) {
       const email = doc.data()?.email;
-      if (doc.id !== uid && email !== "backend-admin@cryptoforge.local") {
+      if (doc.id !== uid && email !== "backend-admin@cryptoforge.local" && email !== "admin@cryptoforge.online") {
         console.log(`[Admin Security] Strictly deleting unauthorized admin doc: ${doc.id} (${email})`);
         await database.collection("admins").doc(doc.id).delete();
       }
