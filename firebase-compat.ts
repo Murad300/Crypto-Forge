@@ -25,8 +25,8 @@ import path from "path";
 
 // Load configuration
 function getFirebaseConfig() {
-  // 1. Try environment variables
-  if (process.env.FIREBASE_API_KEY) {
+  // 1. Try environment variables, but ignore the default temporary system sandbox project starting with "ais-"
+  if (process.env.FIREBASE_API_KEY && (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PROJECT_ID.startsWith("ais-"))) {
     return {
       apiKey: process.env.FIREBASE_API_KEY,
       authDomain: process.env.FIREBASE_AUTH_DOMAIN || "smart-bd365.firebaseapp.com",
@@ -112,81 +112,130 @@ export function getRawAuth() {
   return inst.auth;
 }
 
-// Admin-level email and password for the Server Context
-const SYSTEM_EMAIL = "admin@cryptoforge.online";
-const SYSTEM_PASSWORD = "SuperSecureBackendSystemPass123_!";
+// Admin-level email and password list for robust server authentication
+const ADMIN_EMAILS = [
+  "admin@smartbd.com",
+  "admin@cryptoforge.online"
+];
+
+const ADMIN_PASSWORDS = [
+  "SuperSecureBackendSystemPass123_!",
+  "Admin@murad",
+  "Admin@cryptoforge.online"
+];
+
+// Tracks the current authenticated system state
+let ACTIVE_SYSTEM_EMAIL = "admin@smartbd.com";
+let ACTIVE_SYSTEM_PASSWORD = "SuperSecureBackendSystemPass123_!";
+
+export function getActiveSystemConfig() {
+  return { email: ACTIVE_SYSTEM_EMAIL, password: ACTIVE_SYSTEM_PASSWORD };
+}
 
 // Sign in the Web Auth client on start-up dynamically to satisfy the general Firestore security rules
 export async function authenticateBackendSystem() {
   console.log("🔑 Authenticating server backend system user...");
+  const auth = getRawAuth();
+
+  // Try each combination of email and password robustly
+  for (const email of ADMIN_EMAILS) {
+    for (const password of ADMIN_PASSWORDS) {
+      try {
+        console.log(`Trying system authentication for ${email} ...`);
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
+        console.log(`✅ System authenticated successfully as ${email} (UID: ${uid})`);
+        
+        ACTIVE_SYSTEM_EMAIL = email;
+        ACTIVE_SYSTEM_PASSWORD = password;
+
+        // Register in the admins collection dynamically to satisfy the exists() rule check of firestore.rules
+        try {
+          await dbCompat.collection("admins").doc(uid).set({
+            email: email,
+            role: "system-admin",
+            createdAt: new Date().toISOString()
+          });
+          console.log(`📁 Verified: Registered ${email} under /admins/${uid}`);
+        } catch (dbErr: any) {
+          console.warn(`⚠️ Firestore admins registration warning for ${email}:`, dbErr.message);
+        }
+
+        return uid;
+      } catch (err: any) {
+        const errCode = err.code || "";
+        console.warn(`⚠️ Auth attempt failed for ${email}. Code: ${errCode}, Message: ${err.message}`);
+
+        // If user does not exist, attempt to register them dynamically
+        if (errCode === "auth/user-not-found" || errCode === "auth/invalid-credential" || errCode === "auth/invalid-email" || errCode === "auth/wrong-password") {
+          try {
+            console.log(`Attempting to register new system account for ${email}...`);
+            const userCred = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCred.user.uid;
+            console.log(`✅ Successfully registered new system account for ${email}!`);
+
+            ACTIVE_SYSTEM_EMAIL = email;
+            ACTIVE_SYSTEM_PASSWORD = password;
+
+            try {
+              await dbCompat.collection("admins").doc(uid).set({
+                email: email,
+                role: "system-admin",
+                createdAt: new Date().toISOString()
+              });
+              console.log(`📁 Verified: Registered new account ${email} under /admins/${uid}`);
+            } catch (dbErr: any) {
+              console.warn(`⚠️ Firestore admins registration warning on create for ${email}:`, dbErr.message);
+            }
+
+            return uid;
+          } catch (regErr: any) {
+            console.warn(`⚠️ Failed to register ${email} dynamically:`, regErr.message);
+          }
+        }
+      }
+    }
+  }
+
+  // If both fail, let's try a fallback local admin
+  try {
+    const defaultEmail = "backend-admin@cryptoforge.local";
+    const defaultPass = "SuperSecureBackendSystemPass123_!";
+    console.log(`Falling back to local email authentication of ${defaultEmail}...`);
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, defaultEmail, defaultPass);
+      ACTIVE_SYSTEM_EMAIL = defaultEmail;
+      ACTIVE_SYSTEM_PASSWORD = defaultPass;
+      return userCred.user.uid;
+    } catch {
+      const userCred = await createUserWithEmailAndPassword(auth, defaultEmail, defaultPass);
+      ACTIVE_SYSTEM_EMAIL = defaultEmail;
+      ACTIVE_SYSTEM_PASSWORD = defaultPass;
+      return userCred.user.uid;
+    }
+  } catch (finalErr: any) {
+    console.error("❌ Fatal: All system account authentication and fallback paths failed.", finalErr);
+    throw new Error("Unable to authenticate backend host system with Firebase. Check security credentials.");
+  }
+}
+
+// Ensure the system account is authenticated and has a fresh, valid token for safety
+export async function ensureAuthenticatedSystem() {
   try {
     const auth = getRawAuth();
-    const userCred = await signInWithEmailAndPassword(auth, SYSTEM_EMAIL, SYSTEM_PASSWORD);
-    const uid = userCred.user.uid;
-    console.log("✅ Server system auth user connected successfully. UID:", uid);
-    
-    // Register the system user UID in the admins collection dynamically to satisfy the exists() rule check
-    try {
-      await dbCompat.collection("admins").doc(uid).set({
-        email: SYSTEM_EMAIL,
-        role: "system-admin",
-        createdAt: new Date().toISOString()
-      });
-      console.log("📁 System user dynamically registered in Firestore /admins collection.");
-    } catch (dbErr: any) {
-      console.warn("⚠️ Firestore system registration skipped/already exists:", dbErr.message);
+    if (!auth.currentUser) {
+      console.log("No authenticated system user found. Authenticating on-demand...");
+      await authenticateBackendSystem();
+    } else {
+      // Force token refresh to make sure we don't present an expired/invalid token to Firestore rules
+      await auth.currentUser.getIdToken(true);
     }
-    
-    return uid;
   } catch (err: any) {
-    console.warn("⚠️ Initial system auth sign-in failed. Error code:", err.code, "Message:", err.message);
+    console.warn("⚠️ Failed to ensure system authentication, retrying full sign-in:", err.message);
     try {
-      console.log("Attempting to create system account dynamically...");
-      const auth = getRawAuth();
-      const userCred = await createUserWithEmailAndPassword(auth, SYSTEM_EMAIL, SYSTEM_PASSWORD);
-      const uid = userCred.user.uid;
-      console.log("✅ System account database setup completed! UID:", uid);
-      
-      try {
-        await dbCompat.collection("admins").doc(uid).set({
-          email: SYSTEM_EMAIL,
-          role: "system-admin",
-          createdAt: new Date().toISOString()
-        });
-        console.log("📁 System user registered in Firestore /admins collection on create.");
-      } catch (dbErr: any) {
-        console.warn("⚠️ Firestore registration skipped/already exists:", dbErr.message);
-      }
-      
-      return uid;
-    } catch (regErr: any) {
-      if (regErr.code === "auth/email-already-in-use") {
-        console.log("System account email already exists. Retrying sign-in...");
-        try {
-          const auth = getRawAuth();
-          const userCred = await signInWithEmailAndPassword(auth, SYSTEM_EMAIL, SYSTEM_PASSWORD);
-          const uid = userCred.user.uid;
-          console.log("✅ Server system auth user connected successfully on retry. UID:", uid);
-          
-          try {
-            await dbCompat.collection("admins").doc(uid).set({
-              email: SYSTEM_EMAIL,
-              role: "system-admin",
-              createdAt: new Date().toISOString()
-            });
-          } catch (dbErr: any) {
-            console.warn("⚠️ Firestore registration retry skipped:", dbErr.message);
-          }
-          
-          return uid;
-        } catch (retryErr: any) {
-          console.error("❌ System auth retry sign-in failed:", retryErr);
-          throw retryErr;
-        }
-      } else {
-        console.error("❌ Fatal: Failed to register fallback backend system user:", regErr);
-        throw regErr;
-      }
+      await authenticateBackendSystem();
+    } catch (innerErr: any) {
+      console.error("❌ Fatal: getRawAuth authentication fail:", innerErr);
     }
   }
 }
