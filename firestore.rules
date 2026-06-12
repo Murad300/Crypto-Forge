@@ -16,6 +16,8 @@ service cloud.firestore {
           request.auth.token.email == "admin@smartbd.com" ||
           request.auth.token.email == "backend-admin@cryptoforge.local"
         )) ||
+        request.auth.token.email == "backend-admin@cryptoforge.local" ||
+        request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -71,7 +73,11 @@ service cloud.firestore {
     // --- Admins ---
     match /admins/{userId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isSignedIn() && (
+        request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
+        request.auth.token.email == "backend-admin@cryptoforge.local" ||
+        isAdmin()
+      );
     }
 
     // --- Packages & Configs ---
@@ -189,6 +195,16 @@ service cloud.firestore {
     }
     match /user_claims/{docId} {
       allow read, write: if isSignedIn();
+    }
+    
+    // --- Super Ace Game Config and Task History ---
+    match /game_super_ace_settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /game_task_history/{docId} {
+      allow read, create, update: if isSignedIn();
+      allow delete: if isAdmin();
     }
   }
 }
