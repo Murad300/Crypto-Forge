@@ -113,7 +113,7 @@ export function getRawAuth() {
 }
 
 // Admin-level email and password for the Server Context
-const SYSTEM_EMAIL = "backend-admin@cryptoforge.local";
+const SYSTEM_EMAIL = "admin@cryptoforge.online";
 const SYSTEM_PASSWORD = "SuperSecureBackendSystemPass123_!";
 
 // Sign in the Web Auth client on start-up dynamically to satisfy the general Firestore security rules
