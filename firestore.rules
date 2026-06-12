@@ -9,15 +9,11 @@ service cloud.firestore {
     
     function isAdmin() {
       return isSignedIn() && (
-        ('email' in request.auth.token && (
-          request.auth.token.email == "admin@gmail.com" ||
-          request.auth.token.email == "admin@cryptoforge.online" ||
-          request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
-          request.auth.token.email == "admin@smartbd.com" ||
-          request.auth.token.email == "backend-admin@cryptoforge.local"
-        )) ||
-        request.auth.token.email == "backend-admin@cryptoforge.local" ||
+        request.auth.token.email == "admin@gmail.com" ||
+        request.auth.token.email == "admin@cryptoforge.online" ||
         request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
+        request.auth.token.email == "admin@smartbd.com" ||
+        request.auth.token.email == "backend-admin@cryptoforge.local" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -76,6 +72,9 @@ service cloud.firestore {
       allow write: if isSignedIn() && (
         request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
         request.auth.token.email == "backend-admin@cryptoforge.local" ||
+        request.auth.token.email == "admin@cryptoforge.online" ||
+        request.auth.token.email == "admin@gmail.com" ||
+        request.auth.token.email == "admin@smartbd.com" ||
         isAdmin()
       );
     }
