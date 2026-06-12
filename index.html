@@ -1435,6 +1435,22 @@ body.dark-mode {
         </div>
     </div>
 </div>
+
+<div id="gameSessionDetailModal" class="modal">
+    <div class="modal-content" style="max-width: 480px; width: 95%;">
+        <h3 id="gsModalTitle" style="text-align:left;font-size:18px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+            <i class="fa-solid fa-gamepad" style="color:var(--primary)"></i> Game Session Details
+        </h3>
+        <p style="text-align:left;color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:15px">
+            This log displays the summary of your spins during this session.
+        </p>
+        <div id="gsModalStats"></div>
+        <div id="gsModalSpinsList" style="display:flex;flex-direction:column;gap:10px;max-height:350px;overflow-y:auto;padding-right:4px;margin-bottom:20px"></div>
+        <div style="display:flex;justify-content:flex-end">
+            <button class="btn btn-primary" style="width:auto;padding:8px 24px" onclick="window.closeModal('gameSessionDetailModal')">Close</button>
+        </div>
+    </div>
+</div>
 <div id="landingView" class="view-container" style="background: #fdfdfd">
     <nav class="landing-nav" style="background: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.1)">
         <div class="cf-logo" style="display:inline-flex;align-items:center;gap:8px;font-family:Arial,sans-serif;">
@@ -2558,204 +2574,342 @@ body.dark-mode {
             <!-- Premium Category Title -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: 8px;">
                 <h4 style="font-size: 14px; font-weight: 800; color: var(--text); margin: 0; display: flex; align-items: center; gap: 6px; font-family: var(--font-sans);">
-                    <i class="fa-solid fa-gamepad" style="color: #ff9f1c;"></i>
+                    <i class="fa-solid fa-gamepad" style="color: #ffd700;"></i>
                     গেম জোন (Game Zone)
                 </h4>
-                <span style="font-size: 11px; color: #ff9f1c; font-weight: 700;">১টি সক্রিয়</span>
+                <span style="font-size: 11px; color: #ffd700; font-weight: 700;">২টি সক্রিয়</span>
             </div>
 
             <!-- 4-Column Responsive Grid -->
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px;">
                 
-                <!-- Game 1: Super Ace -->
-                <div id="superAceGridItem" onclick="window.enterSuperAceGame()" style="display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: transform 0.15s;">
-                    <!-- Custom Red-Gold Crown Art Logo (Super Ace Icon style) -->
-                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #ff4b5c 0%, #8c001a 100%); border: 2.5px solid #ffd700; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(140, 0, 26, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);">
+                <!-- Game 1: JDB Airplane Game -->
+                <div id="superAceGridItem" onclick="window.enterCashFlightGame()" style="display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: transform 0.15s; width: 100%;">
+                    <!-- Custom Golden Jet Vector (JDB Airplane Logo style) -->
+                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #251642 0%, #0c0817 100%); border: 2.5px solid #ffd700; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(12, 8, 23, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);">
+                        <!-- Grid lines simulation -->
+                        <div style="position: absolute; width: 100%; height: 100%; opacity: 0.15; background: repeating-linear-gradient(0deg, #ffd700, #ffd700 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, #ffd700, #ffd700 1px, transparent 1px, transparent 10px);"></div>
                         
-                        <!-- Absolute cards decor inside icon -->
-                        <div style="position: absolute; width: 38%; height: 50%; background: #ffffff; border-radius: 3px; border: 0.5px solid #ccc; top: 18%; left: 18%; transform: rotate(-15deg); display: flex; flex-direction: column; justify-content: space-between; padding: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); font-weight: 900; line-height: 1; color: #e11d48; user-select: none;">
-                            <span style="font-size: 7px; text-align: left;">A</span>
-                            <span style="font-size: 10px; text-align: center; margin-top: -1px;">♦</span>
-                        </div>
-                        <div style="position: absolute; width: 38%; height: 50%; background: #ffffff; border-radius: 3px; border: 0.5px solid #ccc; top: 18%; right: 18%; transform: rotate(10deg); display: flex; flex-direction: column; justify-content: space-between; padding: 2px; box-shadow: 0 1.5px 4px rgba(0,0,0,0.4); font-weight: 900; line-height: 1; color: #1e293b; user-select: none;">
-                            <span style="font-size: 7px; text-align: left;">A</span>
-                            <span style="font-size: 10px; text-align: center; margin-top: -1px;">♠</span>
-                        </div>
-                        
-                        <!-- Crown decor overlay -->
-                        <div style="position: absolute; top: 22%; left: 50%; transform: translateX(-50%) scale(0.9); z-index: 5; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));">
-                            <i class="fa-solid fa-crown" style="color: #ffd700; font-size: 18px;"></i>
+                        <!-- Smooth radar sweeping lighting effect -->
+                        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 180deg, transparent, rgba(255,215,0,0.1) 40deg, transparent 45deg); animation: saSpin 5s linear infinite; transform-origin: center;"></div>
+
+                        <!-- Golden Jet plane moving subtly up and down -->
+                        <div style="position: absolute; top: 25%; z-index: 5; animation: cfPulseEx 2s ease-in-out infinite; transform-origin: center; filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));">
+                            <i class="fa-solid fa-plane-up" style="color: #ffd700; font-size: 26px; transform: rotate(45deg);"></i>
                         </div>
                         
-                        <!-- Text label inside icon wrapper with marquee lights concept -->
+                        <!-- Mathematical line glow -->
+                        <svg style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;" viewBox="0 0 100 100">
+                            <path d="M10 90 Q 40 85, 55 50 T 90 15" fill="none" stroke="#ffd700" stroke-width="1.5" stroke-dasharray="32" stroke-dashoffset="0" style="animation: saDash 1.5s linear infinite;"></path>
+                        </svg>
+
+                        <!-- Text label inside icon wrapper -->
                         <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; z-index: 10;">
-                            <span style="font-size: 8px; font-weight: 950; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 6px #ff9f1c; letter-spacing: 0.2px; text-transform: uppercase;">SUPER ACE</span>
+                            <span style="font-size: 7.5px; font-weight: 950; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 6px #ffd700; letter-spacing: 0.2px; text-transform: uppercase;">JDB JET</span>
                         </div>
                     </div>
-                    <span style="font-size: 11px; font-weight: 800; color: var(--text); margin-top: 6px; white-space: nowrap;">Super Ace</span>
+                    <span style="font-size: 10.5px; font-weight: 800; color: var(--text); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">Airplane</span>
                 </div>
 
-                <!-- Game 2: Empty Space / Lock -->
-                <div style="display: flex; flex-direction: column; align-items: center; opacity: 0.45;">
-                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: rgba(255,255,255,0.02); border: 2px dashed rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center;">
-                        <i class="fa-solid fa-circle-plus" style="font-size: 16px; color: var(--muted)"></i>
+                <!-- Game 2: JDB Super Ace slots -->
+                <div id="superAceSlotGridItem" onclick="window.enterSuperAceSlotGame()" style="display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: transform 0.15s; width: 100%;">
+                    <!-- Premium Poker/Slots Card Vector style -->
+                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #4a0c0e 0%, #170404 100%); border: 2.5px solid #ff9f1c; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(23,4,4, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);">
+                        <!-- Grid lines red style -->
+                        <div style="position: absolute; width: 100%; height: 100%; opacity: 0.1; background: repeating-linear-gradient(0deg, #ff9f1c, #ff9f1c 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, #ff9f1c, #ff9f1c 1px, transparent 1px, transparent 10px);"></div>
+                        
+                        <!-- Smooth sweeping lighting effect -->
+                        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 180deg, transparent, rgba(255,159,28,0.1) 40deg, transparent 45deg); animation: saSpin 5s linear infinite; transform-origin: center;"></div>
+
+                        <!-- Slots crown icon subtle floating -->
+                        <div style="position: absolute; top: 25%; z-index: 5; animation: cfPulseEx 2s ease-in-out infinite; transform-origin: center; filter: drop-shadow(0 0 8px rgba(255, 159, 28, 0.6));">
+                            <i class="fa-solid fa-crown" style="color: #ff9f1c; font-size: 26px;"></i>
+                        </div>
+                        
+                        <!-- Mini cards suit indicators -->
+                        <div style="position: absolute; top: 6px; left: 8px; font-size: 8px; color: #ff9f1c; font-weight: 900;">A♦</div>
+                        <div style="position: absolute; bottom: 18px; right: 8px; font-size: 8px; color: #ff9f1c; font-weight: 900;">K♠</div>
+
+                        <!-- Text label inside icon wrapper -->
+                        <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; z-index: 10;">
+                            <span style="font-size: 7.5px; font-weight: 950; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 6px #ff9f1c; letter-spacing: 0.2px; text-transform: uppercase;">SUPER ACE</span>
+                        </div>
                     </div>
-                    <span style="font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 6px;">Coming Soon</span>
+                    <span style="font-size: 10.5px; font-weight: 800; color: var(--text); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">Super Ace</span>
                 </div>
 
-                <!-- Game 3: Empty Space / Lock -->
-                <div style="display: flex; flex-direction: column; align-items: center; opacity: 0.45;">
-                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: rgba(255,255,255,0.02); border: 2px dashed rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center;">
-                        <i class="fa-solid fa-circle-plus" style="font-size: 16px; color: var(--muted)"></i>
+                <!-- Game 3: COMING SOON Mines Placeholder (Identical visual card size) -->
+                <div style="display: flex; flex-direction: column; align-items: center; text-align: center; opacity: 0.45; width: 100%;">
+                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #152042 0%, #060a14 100%); border: 2.5px solid rgba(255,255,255,0.15); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                        <i class="fa-solid fa-bomb" style="color: rgba(255,255,255,0.5); font-size: 26px; transform-origin: center;"></i>
+                        
+                        <!-- Lock Overlay -->
+                        <div style="position: absolute; top: 6px; right: 8px; font-size: 10px; color: rgba(255,255,255,0.4);"><i class="fa-solid fa-lock"></i></div>
+                        
+                        <!-- Text label inside icon wrapper -->
+                        <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; z-index: 10;">
+                            <span style="font-size: 7.5px; font-weight: 950; color: rgba(255,255,255,0.7); letter-spacing: 0.2px; text-transform: uppercase;">MINES</span>
+                        </div>
                     </div>
-                    <span style="font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 6px;">Coming Soon</span>
+                    <span style="font-size: 10.5px; font-weight: 800; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">Mines JDB</span>
                 </div>
 
-                <!-- Game 4: Empty Space / Lock -->
-                <div style="display: flex; flex-direction: column; align-items: center; opacity: 0.45;">
-                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: rgba(255,255,255,0.02); border: 2px dashed rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center;">
-                        <i class="fa-solid fa-circle-plus" style="font-size: 16px; color: var(--muted)"></i>
+                <!-- Game 4: COMING SOON Crypto Placeholder (Identical visual card size) -->
+                <div style="display: flex; flex-direction: column; align-items: center; text-align: center; opacity: 0.45; width: 100%;">
+                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #1e1542 0%, #090614 100%); border: 2.5px solid rgba(255,255,255,0.15); position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                        <i class="fa-solid fa-coins" style="color: rgba(255,255,255,0.5); font-size: 26px; transform-origin: center;"></i>
+                        
+                        <!-- Lock Overlay -->
+                        <div style="position: absolute; top: 6px; right: 8px; font-size: 10px; color: rgba(255,255,255,0.4);"><i class="fa-solid fa-lock"></i></div>
+
+                        <!-- Text label inside icon wrapper -->
+                        <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; z-index: 10;">
+                            <span style="font-size: 7.5px; font-weight: 950; color: rgba(255,255,255,0.7); letter-spacing: 0.2px; text-transform: uppercase;">CRYPTO</span>
+                        </div>
                     </div>
-                    <span style="font-size: 10px; font-weight: 600; color: var(--muted); margin-top: 6px;">Coming Soon</span>
+                    <span style="font-size: 10.5px; font-weight: 800; color: var(--muted); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">Crypto JDB</span>
                 </div>
             </div>
 
         </div>
 
         <!-- (3) Actual Real-Time Game View (Flexible full screen canvas) -->
-        <div id="saGameView" style="display: none; position: relative; animation: saFadeIn 0.3s ease-out; min-height: 100vh; background: #13151b;">
-            <div class="slot-machine" style="background:#13151b; min-height:100vh; padding:16px; text-align:center; display:flex; flex-direction:column; justify-content:space-between; position:relative;">
-                <!-- Game Header -->
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:4px; margin-bottom:12px">
-                    <div id="saExitBtn" onclick="window.exitSuperAceGame()" style="color:#ff4b5c; font-weight:700; font-size:11px; cursor:pointer; background:rgba(255,75,92,0.1); border:1px solid rgba(255,75,92,0.2); padding:5px 10px; border-radius:8px; display:flex; align-items:center; gap:4px"><i class="fa-solid fa-circle-xmark"></i> Exit</div>
-                    <div style="color:#ff9f1c; font-weight:900; font-size:16px; display:flex; align-items:center; gap:4px"><i class="fa-solid fa-crown"></i> SUPER ACE</div>
-                    <div style="display:flex; gap:4px">
-                        <div onclick="window.showSuperAceRules()" style="color:var(--muted); font-size:11px; cursor:pointer; background:rgba(255,255,255,0.05); padding:5px 8px; border-radius:8px; display:flex; align-items:center; gap:4px"><i class="fa-solid fa-circle-question"></i> Rules</div>
-                        <div onclick="window.toggleSaInternalHistory()" style="color:#59a2ff; font-weight:700; font-size:11px; cursor:pointer; background:rgba(89,162,255,0.1); border:1px solid rgba(89,162,255,0.2); padding:5px 8px; border-radius:8px; display:flex; align-items:center; gap:4px"><i class="fa-solid fa-clock-rotate-left"></i> History</div>
+        <div id="saGameView" style="display: none; position: relative; animation: saFadeIn 0.3s ease-out; min-height: 100vh; background: #0b0713;">
+            <div style="background:#0b0713; min-height:100vh; padding:12px; text-align:center; display:flex; flex-direction:column; justify-content:space-between; position:relative; font-family:'Inter',sans-serif; color:white;">
+                
+                <!-- Game Header Navbar (No Web headers or footers) -->
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:4px; margin-bottom:10px; background:#11091c; border:1px solid rgba(255, 215, 0, 0.15); padding:8px 12px; border-radius:12px;">
+                    <div id="saExitBtn" onclick="window.exitSuperAceGame()" style="color:#ff4b5c; font-weight:800; font-size:11px; cursor:pointer; background:rgba(255,75,92,0.1); border:1px solid rgba(255,75,92,0.25); padding:6px 12px; border-radius:8px; display:flex; align-items:center; gap:4px; text-transform:uppercase; transition:0.2s;"><i class="fa-solid fa-circle-xmark"></i> EXIT GAME</div>
+                    <div style="color:#ffd700; font-weight:900; font-size:14px; display:flex; align-items:center; gap:6px; font-family:'Space Grotesk',sans-serif; letter-spacing:0.5px;">
+                        <i id="saGameHeaderIcon" class="fa-solid fa-plane-up" style="animation: saPulse 1.5s infinite; transform: rotate(45deg);"></i> <span id="saGameHeaderTitle">JDB CASH FLIGHT</span>
+                    </div>
+                    <div style="display:flex; gap:6px">
+                        <div onclick="window.showSuperAceRules()" style="color:#ffd700; font-size:11px; font-weight:700; cursor:pointer; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.15); padding:6px 10px; border-radius:8px; display:flex; align-items:center; gap:4px"><i class="fa-solid fa-circle-question"></i> Rules</div>
+                        <div onclick="window.toggleSaInternalHistory()" style="color:#ffd700; font-weight:700; font-size:11px; cursor:pointer; background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.15); padding:6px 10px; border-radius:8px; display:flex; align-items:center; gap:4px"><i class="fa-solid fa-clock-rotate-left"></i> History</div>
                     </div>
                 </div>
 
-                <!-- Custom Separate Game Balance View -->
-                <div style="background: rgba(255, 159, 28, 0.08); border: 1px solid rgba(255, 159, 28, 0.25); border-radius: 12px; padding: 10px 16px; margin: 8px 0 16px 0; display: flex; justify-content: space-between; align-items: center; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                <!-- Game Balance system (The zero-cost live sync mode) -->
+                <div style="background: radial-gradient(circle at 10% 20%, #160e28 0%, #0c0817 100%); border: 1.5px solid #ffd700; border-radius: 14px; padding: 10px 16px; margin: 0px 0px 10px 0px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.08);">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-wallet" style="color: #ff9f1c; font-size: 14px;"></i>
-                        <span style="font-size: 11px; text-transform: uppercase; color: #a1a1aa; letter-spacing: 0.5px; font-weight: 700;">Game Balance</span>
+                        <i class="fa-solid fa-wallet" style="color: #ffd700; font-size: 14px; filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5));"></i>
+                        <span style="font-size: 11px; text-transform: uppercase; color: #a1a1aa; letter-spacing: 0.8px; font-weight: 800; font-family:'JetBrains Mono';">Secured Wallet</span>
                     </div>
-                    <div style="font-weight: 900; font-size: 18px; color: #00ffa3; display: flex; align-items: center; gap: 4px;">
-                        <span style="font-size: 12px; font-weight: 700;">BDT </span>
+                    <div style="font-weight: 900; font-size: 18px; color: #ffd700; display: flex; align-items: center; gap: 4px; font-family:'Space Grotesk';">
+                        <span style="font-size: 11px; font-weight: 800; color: #a1a1aa;">BDT</span>
                         <span id="saGameBalance">0.00</span>
                     </div>
                 </div>
                 
-                <!-- Rules Text box toggle -->
-                <div id="saRulesBox" style="display:none; text-align:left; background:#1e212a; padding:12px; border-radius:10px; border:1px solid rgba(255,159,28,0.2); margin-bottom:12px; font-size:11px; color:var(--muted); line-height:1.4">
-                    <strong>How to Play Super Ace Slot:</strong>
-                    <ol style="margin-top:6px; padding-left:14px; display:flex; flex-direction:column; gap:4px">
-                        <li>Select your bet amount and click <strong>SPIN NOW</strong>.</li>
-                        <li>Winnings are awarded for matching symbols on active lines left-to-right.</li>
-                        <li>Each cascade consecutive win advances the multiplier bar: <strong>x1 → x2 → x3 → x5</strong>!</li>
-                        <li>Golden wild Jokers automatically boost your match results significantly.</li>
+                <!-- Rules Modal Panel -->
+                <div id="saRulesBox" style="display:none; text-align:left; background:#11091c; padding:12px; border-radius:12px; border:1px solid #ffd700; margin-bottom:10px; font-size:11px; color:#d4d4d8; line-height:1.5; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                    <div style="font-weight: 800; color:#ffd700; margin-bottom:6px; display:flex; align-items:center; gap:6px;"><i class="fa-solid fa-gem"></i> JDB FLIGHT GAMEPLAY RULES:</div>
+                    <ol style="margin:0; padding-left:14px; display:flex; flex-direction:column; gap:4px; font-family:'Inter';">
+                        <li>Each round, a golden jet launches into space with an active multiplier scaling from 1.00x upward.</li>
+                        <li>Place up to <strong>TWO independent bets</strong> side-by-side before launch!</li>
+                        <li>Tap <strong>CASH OUT</strong> at any moment to secure your earnings before the plane crashes.</li>
+                        <li>If the plane crashes before you cash out, your stake is lost. Simple, fast, and highly exciting!</li>
                     </ol>
                 </div>
 
-                <!-- Internal Game Bet History Box (Beautiful Centered Popup Modal Overlay) -->
-                <div id="saInternalHistoryBox" style="display:none; position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; height:100%; background:rgba(10,11,15,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
-                    <div style="background:#1e212a; width:92%; max-width:380px; border:2px solid #59a2ff; border-radius:18px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,0.95); display:flex; flex-direction:column; max-height:80%;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px">
-                            <strong style="font-size:14px; color:#59a2ff; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-clock-rotate-left"></i> Game Spin History</strong>
-                            <span onclick="window.toggleSaInternalHistory()" style="font-size:11px; color:#fff; cursor:pointer; background:#ff4b5c; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-xmark"></i></span>
+                <!-- Internal Round History Modal -->
+                <div id="saInternalHistoryBox" style="display:none; position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; height:100%; background:rgba(6,3,12,0.92); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
+                    <div style="background:#11091c; width:92%; max-width:380px; border:2px solid #ffd700; border-radius:18px; padding:20px; box-shadow:0 15px 40px rgba(0,0,0,0.8); display:flex; flex-direction:column; max-height:80%;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255, 215, 0, 0.15); padding-bottom:12px">
+                            <strong style="font-size:14px; color:#ffd700; display:flex; align-items:center; gap:8px; font-family:'Space Grotesk'; text-transform:uppercase;"><i class="fa-solid fa-clock-rotate-left"></i> ROUND HISTORY LOG</strong>
+                            <span onclick="window.toggleSaInternalHistory()" style="font-size:11px; color:#11091c; cursor:pointer; background:#ffd700; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800;"><i class="fa-solid fa-xmark"></i></span>
                         </div>
-                        <!-- History container -->
-                        <div id="saInternalHistoryList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex-grow:1; max-height:300px; padding-right:4px;">
-                            <p style="text-align:center; padding:12px; font-size:11px; color:var(--muted);">No spins yet. Let's play!</p>
+                        <div id="saInternalHistoryList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex-grow:1; max-height:320px; padding-right:4px;">
+                            <p style="text-align:center; padding:12px; font-size:11px; color:#a1a1aa; font-family:'JetBrains Mono';">No flight logs recorded in this session yet.</p>
                         </div>
                         <div style="margin-top:16px;">
-                            <button onclick="window.toggleSaInternalHistory()" style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border:1px solid rgba(89,162,255,0.3); color:#fff; font-size:13px; font-weight:700; height:40px; border-radius:10px; cursor:pointer; width:100%;">Close History</button>
+                            <button onclick="window.toggleSaInternalHistory()" style="background:linear-gradient(135deg, #251642 0%, #0c0817 100%); border:1px solid #ffd700; color:#ffd700; font-size:13px; font-weight:800; height:42px; border-radius:10px; cursor:pointer; width:100%; text-transform:uppercase; tracking:0.5px; transition:0.2s;">CLOSE HISTORY</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Combo Multiplier Meter -->
-                <div style="display:flex; justify-content:center; gap:8px; margin-bottom:16px" id="saComboMeter">
-                    <div class="combo-pill" id="saCombo_1" style="flex:1; background:linear-gradient(to right, #ff9f1c, #ffbf47); padding:8px; border-radius:10px; font-weight:900; color:#13151b; font-size:13px">x1</div>
-                    <div class="combo-pill" id="saCombo_2" style="flex:1; background:#1e212a; border:1px solid #ff9f1c; padding:8px; border-radius:10px; font-weight:900; color:#ff9f1c; font-size:13px">x2</div>
-                    <div class="combo-pill" id="saCombo_3" style="flex:1; background:#1e212a; border:1px solid #ff9f1c; padding:8px; border-radius:10px; font-weight:900; color:#ff9f1c; font-size:13px">x3</div>
-                    <div class="combo-pill" id="saCombo_5" style="flex:1; background:#1e212a; border:1px solid #ff9f1c; padding:8px; border-radius:10px; font-weight:900; color:#ff9f1c; font-size:13px">x5</div>
-                </div>
-
-                <!-- 4-Reel Column Grid Container (4x4) -->
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; background:radial-gradient(circle, #0e2a1b 0%, #05140c 100%); padding:10px; border-radius:14px; margin-bottom:16px; border:3px solid #ffbf47; box-shadow: 0 0 20px rgba(255, 191, 71, 0.25), inset 0 0 12px rgba(0,0,0,0.8); overflow: hidden; position: relative;" id="saGrid">
-                    <!-- Column 0 -->
-                    <div id="saReel_0" style="display:-webkit-box; display:flex; -webkit-box-orient:vertical; -webkit-box-direction:normal; flex-direction:column; gap:6px; border-right: 1px dashed rgba(255, 191, 71, 0.15); padding-right: 3px; transition: transform 0.15s ease-out;">
-                        <div class="sa-cell" id="sa_0_0">A</div>
-                        <div class="sa-cell" id="sa_1_0">J</div>
-                        <div class="sa-cell" id="sa_2_0">Q</div>
-                        <div class="sa-cell" id="sa_3_0">K</div>
-                    </div>
-                    <!-- Column 1 -->
-                    <div id="saReel_1" style="display:-webkit-box; display:flex; -webkit-box-orient:vertical; -webkit-box-direction:normal; flex-direction:column; gap:6px; border-right: 1px dashed rgba(255, 191, 71, 0.15); padding: 0 3px; transition: transform 0.15s ease-out;">
-                        <div class="sa-cell" id="sa_0_1">K</div>
-                        <div class="sa-cell" id="sa_1_1">10</div>
-                        <div class="sa-cell" id="sa_2_1">J</div>
-                        <div class="sa-cell" id="sa_3_1">Heart</div>
-                    </div>
-                    <!-- Column 2 -->
-                    <div id="saReel_2" style="display:-webkit-box; display:flex; -webkit-box-orient:vertical; -webkit-box-direction:normal; flex-direction:column; gap:6px; border-right: 1px dashed rgba(255, 191, 71, 0.15); padding: 0 3px; transition: transform 0.15s ease-out;">
-                        <div class="sa-cell" id="sa_0_2">Q</div>
-                        <div class="sa-cell" id="sa_1_2">A</div>
-                        <div class="sa-cell" id="sa_2_2">Joker</div>
-                        <div class="sa-cell" id="sa_3_2">Spade</div>
-                    </div>
-                    <!-- Column 3 -->
-                    <div id="saReel_3" style="display:-webkit-box; display:flex; -webkit-box-orient:vertical; -webkit-box-direction:normal; flex-direction:column; gap:6px; padding-left: 3px; transition: transform 0.15s ease-out;">
-                        <div class="sa-cell" id="sa_0_3">K</div>
-                        <div class="sa-cell" id="sa_1_3">J</div>
-                        <div class="sa-cell" id="sa_2_3">A</div>
-                        <div class="sa-cell" id="sa_3_3">Club</div>
-                    </div>
-                </div>
-
-                <!-- Spin Progress & Current Win Display -->
-                <div style="background:#1a1d27; border-radius:10px; padding:10px 14px; margin-bottom:16px; min-height:44px; display:flex; justify-content:space-between; align-items:center; font-size:13px; border:1px solid rgba(255,159,28,0.06)">
-                    <div style="color:var(--muted)">Current Win:</div>
-                    <div style="color:#00ffa3; font-weight:900; font-size:16px" id="saWinCount">৳0.00</div>
-                </div>
-
-                <!-- Betting & Play Controls -->
-                <div style="display:flex; flex-direction:column; gap:12px">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px">
-                        <div style="flex:1; text-align:left">
-                            <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px">Select Bet Size (৳)</div>
-                            <select id="saBetSelect" onchange="window.saveSaLocalBet()" style="width:100%; height:40px; background:#1e212a; color:#fff; border:1px solid var(--border); border-radius:8px; padding:0 8px; font-weight:700; margin-top:4px">
-                                <option value="1">1 BDT</option>
-                                <option value="2">2 BDT</option>
-                                <option value="3">3 BDT</option>
-                                <option value="5">5 BDT</option>
-                                <option value="8">8 BDT</option>
-                                <option value="10">10 BDT</option>
-                                <option value="20">20 BDT</option>
-                            </select>
-                        </div>
-
-                        <!-- Mute/Sound Button -->
-                        <button onclick="window.toggleSaAudio()" id="saSoundBtn" style="width:40px; height:40px; background:#1e212a; border:1px solid var(--border); border-radius:8px; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;" title="Toggle Sounds">
-                            <i class="fa-solid fa-volume-high"></i>
-                        </button>
+                <div id="saCrashGameContainer" style="display: flex; flex-direction: column; width: 100%;">
+                    <!-- Flight Radar Graph Wrapper (Strictly conforming to 180px height guidelines) -->
+                    <div style="height: 180px; background:#0e0919; border:2px solid #ffd700; border-radius:16px; margin-bottom:10px; position:relative; overflow:hidden; box-shadow: inset 0 0 25px rgba(0,0,0,0.9), 0 0 10px rgba(255, 215, 0, 0.15);" id="jdbFlightRadar">
                         
-                        <!-- Auto Spin Option -->
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px">
-                            <span style="font-size:9px; color:var(--muted); text-transform:uppercase">Auto</span>
-                            <label class="switch-modern" style="position:relative; display:inline-block; width:44px; height:24px;">
-                                <input type="checkbox" id="saAutoToggle" style="opacity:0; width:0; height:0" onchange="window.toggleSaAuto()">
-                                <span class="slide-round" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#3e4456; transition:0.3s; border-radius:24px;"></span>
-                            </label>
+                        <!-- Radar background line indicators -->
+                        <div style="position: absolute; width:100%; height:100%; opacity:0.1; background: repeating-linear-gradient(0deg, #ffd700, #ffd700 1px, transparent 1px, transparent 12px), repeating-linear-gradient(90deg, #ffd700, #ffd700 1px, transparent 1px, transparent 12px);"></div>
+                        
+                        <!-- SVG Flight Path Line -->
+                        <svg style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;" id="jdbFlightSvg">
+                            <!-- Curved dynamic path -->
+                            <path id="jdbFlightCurve" d="M 10 160 Q 30 150, 40 130" fill="none" stroke="#ffd700" stroke-width="4" stroke-linecap="round" style="filter: drop-shadow(0 0 6px #ffd700); display:none;"></path>
+                        </svg>
+
+                        <!-- Vector Golden Airplane Icon -->
+                        <div id="jdbAirplaneIcon" style="position: absolute; transform: translate(-50%, -50%) rotate(15deg); display: none; z-index: 10; pointer-events: none; filter: drop-shadow(0 0 8px #ffd700);">
+                            <i class="fa-solid fa-plane" style="color: #ffd700; font-size: 28px;"></i>
+                        </div>
+
+                        <!-- Dynamic LIVE Multiplier Glow Display -->
+                        <div style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none; text-align: center;">
+                            <div id="jdbLiveMultiplier" style="font-size: 40px; font-weight: 900; color: #ffd700; font-family:'Space Grotesk',sans-serif; text-shadow: 0 0 15px rgba(255,215,0,0.7), 0 2px 4px rgba(0,0,0,0.9); line-height:1;">1.00x</div>
+                            <div id="jdbGameStatusLabel" style="font-size: 10px; color: #a1a1aa; font-weight:800; letter-spacing:1px; margin-top:2px;">LAUNCHING SHORTLY</div>
+                        </div>
+
+                        <!-- 10s Countdown Overlay Dialog -->
+                        <div id="jdbCountdownOverlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(11,7,19,0.8); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                            <span style="color:#ffd700; font-size:12px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; font-family:'JetBrains Mono';">Next round launching in</span>
+                            <span id="jdbCountdownTimer" style="color:#ffd700; font-size:38px; font-weight:900; font-family:'Space Grotesk'; margin: 4px 0;">10.0s</span>
+                            <!-- Custom CSS loader progress bar -->
+                            <div style="width:140px; height:4px; background:rgba(255,215,0,0.15); border-radius:2px; overflow:hidden;">
+                                <div id="jdbCountdownBar" style="width:100%; height:100%; background:#ffd700; transform-origin:left; transition: transform 0.1s linear;"></div>
+                            </div>
+                        </div>
+
+                        <!-- crashed explosion overlay red shaking overlay -->
+                        <div id="jdbCrashOverlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(239,68,68,0.22); border: 2px solid #ef4444; border-radius:14px; z-index:35; display:none; flex-direction:column; align-items:center; justify-content:center; animation: saPulse 0.15s infinite;">
+                            <span style="color:#ffffff; font-size:14px; font-weight:900; letter-spacing:2px; text-transform:uppercase; text-shadow:0 0 10px #ef4444, 0 1px 2px #000; font-family:'Space Grotesk';">FLEW AWAY</span>
+                            <span id="jdbCrashedMultiplier" style="color:#ffffff; font-size:34px; font-weight:900; font-family:'Space Grotesk'; text-shadow:0 0 12px #ef4444, 0 2px 4px #000;">CRASHED @ 1.25x</span>
                         </div>
                     </div>
 
-                    <!-- SPIN BUTTON -->
-                    <button onclick="window.spinSuperAce()" id="saSpinBtn" style="background:linear-gradient(135deg, #ff9f1c 0%, #ff5e62 100%); color:white; font-size:15px; font-weight:900; height:46px; border-radius:12px; border:none; cursor:pointer; width:100%; box-shadow:0 6px 18px rgba(255,94,98,0.2); display:flex; justify-content:center; align-items:center; gap:8px">
-                        <i class="fa-solid fa-rotate"></i> SPIN NOW
-                    </button>
+                    <!-- Live Round History Log Pills (Displays previous outcomes) -->
+                    <div style="display: flex; gap: 6px; overflow-x: auto; padding: 4px 0px 8px 0px; margin-bottom: 8px; justify-content: flex-start; min-height: 28px;" id="jdbHistoryDots">
+                        <!-- Dynamic dots will render here -->
+                    </div>
+
+                    <!-- Twin Dual-Betting Controllers Container (Side-By-Side layout) -->
+                    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:10px;" id="jdbTwinControllers">
+                        
+                        <!-- Controller 1 Card -->
+                        <div style="background:#11091c; border:1px solid rgba(255, 215, 0, 0.15); border-radius:14px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                            <div style="font-size:10px; font-weight:800; color:#ffd700; text-align:left; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px; font-family:'Space Grotesk';">
+                                <span style="background:rgba(255,215,0,0.1); width:14px; height:14px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; border:0.5px solid #ffd700;">1</span> DUAL BET ONE
+                            </div>
+                            
+                            <!-- Stake Selector -->
+                            <div style="background:rgba(255,255,255,0.02); border:1.5px solid rgba(255, 215, 0, 0.1); border-radius:10px; padding:6px; margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-size:9px; color:#a1a1aa; text-transform:uppercase;">Stake BDT</span>
+                                    <span id="jdbStakeVal1" style="font-size:12px; font-weight:900; color:#ffd700; font-family:'JetBrains Mono';">10.00</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; gap:2px;">
+                                    <button onclick="window.adjustJdbStake(1, -1)" style="flex:1; height:24px; background:rgba(255,215,0,0.08); border:0.5px solid rgba(255,215,0,0.3); border-radius:6px; color:#ffd700; font-size:13px; font-weight:900; cursor:pointer;">-</button>
+                                    <button onclick="window.adjustJdbStake(1, 1)" style="flex:1; height:24px; background:rgba(255,215,0,0.08); border:0.5px solid rgba(255,215,0,0.3); border-radius:6px; color:#ffd700; font-size:13px; font-weight:900; cursor:pointer;">+</button>
+                                </div>
+                                <!-- Quick-stake tags -->
+                                <div style="display:flex; justify-content:space-between; gap:2px; margin-top:4px;">
+                                    <button onclick="window.setJdbStakeQuick(1, 10)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">10</button>
+                                    <button onclick="window.setJdbStakeQuick(1, 20)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">20</button>
+                                    <button onclick="window.setJdbStakeQuick(1, 50)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">50</button>
+                                    <button onclick="window.setJdbStakeQuick(1, 100)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">100</button>
+                                </div>
+                            </div>
+
+                            <!-- Auto cashout configuration -->
+                            <div style="background:rgba(0,0,0,0.2); border-radius:10px; padding:6px; margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:9px; color:#a1a1aa; text-transform:uppercase;">Auto Cashout</span>
+                                    <input id="jdbAutoCashoutInput1" type="text" placeholder="No limit" value="2.0" oninput="window.updateJdbPotentialWin(1)" style="width:58px; height:20px; background:#0e0618; border:1px solid rgba(255,215,0,0.2); border-radius:6px; color:#ffd700; text-align:center; font-size:10px; font-weight:800; font-family:'JetBrains Mono'; outline:none;">
+                                </div>
+                            </div>
+
+                            <!-- Main Play Controller Action Button -->
+                            <button id="jdbActionButton1" onclick="window.triggerJdbAction(1)" style="background: linear-gradient(180deg, #2ebd59, #1b853c); color:white; border:none; padding:10px; border-radius:12px; font-size:11px; font-weight:900; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(27,133,60,0.3); transition: transform 0.1s; text-transform:uppercase; line-height:1.2; display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                <span id="jdbActionBtnLabel1" style="font-size:11px;">PLACE BET</span>
+                                <span id="jdbActionBtnWin1" style="font-size:8px; opacity:0.9; font-weight:600;">P.Win: ৳20.00</span>
+                            </button>
+                        </div>
+
+                        <!-- Controller 2 Card -->
+                        <div style="background:#11091c; border:1px solid rgba(255, 215, 0, 0.15); border-radius:14px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                            <div style="font-size:10px; font-weight:800; color:#ffd700; text-align:left; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px; font-family:'Space Grotesk';">
+                                <span style="background:rgba(255,215,0,0.1); width:14px; height:14px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; border:0.5px solid #ffd700;">2</span> DUAL BET TWO
+                            </div>
+                            
+                            <!-- Stake Selector -->
+                            <div style="background:rgba(255,255,255,0.02); border:1.5px solid rgba(255, 215, 0, 0.1); border-radius:10px; padding:6px; margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                    <span style="font-size:9px; color:#a1a1aa; text-transform:uppercase;">Stake BDT</span>
+                                    <span id="jdbStakeVal2" style="font-size:12px; font-weight:900; color:#ffd700; font-family:'JetBrains Mono';">10.00</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; gap:2px;">
+                                    <button onclick="window.adjustJdbStake(2, -1)" style="flex:1; height:24px; background:rgba(255,215,0,0.08); border:0.5px solid rgba(255,215,0,0.3); border-radius:6px; color:#ffd700; font-size:13px; font-weight:900; cursor:pointer;">-</button>
+                                    <button onclick="window.adjustJdbStake(2, 1)" style="flex:1; height:24px; background:rgba(255,215,0,0.08); border:0.5px solid rgba(255,215,0,0.3); border-radius:6px; color:#ffd700; font-size:13px; font-weight:900; cursor:pointer;">+</button>
+                                </div>
+                                <!-- Quick-stake tags -->
+                                <div style="display:flex; justify-content:space-between; gap:2px; margin-top:4px;">
+                                    <button onclick="window.setJdbStakeQuick(2, 10)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">10</button>
+                                    <button onclick="window.setJdbStakeQuick(2, 20)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">20</button>
+                                    <button onclick="window.setJdbStakeQuick(2, 50)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">50</button>
+                                    <button onclick="window.setJdbStakeQuick(2, 100)" style="flex:1; font-size:8px; padding:2px 0; background:rgba(255,255,255,0.04); border:none; border-radius:4px; color:#ffd700; font-weight:700; cursor:pointer;">100</button>
+                                </div>
+                            </div>
+
+                            <!-- Auto cashout configuration -->
+                            <div style="background:rgba(0,0,0,0.2); border-radius:10px; padding:6px; margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:9px; color:#a1a1aa; text-transform:uppercase;">Auto Cashout</span>
+                                    <input id="jdbAutoCashoutInput2" type="text" placeholder="No limit" value="1.5" oninput="window.updateJdbPotentialWin(2)" style="width:58px; height:20px; background:#0e0618; border:1px solid rgba(255,215,0,0.2); border-radius:6px; color:#ffd700; text-align:center; font-size:10px; font-weight:800; font-family:'JetBrains Mono'; outline:none;">
+                                </div>
+                            </div>
+
+                            <!-- Main Play Controller Action Button -->
+                            <button id="jdbActionButton2" onclick="window.triggerJdbAction(2)" style="background: linear-gradient(180deg, #2ebd59, #1b853c); color:white; border:none; padding:10px; border-radius:12px; font-size:11px; font-weight:900; cursor:pointer; width:100%; box-shadow: 0 4px 10px rgba(27,133,60,0.3); transition: transform 0.1s; text-transform:uppercase; line-height:1.2; display:flex; flex-direction:column; align-items:center; gap:2px;">
+                                <span id="jdbActionBtnLabel2" style="font-size:11px;">PLACE BET</span>
+                                <span id="jdbActionBtnWin2" style="font-size:8px; opacity:0.9; font-weight:600;">P.Win: ৳15.00</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- (Slot Section Container) JDB Super Ace slots content space -->
+                <div id="saSlotGameContainer" style="display: none; flex-direction: column; width: 100%;">
+                    <!-- Multiplier Track JILI indicator -->
+                    <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; background: rgba(0,0,0,0.4); padding: 6px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.15);">
+                        <div id="saSlotMult1" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: #ff9f1c; color: #000; border: 1px solid #ff9f1c; transition: 0.2s;">x1</div>
+                        <div id="saSlotMult2" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,160,0,0.1); transition: 0.2s;">x2</div>
+                        <div id="saSlotMult3" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,160,0,0.1); transition: 0.2s;">x3</div>
+                        <div id="saSlotMult4" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,160,0,0.1); transition: 0.2s;">x5</div>
+                    </div>
+
+                    <!-- The 5x3 Grid Board -->
+                    <div style="background: radial-gradient(circle at 50% 50%, #201735 0%, #0c0817 100%); border: 2.5px solid #ff9f1c; border-radius: 16px; padding: 6px; margin-bottom: 10px; position: relative; box-shadow: 0 8px 30px rgba(0,0,0,0.8), inset 0 0 25px rgba(255,159,28,0.05); overflow: hidden;">
+                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;" id="saSlotGrid">
+                            <!-- Dynamic cell items will render here: 15 cells (3 rows x 5 cols) -->
+                        </div>
+                    </div>
+
+                    <!-- Controls Area -->
+                    <div style="background: #11091c; border: 1px solid rgba(255,159,28,0.15); border-radius: 14px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                        <!-- Active Stake selector -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 8px;">
+                            <span style="font-size: 10px; color: #a1a1aa; font-weight: bold; text-transform: uppercase;">Bet BDT</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button onclick="window.adjustSaSlotBet(-1)" style="flex: none; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,159,28,0.1); border: 1px solid rgba(255,159,28,0.3); color: #ff9f1c; font-weight: 900; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
+                                <span id="saSlotBetVal" style="font-size: 14px; font-weight: 950; color: #ff9f1c; font-family: 'JetBrains Mono', monospace; min-width: 44px; text-align: center;">10.00</span>
+                                <button onclick="window.adjustSaSlotBet(1)" style="flex: none; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,159,28,0.1); border: 1px solid rgba(255,159,28,0.3); color: #ff9f1c; font-weight: 900; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Bet steps quick selectors -->
+                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 8px;" id="saSlotQuickBets">
+                            <!-- Dynamic quick bet buttons from config.betSteps -->
+                        </div>
+
+                        <!-- Spin action trigger -->
+                        <div style="display: flex; gap: 8px;">
+                            <button id="saSlotSpinBtn" onclick="window.triggerSaSlotSpin()" style="flex: 2; height: 44px; background: linear-gradient(180deg, #ff9f1c, #d97706); color: #000; border: none; border-radius: 10px; font-size: 13px; font-weight: 950; cursor: pointer; box-shadow: 0 4px 12px rgba(255,159,28,0.3); transition: transform 0.1s; text-transform: uppercase; letter-spacing: 0.5px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;">
+                                <span>SPIN SLOT</span>
+                                <span id="saSlotSpinSub" style="font-size: 7.5px; font-weight: 700; opacity: 0.8;">TAP TO SPIN</span>
+                            </button>
+                            <button id="saSlotAutoBtn" onclick="window.toggleSaSlotAuto()" style="flex: 1; height: 44px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,159,28,0.15); border-radius: 10px; color: #ff9f1c; font-size: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;">
+                                <i class="fa-solid fa-redo" style="font-size: 11px;" id="saSlotAutoIcon"></i>
+                                <span id="saSlotAutoLabel" style="font-size: 8px;">AUTO: OFF</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Audio Context warning element kept small & muted -->
+                <div style="font-size:8px; color:rgba(255,255,255,0.3); text-align:center; padding:2px;" id="jdbMuteTrigger">
+                    Sound active via browser synthesis engine. Multipliers seed determined with RTP protocol.
                 </div>
             </div>
         </div>
@@ -8718,6 +8872,10 @@ async function renderEarnings() {
     if(!list || !auth.currentUser) return;
     list.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">Loading history...</p>';
     
+    if (!window.saSessionDetailData) {
+        window.saSessionDetailData = {};
+    }
+    
     try {
         const q = query(collection(db, 'transactions'), where('userId', '==', auth.currentUser.uid));
         const snap = await getDocs(q);
@@ -8726,10 +8884,11 @@ async function renderEarnings() {
         // Combine with legacy earnings if any (optional but good for transition)
         const earningsSnap = await getDocs(query(collection(db, 'earnings'), where('userId', '==', auth.currentUser.uid)));
         
+        // Filter out single game spin entries, only display consolidated game spin sessions
         const allDocs = [
             ...snap.docs.map(d => ({id: d.id, ...d.data(), source_col: 'transactions'})),
             ...earningsSnap.docs.map(d => ({id: d.id, ...d.data(), source_col: 'earnings'}))
-        ].filter(d => d.type !== 'deposit' && d.type !== 'withdraw' && d.type !== 'withdrawal' && d.type !== 'manual_deposit' && d.type !== 'manual_withdrawal');
+        ].filter(d => d.type !== 'deposit' && d.type !== 'withdraw' && d.type !== 'withdrawal' && d.type !== 'manual_deposit' && d.type !== 'manual_withdrawal' && d.type !== 'game_spin');
 
         // Deduplicate overlapping entries (if any) and normalize createdAt
         const uniqueDocs = [];
@@ -8753,13 +8912,36 @@ async function renderEarnings() {
         
         uniqueDocs.forEach(d => {
             const amountNum = Number(d.amount || 0);
-            const isAdded = amountNum > 0 || d.type === 'earning' || d.source_col === 'earnings';
+            const isAdded = amountNum >= 0 || d.type === 'earning' || d.source_col === 'earnings';
             const displayAmount = Math.abs(amountNum).toFixed(2);
             
             const color = isAdded ? '#2E7D32' : '#D32F2F'; // Green for added (+), Red for spent (-)
             const prefix = isAdded ? '+' : '-';
-            const icon = isAdded ? 'fa-arrow-up-right' : 'fa-cart-shopping';
+            let icon = isAdded ? 'fa-arrow-up-right' : 'fa-cart-shopping';
+            
+            let onClickAttr = '';
+            let extraStyle = '';
+            
             let label = d.packageName ? `Purchase: ${d.packageName}` : (d.source || d.description);
+            
+            // Handle consolidated game session records elegantly
+            if (d.type === 'game_spin_session') {
+                window.saSessionDetailData[d.id] = d;
+                onClickAttr = `onclick="window.showGameSessionDetails('${d.id}')"`;
+                extraStyle = 'cursor:pointer; transition: transform 0.15s ease, background-color 0.15s ease;';
+                icon = 'fa-gamepad';
+                
+                let totalBetVal = d.totalBet;
+                if (totalBetVal === undefined && Array.isArray(d.spins)) {
+                    totalBetVal = d.spins.reduce((s, spin) => s + (Number(spin.betAmount) || 0), 0);
+                } else if (totalBetVal === undefined) {
+                    totalBetVal = 0;
+                }
+                
+                label = d.gameName || d.source || 'Super Ace';
+                d.description = `Total Bet: ৳${Number(totalBetVal).toFixed(2)}`;
+            }
+            
             if (!label) {
                 if (d.type === 'purchase' || d.productType === 'robot') {
                     label = d.productName ? `Robot Purchased: ${d.productName}` : 'Robot Purchase';
@@ -8779,7 +8961,7 @@ async function renderEarnings() {
             });
 
             list.innerHTML += `
-                <div class="card" style="margin-bottom:10px; padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:3px solid ${color}">
+                <div class="card" ${onClickAttr} style="margin-bottom:10px; padding:15px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid ${color}; ${extraStyle}" onmouseover="this.style.transform='scale(1.02)'; this.style.backgroundColor='rgba(255,255,255,0.02)';" onmouseout="this.style.transform='scale(1)'; this.style.backgroundColor='var(--card)';">
                     <div style="display:flex; align-items:center; gap:12px">
                         <div style="width:35px; height:35px; background:var(--bg); border-radius:50%; display:flex; align-items:center; justify-content:center; color:${color}">
                             <i class="fa-solid ${icon}"></i>
@@ -8799,6 +8981,93 @@ async function renderEarnings() {
         list.innerHTML = '<p style="text-align:center;padding:20px;color:var(--danger)">Error loading history.</p>';
     }
 }
+
+window.showGameSessionDetails = (id) => {
+    const docData = window.saSessionDetailData ? window.saSessionDetailData[id] : null;
+    if (!docData) return;
+    
+    const modal = document.getElementById('gameSessionDetailModal');
+    if (!modal) return;
+    
+    const titleEl = document.getElementById('gsModalTitle');
+    const statsEl = document.getElementById('gsModalStats');
+    const listEl = document.getElementById('gsModalSpinsList');
+    
+    if (titleEl) {
+        const gameDisplay = docData.gameName || docData.source || 'Super Ace';
+        titleEl.innerHTML = `<i class="fa-solid fa-gamepad" style="color:var(--primary)"></i> ${gameDisplay} Session Breakdown`;
+    }
+    
+    const amount = Number(docData.amount || 0);
+    const win = amount >= 0;
+    const amountColor = win ? '#2E7D32' : '#D32F2F';
+    const amountPrefix = win ? '+' : '-';
+    
+    let totalBet = docData.totalBet;
+    let spins = docData.spins || [];
+    if (totalBet === undefined && Array.isArray(spins)) {
+        totalBet = spins.reduce((sum, s) => sum + (Number(s.betAmount) || 0), 0);
+    } else if (totalBet === undefined) {
+        totalBet = 0;
+    }
+    
+    const totalWin = totalBet + amount;
+    
+    if (statsEl) {
+        statsEl.innerHTML = `
+            <div style="background:var(--bg); padding:12px; border-radius:12px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; margin-bottom:15px; border:1px solid var(--border)">
+                <div>
+                    <span style="font-size:10px; color:var(--muted); display:block">Total Bet</span>
+                    <strong style="font-size:12px; color:var(--text)">৳${Number(totalBet).toFixed(2)}</strong>
+                </div>
+                <div>
+                    <span style="font-size:10px; color:var(--muted); display:block">Total Win</span>
+                    <strong style="font-size:12px; color:var(--text)">৳${Number(totalWin).toFixed(2)}</strong>
+                </div>
+                <div>
+                    <span style="font-size:10px; color:var(--muted); display:block">Net P/L</span>
+                    <strong style="font-size:12px; color:${amountColor}">${amountPrefix}৳${Math.abs(amount).toFixed(2)}</strong>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (listEl) {
+        listEl.innerHTML = '';
+        if (!Array.isArray(spins) || spins.length === 0) {
+            listEl.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted); font-size:12px">No activity logs found inside this session.</p>';
+        } else {
+            spins.forEach((spin, idx) => {
+                const sBet = Number(spin.betAmount || 0);
+                const sWin = Number(spin.winAmount || 0);
+                const sMult = Number(spin.multiplier || 0);
+                const sNet = sWin - sBet;
+                const isSpinWin = sWin > 0;
+                const spinColor = isSpinWin ? '#2E7D32' : 'var(--muted)';
+                const spinNetColor = sNet >= 0 ? '#2E7D32' : '#D32F2F';
+                const spinNetPrefix = sNet >= 0 ? '+' : '-';
+                
+                const timeStr = spin.timestamp ? new Date(spin.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : `Bet #${idx+1}`;
+                
+                const item = document.createElement('div');
+                item.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:var(--bg); padding:10px; border-radius:10px; border:1px solid var(--border); margin-bottom:0";
+                item.innerHTML = `
+                    <div>
+                        <div style="font-size:12px; font-weight:700; color:var(--text)">Bet #${idx+1} <span style="font-size:10px; font-weight:normal; color:var(--muted); margin-left:6px">${timeStr}</span></div>
+                        <div style="font-size:10px; color:var(--muted); margin-top:2px">Bet: ৳${sBet.toFixed(2)} • Multiplier: ${sMult.toFixed(2)}x</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:12px; font-weight:700; color:${spinNetColor}">${spinNetPrefix}৳${Math.abs(sNet).toFixed(2)}</div>
+                        <div style="font-size:10px; color:${spinColor}">${isSpinWin ? `Win: ৳${sWin.toFixed(2)}` : 'Lose'}</div>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+    }
+    
+    modal.classList.add('show');
+};
 
 async function startWork(docId, daily) {
     if (!auth.currentUser) return;
@@ -9463,12 +9732,47 @@ window.copyNumber = () => {
     showToast('success', 'Copied', 'Payment number copied to clipboard.');
 };
 
-// Simple Earn / Super Ace Logic
+// Joking / JDB Cash Flight - Airplane Crash Game Client Engine
 let saAudioCtx = null;
 window.isSaMuted = false;
-window.isSaSpinning = false;
-window.saAutoActive = false;
+window.isSaSpinning = false; // Compat key representing active flight running
+window.saAutoActive = false; // Stubs for old slot loop
 
+// State Variables for JDB Airplane Game
+window.jdbFlightStatus = 'waiting'; // 'waiting', 'countdown', 'flying', 'crashed'
+window.jdbFlightMultiplier = 1.00;
+window.jdbCrashPoint = 1.00;
+window.jdbCountdownTime = 10.0;
+window.jdbPreviousRounds = [1.25, 3.42, 1.05, 12.80, 2.10, 1.15, 6.40, 1.50]; // Horizontal outcome pills
+window.jdbStakes = { 1: 10, 2: 10 }; // Live BDT stakes per controller
+window.jdbAutoCashouts = { 1: 2.0, 2: 1.5 }; // Auto cashout multipliers (blank or float)
+window.jdbActiveBets = {
+    1: null, // null or { stake: 10, autoCashout: 2.0, cashedOut: false, winAmount: 0 }
+    2: null
+};
+
+// Internal game logs for current session history dialog
+window.jdbSessionHistoryLogs = []; 
+
+// 15-Minute background heartbeat auto-sync interval
+window.jdbHeartbeatIntervalId = null;
+
+window.saSessionLogs = [];
+window.saSessionBalance = 0;
+window.saSessionStartBalance = 0;
+window.saFirebaseSyncNeeded = false;
+
+window.updateOverallBalanceHTML = (newBalance) => {
+    if (window.currentUserData) {
+        window.currentUserData.mainBalance = Number(newBalance);
+        window.currentUserData.balance = Number(newBalance);
+    }
+    if (typeof updateHeader === 'function') {
+        updateHeader();
+    }
+};
+
+// Sound synthesizer using Web Audio API for high-end arcade vibes
 function playSaSynthSound(type) {
     if (window.isSaMuted) return;
     try {
@@ -9485,42 +9789,48 @@ function playSaSynthSound(type) {
         gain.connect(saAudioCtx.destination);
         
         const now = saAudioCtx.currentTime;
-        if (type === 'spin') {
+        if (type === 'spin' || type === 'tick') {
+            // Jet climbing whine sound
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
-            gain.gain.setValueAtTime(0.04, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            const f = 100 + (window.jdbFlightMultiplier || 1.0) * 8;
+            osc.frequency.setValueAtTime(f, now);
+            osc.frequency.exponentialRampToValueAtTime(f + 20, now + 0.05);
+            gain.gain.setValueAtTime(0.015, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
             osc.start(now);
-            osc.stop(now + 0.1);
-        } else if (type === 'hit') {
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(440, now);
-            osc.frequency.setValueAtTime(659.25, now + 0.1);
-            osc.frequency.setValueAtTime(880, now + 0.2);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-        } else if (type === 'bigwin') {
+            osc.stop(now + 0.05);
+        } else if (type === 'hit' || type === 'cashout') {
+            // High chiming coin/cashout bells
             osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now); // D5 chord cascading
+            osc.frequency.setValueAtTime(880, now + 0.08); // A5
+            osc.frequency.setValueAtTime(1174.66, now + 0.16); // D6
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } else if (type === 'bigwin') {
+            // Big hit melody
+            osc.type = 'triangle';
             osc.frequency.setValueAtTime(523.25, now);
-            osc.frequency.exponentialRampToValueAtTime(1046.5, now + 0.5);
-            gain.gain.setValueAtTime(0.12, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.frequency.setValueAtTime(659.25, now + 0.15);
+            osc.frequency.setValueAtTime(783.99, now + 0.3);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
             osc.start(now);
-            osc.stop(now + 0.5);
-        } else if (type === 'lose') {
+            osc.stop(now + 0.6);
+        } else if (type === 'lose' || type === 'crash') {
+            // Jet engine exploding crash rumble
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(180, now);
-            osc.frequency.linearRampToValueAtTime(90, now + 0.2);
-            gain.gain.setValueAtTime(0.03, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.linearRampToValueAtTime(30, now + 0.4);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
             osc.start(now);
-            osc.stop(now + 0.2);
+            osc.stop(now + 0.4);
         }
     } catch(err) {
-        console.warn("Web Audio sound failure:", err);
+        console.warn("Audio Context synth failure:", err);
     }
 }
 
@@ -9531,10 +9841,68 @@ window.showSuperAceRules = () => {
     }
 };
 
-window.saveSaLocalBet = () => {
-    const bet = document.getElementById('saBetSelect').value;
-    localStorage.setItem('sa_saved_bet', bet);
+window.saDelay = (ms) => new Promise(res => setTimeout(res, ms));
+
+// Custom dynamic floating banner overlay inside Slot Area to display wins and matches
+window.showFloatingSlotBanner = (message, isBigWin = false) => {
+    const grid = document.getElementById('saSlotGrid');
+    if (!grid) return;
+    
+    // Create or locate slot banner elements
+    let banner = document.getElementById('saSlotBannerOverlay');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'saSlotBannerOverlay';
+        banner.style.position = 'absolute';
+        banner.style.top = '50%';
+        banner.style.left = '50%';
+        banner.style.transform = 'translate(-50%, -50%) scale(0.9)';
+        banner.style.zIndex = '100';
+        banner.style.boxSizing = 'border-box';
+        banner.style.borderRadius = '12px';
+        banner.style.color = '#fff';
+        banner.style.fontFamily = "'Space Grotesk', sans-serif";
+        banner.style.fontWeight = '950';
+        banner.style.textAlign = 'center';
+        banner.style.pointerEvents = 'none';
+        banner.style.transition = 'all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.25)';
+        banner.style.opacity = '0';
+        grid.parentNode.appendChild(banner);
+    }
+    
+    // Style depending on win significance
+    if (isBigWin) {
+        banner.style.background = 'linear-gradient(135deg, #b5179e 0%, #7209b7 50%, #3f37c9 100%)';
+        banner.style.border = '3px solid #ff9f1c';
+        banner.style.boxShadow = '0 0 35px #ff9f1c, 0 10px 30px rgba(0,0,0,0.8)';
+        banner.style.padding = '14px 20px';
+        banner.style.fontSize = '18px';
+        banner.style.animation = 'saPulse 0.4s ease infinite alternate';
+    } else {
+        banner.style.background = 'rgba(11, 7, 19, 0.95)';
+        banner.style.border = '2px solid #ff9f1c';
+        banner.style.boxShadow = '0 8px 25px rgba(0,0,0,0.7)';
+        banner.style.padding = '8px 14px';
+        banner.style.fontSize = '13px';
+        banner.style.animation = 'none';
+    }
+    
+    banner.innerHTML = message;
+    
+    // Animate display in
+    setTimeout(() => {
+        banner.style.opacity = '1';
+        banner.style.transform = 'translate(-50%, -50%) scale(1.1)';
+    }, 10);
+    
+    // Automatically fade out after 2.2 seconds
+    setTimeout(() => {
+        banner.style.opacity = '0';
+        banner.style.transform = 'translate(-50%, -50%) scale(0.8)';
+    }, 2200);
 };
+
+window.saveSaLocalBet = () => {};
 
 window.toggleSaAudio = () => {
     window.isSaMuted = !window.isSaMuted;
@@ -9544,73 +9912,913 @@ window.toggleSaAudio = () => {
     }
 };
 
-window.toggleSaAuto = () => {
-    window.saAutoActive = document.getElementById('saAutoToggle').checked;
-    if (window.saAutoActive && !window.isSaSpinning) {
-        window.spinSuperAce();
+window.toggleSaAuto = () => {};
+
+// Select slot bet Amount dynamically
+window.saSlotBetSteps = [1, 2, 3, 5, 8, 10, 20];
+window.saSlotBetIndex = 3; // Defaults to index of 5.00 BDT
+
+window.adjustSaSlotBet = (dir) => {
+    if (window.saIsSlotSpinning) return;
+    
+    window.saSlotBetIndex += dir;
+    if (window.saSlotBetIndex < 0) window.saSlotBetIndex = window.saSlotBetSteps.length - 1;
+    if (window.saSlotBetIndex >= window.saSlotBetSteps.length) window.saSlotBetIndex = 0;
+    
+    const betVal = window.saSlotBetSteps[window.saSlotBetIndex];
+    const betValEl = document.getElementById('saSlotBetVal');
+    if (betValEl) {
+        betValEl.innerText = Number(betVal).toFixed(2);
     }
+    
+    if (typeof playSaSynthSound === 'function') {
+        playSaSynthSound('tick');
+    }
+    window.updateSaSlotQuickBetsUI();
+};
+
+window.setSaSlotBet = (val) => {
+    if (window.saIsSlotSpinning) return;
+    
+    const idx = window.saSlotBetSteps.indexOf(val);
+    if (idx !== -1) {
+        window.saSlotBetIndex = idx;
+    }
+    
+    const betValEl = document.getElementById('saSlotBetVal');
+    if (betValEl) {
+        betValEl.innerText = Number(val).toFixed(2);
+    }
+    
+    if (typeof playSaSynthSound === 'function') {
+        playSaSynthSound('tick');
+    }
+    window.updateSaSlotQuickBetsUI();
+};
+
+window.toggleSaSlotAuto = () => {
+    window.saSlotAutoActive = !window.saSlotAutoActive;
+    window.updateSaSlotAutoUI();
+    
+    if (typeof playSaSynthSound === 'function') {
+        playSaSynthSound('tick');
+    }
+    
+    // Trigger first spin immediately on activation if not spinning
+    if (window.saSlotAutoActive && !window.saIsSlotSpinning) {
+        window.triggerSaSlotSpin();
+    }
+};
+
+window.updateSaSlotAutoUI = () => {
+    const btn = document.getElementById('saSlotAutoBtn');
+    const label = document.getElementById('saSlotAutoLabel');
+    const icon = document.getElementById('saSlotAutoIcon');
+    
+    if (!btn || !label || !icon) return;
+    
+    if (window.saSlotAutoActive) {
+        btn.style.boxShadow = '0 0 15px #ff9f1c';
+        btn.style.borderColor = '#ff9f1c';
+        btn.style.background = 'rgba(255,159,28,0.15)';
+        label.innerText = "AUTO: ON";
+        icon.className = "fa-solid fa-redo fa-spin";
+    } else {
+        btn.style.boxShadow = 'none';
+        btn.style.borderColor = 'rgba(255,159,28,0.15)';
+        btn.style.background = 'rgba(255,255,255,0.02)';
+        label.innerText = "AUTO: OFF";
+        icon.className = "fa-solid fa-redo";
+    }
+};
+
+window.updateSaSlotSpinUI = (spinning) => {
+    const spinBtn = document.getElementById('saSlotSpinBtn');
+    const subLabel = document.getElementById('saSlotSpinSub');
+    if (!spinBtn || !subLabel) return;
+    
+    if (spinning) {
+        spinBtn.style.opacity = '0.5';
+        spinBtn.style.transform = 'scale(0.96)';
+        spinBtn.style.filter = 'brightness(0.7)';
+        subLabel.innerText = "REELS ROLLING...";
+    } else {
+        spinBtn.style.opacity = '1';
+        spinBtn.style.transform = 'scale(1)';
+        spinBtn.style.filter = 'brightness(1)';
+        subLabel.innerText = "TAP TO SPIN";
+    }
+};
+
+window.updateSaSlotMultiplierTrack = (activeMult) => {
+    const m1 = document.getElementById('saSlotMult1');
+    const m2 = document.getElementById('saSlotMult2');
+    const m3 = document.getElementById('saSlotMult3');
+    const m4 = document.getElementById('saSlotMult4');
+    
+    const resetStyle = (el) => {
+        if (!el) return;
+        el.style.background = 'rgba(255,255,255,0.03)';
+        el.style.color = 'rgba(255,255,255,0.4)';
+        el.style.borderColor = 'rgba(255,160,0,0.1)';
+        el.style.boxShadow = 'none';
+    };
+    
+    const setActiveStyle = (el) => {
+        if (!el) return;
+        el.style.background = '#ff9f1c';
+        el.style.color = '#000';
+        el.style.borderColor = '#ffd700';
+        el.style.boxShadow = '0 0 12px #ff9f1c';
+    };
+    
+    resetStyle(m1);
+    resetStyle(m2);
+    resetStyle(m3);
+    resetStyle(m4);
+    
+    if (activeMult === 1) setActiveStyle(m1);
+    else if (activeMult === 2) setActiveStyle(m2);
+    else if (activeMult === 3) setActiveStyle(m3);
+    else if (activeMult === 5) setActiveStyle(m4);
+};
+
+window.getSaSlotCellHTML = (symbol, isGold) => {
+    let cellClass = "sa-cell";
+    let style = "box-sizing: border-box;";
+    let content = "";
+    
+    if (symbol === "Joker" || symbol === "Wild" || symbol === "pure Joker") {
+        cellClass += " sa-cell-wild";
+        content = `
+            <div style="font-size: 26px; line-height: 1; animation: starPulse 1.2s infinite; transform-origin: center;">🃏</div>
+            <span style="font-size: 8px; font-weight: 950; letter-spacing: 0.5px; margin-top: 2px;">WILD</span>
+        `;
+    } else if (symbol === "Scatter") {
+        cellClass += " sa-cell-scatter";
+        content = `
+            <div style="font-size: 26px; line-height: 1; animation: starPulse 1.2s infinite; transform-origin: center;">👑</div>
+            <span style="font-size: 8px; font-weight: 950; letter-spacing: 0.5px; margin-top: 2px; color: #fff;">SCATTER</span>
+        `;
+    } else {
+        if (isGold) {
+            cellClass += " sa-cell-gold";
+        } else {
+            const isRed = symbol === "A" || symbol === "Q" || symbol === "10";
+            cellClass += isRed ? " sa-cell-red" : " sa-cell-black";
+        }
+        
+        let suit = "♠";
+        if (symbol === "A") suit = "♥";
+        else if (symbol === "K") suit = "♣";
+        else if (symbol === "Q") suit = "♦";
+        else if (symbol === "J") suit = "♠";
+        else suit = "♥";
+        
+        content = `
+            <div style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 950; line-height: 1;">${symbol}</div>
+            <div style="font-size: 13px; line-height: 1; margin-top: 2px;">${suit}</div>
+        `;
+    }
+    
+    return `<div class="${cellClass}" style="${style}">${content}</div>`;
+};
+
+window.registerSaSlotHistoryItem = (bet, win, mult) => {
+    if (!window.jdbSessionHistoryLogs) {
+        window.jdbSessionHistoryLogs = [];
+    }
+    window.jdbSessionHistoryLogs.push({
+        gameName: 'Super Ace',
+        type: 'Spin',
+        stake: bet,
+        multiplier: mult,
+        win: win,
+        timestamp: new Date()
+    });
+};
+
+window.initializeSuperAceBoard = () => {
+    const gridEl = document.getElementById('saSlotGrid');
+    if (!gridEl) return;
+    gridEl.innerHTML = '';
+    
+    const initialSymbols = [
+        "A", "10", "K", "Q", "J",
+        "Joker", "Q", "A", "10", "K",
+        "K", "J", "Q", "A", "10"
+    ];
+    
+    for (let i = 0; i < 15; i++) {
+        const sym = initialSymbols[i];
+        const isGoldSymbol = (i % 4 === 1) && Math.random() > 0.65;
+        const cellHTML = window.getSaSlotCellHTML(sym, isGoldSymbol);
+        gridEl.insertAdjacentHTML('beforeend', cellHTML);
+    }
+};
+
+window.updateSaSlotQuickBetsUI = () => {
+    const parent = document.getElementById('saSlotQuickBets');
+    if (!parent) return;
+    
+    const steps = window.saSlotBetSteps || [1, 2, 3, 5, 8, 10, 20];
+    const currentBet = Number(document.getElementById('saSlotBetVal').innerText) || 10;
+    
+    parent.innerHTML = '';
+    
+    steps.slice(0, 5).forEach((step) => {
+        const isActive = Math.abs(currentBet - step) < 0.01;
+        const btn = document.createElement('button');
+        btn.onclick = () => window.setSaSlotBet(step);
+        btn.style.flex = '1';
+        btn.style.fontSize = '9px';
+        btn.style.fontFamily = "'JetBrains Mono', monospace";
+        btn.style.fontWeight = '900';
+        btn.style.padding = '4px 0';
+        btn.style.border = isActive ? '1px solid #ff9f1c' : '1px solid rgba(255,255,255,0.05)';
+        btn.style.borderRadius = '6px';
+        btn.style.color = isActive ? '#000' : '#ffd700';
+        btn.style.background = isActive ? '#ff9f1c' : 'rgba(255,255,255,0.02)';
+        btn.style.cursor = 'pointer';
+        btn.style.transition = 'all 0.15s';
+        btn.innerText = `৳${step}`;
+        parent.appendChild(btn);
+    });
 };
 
 window.loadSuperAceBetSelect = async () => {
     try {
         const response = await fetch('/api/game/super-ace/config');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.betSteps) {
-                const select = document.getElementById('saBetSelect');
-                if (select) {
-                    select.innerHTML = '';
-                    data.betSteps.forEach(bet => {
-                        const opt = document.createElement('option');
-                        opt.value = bet;
-                        opt.innerText = `${bet} BDT`;
-                        select.appendChild(opt);
-                    });
-                }
+        const data = await response.json();
+        
+        if (data && Array.isArray(data.betSteps)) {
+            window.saSlotBetSteps = data.betSteps;
+            const idx = window.saSlotBetSteps.indexOf(10);
+            window.saSlotBetIndex = idx !== -1 ? idx : 0;
+            
+            const betValEl = document.getElementById('saSlotBetVal');
+            if (betValEl) {
+                betValEl.innerText = Number(window.saSlotBetSteps[window.saSlotBetIndex]).toFixed(2);
             }
         }
-    } catch (e) {
-        console.error("Failed to load Super Ace configuration", e);
+    } catch (err) {
+        console.warn("Failed to retrieve Super Ace dynamic config - using local standards:", err);
+    }
+    window.updateSaSlotQuickBetsUI();
+};
+
+window.triggerSaSlotSpin = async () => {
+    if (window.saIsSlotSpinning) return;
+    
+    const betVal = Number(document.getElementById('saSlotBetVal').innerText) || 10;
+    
+    if (window.saSessionBalance < betVal) {
+        showToast('error', 'BALANCE UNSECURED', "You do not have enough BDT balance to perform this spin.");
+        window.saSlotAutoActive = false;
+        window.updateSaSlotAutoUI();
+        if (typeof playSaSynthSound === 'function') {
+            playSaSynthSound('lose');
+        }
+        return;
+    }
+    
+    window.saIsSlotSpinning = true;
+    window.updateSaSlotSpinUI(true);
+    
+    // Deduct local session balance
+    window.saSessionBalance = Number((window.saSessionBalance - betVal).toFixed(2));
+    const gameBalEl = document.getElementById('saGameBalance');
+    if (gameBalEl) {
+        gameBalEl.innerText = window.saSessionBalance.toFixed(2);
+    }
+    window.updateOverallBalanceHTML(window.saSessionBalance);
+    
+    if (typeof playSaSynthSound === 'function') {
+        playSaSynthSound('spin');
+    }
+    
+    // Visually roll the board columns
+    const cells = document.querySelectorAll('#saSlotGrid .sa-cell');
+    cells.forEach((cell, idx) => {
+        setTimeout(() => {
+            cell.className = "sa-cell sa-cell-gold sa-reel-spinning";
+            cell.innerHTML = `
+                <div style="font-size: 24px; animation: saSpin 0.3s linear infinite;">🎰</div>
+            `;
+        }, idx * 25);
+    });
+    
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/game/super-ace/spin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ betAmount: betVal })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || (data && data.success === false)) {
+            throw new Error(data.error || "Execution halted.");
+        }
+        
+        // Spin for a dynamic minimum duration
+        setTimeout(async () => {
+            await window.processSaSlotOutcomes(data, betVal);
+        }, 900);
+        
+    } catch(err) {
+        console.error("[Super Ace Slot Engine] Process error:", err);
+        showToast('error', 'SPIN ERROR', err.message || "Failed to finalize card spin.");
+        
+        // Refund subtracted local balance
+        window.saSessionBalance = Number((window.saSessionBalance + betVal).toFixed(2));
+        if (gameBalEl) gameBalEl.innerText = window.saSessionBalance.toFixed(2);
+        window.updateOverallBalanceHTML(window.saSessionBalance);
+        
+        window.initializeSuperAceBoard();
+        window.saIsSlotSpinning = false;
+        window.saSlotAutoActive = false;
+        window.updateSaSlotAutoUI();
+        window.updateSaSlotSpinUI(false);
     }
 };
 
-window.getSymbolHTML = (sym) => {
-    const cleanSym = String(sym || '').trim();
-    if (cleanSym === "Joker" || cleanSym === "Wild" || cleanSym === "Joker_Gold" || cleanSym === "WILD") {
-        return `
-            <div style="font-size: clamp(30px, 8vw, 44px); line-height: 1; animation: starPulse 1.2s infinite ease-in-out; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));">👑</div>
-            <div style="font-size: 9px; font-weight: 800; letter-spacing: 1px; margin-top: 2px; font-family: 'Outfit'; text-transform: uppercase;">WILD</div>
-        `;
+window.processSaSlotOutcomes = async (data, betVal) => {
+    const cascades = data.cascades || [];
+    const gridEl = document.getElementById('saSlotGrid');
+    if (!gridEl) return;
+    
+    let totalPayout = 0;
+    
+    for (let cascadeIdx = 0; cascadeIdx < cascades.length; cascadeIdx++) {
+        const cascade = cascades[cascadeIdx];
+        const grid = cascade.grid; // 3x5 layout
+        const winLines = cascade.winningLines || [];
+        const mult = cascade.currentMultiplier || 1;
+        const payout = cascade.payout || 0;
+        
+        totalPayout += payout;
+        
+        // Dynamic multiplier highlight track light feedback
+        window.updateSaSlotMultiplierTrack(mult);
+        
+        gridEl.innerHTML = '';
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 5; c++) {
+                const sym = grid[r][c];
+                const isGoldSymbol = (r + c + cascadeIdx) % 5 === 1 && Math.random() > 0.65;
+                const isWinningLine = winLines.includes(r);
+                
+                const cellHTML = window.getSaSlotCellHTML(sym, isGoldSymbol);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = cellHTML;
+                const cellNode = tempDiv.firstElementChild;
+                
+                if (isWinningLine) {
+                    cellNode.classList.add('sa-cell-winning');
+                } else if (cascadeIdx > 0) {
+                    cellNode.classList.add('sa-reel-stopping');
+                }
+                
+                gridEl.appendChild(cellNode);
+            }
+        }
+        
+        if (winLines.length > 0) {
+            if (typeof playSaSynthSound === 'function') {
+                playSaSynthSound('hit');
+            }
+            gridEl.classList.add('shake-active');
+            setTimeout(() => { gridEl.classList.remove('shake-active'); }, 150);
+            
+            window.showFloatingSlotBanner(`CASCADING WIN! +৳${payout.toFixed(2)}`);
+            await window.saDelay(1100);
+        } else {
+            if (typeof playSaSynthSound === 'function') {
+                playSaSynthSound('spin');
+            }
+            await window.saDelay(500);
+        }
     }
-    if (cleanSym === "Scatter" || cleanSym === "SCATTER") {
-        return `
-            <div style="font-size: clamp(30px, 8vw, 44px); line-height: 1; animation: starPulse 1.2s infinite ease-in-out; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));">★</div>
-            <div style="font-size: 8px; font-weight: 850; letter-spacing: 1.2px; margin-top: 2px; font-family: 'Outfit'; text-transform: uppercase;">SCATTER</div>
-        `;
+    
+    // Credit secure server calculated overall payout
+    const secureWin = Number(data.winAmount || 0);
+    window.saSessionBalance = Number((window.saSessionBalance + secureWin).toFixed(2));
+    
+    const gameBalEl = document.getElementById('saGameBalance');
+    if (gameBalEl) {
+        gameBalEl.innerText = window.saSessionBalance.toFixed(2);
+    }
+    window.updateOverallBalanceHTML(window.saSessionBalance);
+    
+    // Register details in logs
+    if (secureWin > 0) {
+        const ratio = secureWin / betVal;
+        
+        if (ratio >= 6.0) {
+            window.showFloatingSlotBanner(`🏆 EPIC BIG WIN!<br><span style="font-size:18px; color:#ff9f1c;">৳${secureWin.toFixed(2)}</span>`, true);
+            if (typeof playSaSynthSound === 'function') {
+                playSaSynthSound('bigwin');
+            }
+        } else {
+            window.showFloatingSlotBanner(`🍀 SUCCESS WIN!<br>৳${secureWin.toFixed(2)}`);
+            if (typeof playSaSynthSound === 'function') {
+                playSaSynthSound('hit');
+            }
+        }
+        
+        window.registerSaSlotHistoryItem(betVal, secureWin, ratio);
+    } else {
+        window.showFloatingSlotBanner(`SPIN OVER`);
     }
     
-    const cardMap = {
-        "A": { rank: "A", suit: "♠" },
-        "K": { rank: "K", suit: "♦" },
-        "Q": { rank: "Q", suit: "♣" },
-        "J": { rank: "J", suit: "♥" },
-        "10": { rank: "10", suit: "♦" },
-        "Heart": { rank: "♥", suit: "♥" },
-        "Diamond": { rank: "♦", suit: "♦" },
-        "Spade": { rank: "♠", suit: "♠" },
-        "Club": { rank: "♣", suit: "♣" }
-    };
+    await window.saDelay(800);
     
-    const mapped = cardMap[cleanSym] || { rank: cleanSym, suit: "♦" };
+    window.saIsSlotSpinning = false;
+    window.updateSaSlotSpinUI(false);
     
-    return `
-        <div style="font-family: 'Outfit', sans-serif; font-size: clamp(22px, 6.5vw, 34px); font-weight: 800; line-height: 1; text-shadow: 0 1px 0 rgba(0,0,0,0.1);">${mapped.rank}</div>
-        <div style="font-size: clamp(26px, 7.5vw, 40px); line-height: 1; margin-top: -4px; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));">${mapped.suit}</div>
-    `;
+    // Recycle loop automatically if active
+    if (window.saSlotAutoActive) {
+        setTimeout(() => {
+            if (window.saSlotAutoActive && !window.saIsSlotSpinning) {
+                window.triggerSaSlotSpin();
+            }
+        }, 1100);
+    }
 };
 
-function listenSimpleEarnTasks() {
-    console.log("listenSimpleEarnTasks called: resetting Simple Earn page views cleanly");
+// Progressive flight radar SVG rendering curve & positioning the jet plane
+window.updateJdbFlightRadarUI = (elapsed) => {
+    const radar = document.getElementById('jdbFlightRadar');
+    const svg = document.getElementById('jdbFlightSvg');
+    const curve = document.getElementById('jdbFlightCurve');
+    const airplane = document.getElementById('jdbAirplaneIcon');
+    
+    if (!radar || !svg || !curve || !airplane) return;
+    
+    const w = radar.clientWidth || 340;
+    const h = 180; // Fixed graph wrapper height
+    
+    // Estimate elapsed visual ratio: plane reaches right corner around 15 seconds
+    const maxEstimatedTime = 15;
+    const progressR = Math.min(elapsed / maxEstimatedTime, 1.0);
+    
+    // Calculate exponential dynamic coordinate values
+    const startX = 20;
+    const startY = h - 20;
+    const currentX = startX + progressR * (w - 60);
+    const currentY = startY - Math.pow(progressR, 1.6) * (h - 50);
+    
+    // Draw continuous custom quadratic curved path styling
+    curve.style.display = 'block';
+    curve.setAttribute("d", `M ${startX} ${startY} Q ${startX + (currentX - startX) * 0.4} ${startY}, ${currentX} ${currentY}`);
+    
+    // Update vector airplane coordinates
+    airplane.style.display = 'block';
+    airplane.style.left = `${currentX}px`;
+    airplane.style.top = `${currentY}px`;
+    
+    // Rotate the plane pointing up-right along the trajectory curve tangent line
+    const dx = 10;
+    const targetYNext = startY - Math.pow(Math.min((elapsed + 0.1) / maxEstimatedTime, 1.0), 1.6) * (h - 50);
+    const dy = currentY - targetYNext;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    airplane.style.transform = `translate(-50%, -50%) rotate(${Math.max(15, Math.min(75, angle))}deg)`;
+};
+
+// Reset path coordinates
+window.resetJdbFlightRadarUI = () => {
+    const curve = document.getElementById('jdbFlightCurve');
+    const airplane = document.getElementById('jdbAirplaneIcon');
+    if (curve) curve.style.display = 'none';
+    if (airplane) airplane.style.display = 'none';
+};
+
+// Adjust local stake amount (+ / -) supporting 1, 2, 3, 5, 10, 20 BDT
+window.adjustJdbStake = (btnId, dir) => {
+    // Determine step size depending on current value limits
+    const current = window.jdbStakes[btnId] || 10;
+    let step = 1;
+    if (current >= 50) step = 10;
+    else if (current >= 20) step = 5;
+    else if (current >= 10) step = 2;
+    
+    const newVal = Math.max(1, current + dir * step);
+    window.jdbStakes[btnId] = newVal;
+    
+    const el = document.getElementById(`jdbStakeVal${btnId}`);
+    if (el) el.innerText = newVal.toFixed(2);
+    
+    window.updateJdbPotentialWin(btnId);
+};
+
+// Fast quick-stake buttons
+window.setJdbStakeQuick = (btnId, val) => {
+    window.jdbStakes[btnId] = val;
+    const el = document.getElementById(`jdbStakeVal${btnId}`);
+    if (el) el.innerText = val.toFixed(2);
+    
+    window.updateJdbPotentialWin(btnId);
+};
+
+// Real-time recalculation of JDB Cash action button Potential Win labels
+window.updateJdbPotentialWin = (btnId) => {
+    const stake = window.jdbStakes[btnId] || 10;
+    const autoEl = document.getElementById(`jdbAutoCashoutInput${btnId}`);
+    const autoVal = autoEl ? parseFloat(autoEl.value) : NaN;
+    
+    const labelWin = document.getElementById(`jdbActionBtnWin${btnId}`);
+    if (labelWin) {
+        if (!isNaN(autoVal) && autoVal > 1.0) {
+            const potential = stake * autoVal;
+            labelWin.innerText = `P.Win: ৳${potential.toFixed(2)}`;
+        } else {
+            labelWin.innerText = `MANUAL CASHOUT`;
+        }
+    }
+};
+
+// Primary Controller cashout / bet trigger action
+window.triggerJdbAction = (btnId) => {
+    const active = window.jdbActiveBets[btnId];
+    
+    if (window.jdbFlightStatus === 'countdown' || window.jdbFlightStatus === 'waiting') {
+        // Option A: Betting Stage - Placing bet or canceling bet
+        if (active) {
+            // Refund bet instantly (can cancel during countdown)
+            window.jdbActiveBets[btnId] = null;
+            window.saSessionBalance = Number((window.saSessionBalance + active.stake).toFixed(2));
+            
+            // Sync to wallet interface
+            const gameBalEl = document.getElementById('saGameBalance');
+            if (gameBalEl) gameBalEl.innerText = window.saSessionBalance.toFixed(2);
+            
+            showToast('info', 'Refunded', `Dual Bet ${btnId} refunded: ৳${active.stake}`);
+            window.updateJdbButtonUI(btnId);
+        } else {
+            // Place new bet
+            const stake = window.jdbStakes[btnId] || 10;
+            if (window.saSessionBalance < stake) {
+                showToast('error', 'Insufficient Wallet', 'Please enter lower custom stake size.');
+                return;
+            }
+            
+            // Collect Auto cashout multiplier
+            const autoEl = document.getElementById(`jdbAutoCashoutInput${btnId}`);
+            let autoLimit = autoEl ? parseFloat(autoEl.value) : parseFloat('No Limit');
+            if (isNaN(autoLimit) || autoLimit <= 1.0) autoLimit = null;
+            
+            // Lock stake instantly
+            window.saSessionBalance = Number((window.saSessionBalance - stake).toFixed(2));
+            window.saFirebaseSyncNeeded = true;
+            
+            const gameBalEl = document.getElementById('saGameBalance');
+            if (gameBalEl) gameBalEl.innerText = window.saSessionBalance.toFixed(2);
+            
+            window.jdbActiveBets[btnId] = {
+                stake: stake,
+                autoCashout: autoLimit,
+                cashedOut: false,
+                winAmount: 0
+            };
+            
+            showToast('success', 'Bet Lock', `Dual Bet ${btnId} accepted: ৳${stake}.`);
+            window.updateJdbButtonUI(btnId);
+        }
+    } else if (window.jdbFlightStatus === 'flying') {
+        // Option B: Flying Stage - Manual claiming cash out
+        if (active && !active.cashedOut) {
+            window.claimJdbCashout(btnId);
+        }
+    }
+};
+
+// Update bet actions visual interfaces based on states
+window.updateJdbButtonUI = (btnId) => {
+    const active = window.jdbActiveBets[btnId];
+    const btn = document.getElementById(`jdbActionButton${btnId}`);
+    const label = document.getElementById(`jdbActionBtnLabel${btnId}`);
+    const winLabel = document.getElementById(`jdbActionBtnWin${btnId}`);
+    
+    if (!btn || !label) return;
+    
+    if (window.jdbFlightStatus === 'countdown' || window.jdbFlightStatus === 'waiting') {
+        btn.disabled = false;
+        if (active) {
+            btn.style.background = 'linear-gradient(180deg, #dc2626, #991b1b)'; // Red cancel
+            label.innerText = 'CANCEL BET';
+            winLabel.innerText = 'Refundable';
+        } else {
+            btn.style.background = 'linear-gradient(180deg, #2ebd59, #1b853c)'; // Green Bet
+            label.innerText = 'PLACE BET';
+            window.updateJdbPotentialWin(btnId);
+        }
+    } else if (window.jdbFlightStatus === 'flying') {
+        if (active) {
+            if (active.cashedOut) {
+                btn.disabled = true;
+                btn.style.background = 'rgba(255,255,255,0.05)';
+                btn.style.color = '#a1a1aa';
+                label.innerText = 'CASHED OUT';
+                winLabel.innerText = `৳${active.winAmount.toFixed(2)}`;
+            } else {
+                btn.disabled = false;
+                btn.style.background = 'linear-gradient(180deg, #eab308, #ca8a04)'; // Gold pulsing cash out
+                label.innerText = 'CASH OUT';
+                const curWin = active.stake * window.jdbFlightMultiplier;
+                winLabel.innerText = `৳${curWin.toFixed(2)}`;
+            }
+        } else {
+            btn.disabled = true;
+            btn.style.background = '#1e1b29';
+            label.innerText = 'FLYING ACTIVE';
+            winLabel.innerText = 'Wait Next Round';
+        }
+    } else if (window.jdbFlightStatus === 'crashed') {
+        btn.disabled = true;
+        btn.style.background = '#11091c';
+        label.innerText = 'FLEW AWAY';
+        winLabel.innerText = 'Crashed';
+    }
+};
+
+// Manually cashout action
+window.claimJdbCashout = (btnId) => {
+    const active = window.jdbActiveBets[btnId];
+    if (!active || active.cashedOut || window.jdbFlightStatus !== 'flying') return;
+    
+    active.cashedOut = true;
+    const finalMult = window.jdbFlightMultiplier;
+    const winVal = Number((active.stake * finalMult).toFixed(2));
+    active.winAmount = winVal;
+    
+    // Add directly to persistent session balance
+    window.saSessionBalance = Number((window.saSessionBalance + winVal).toFixed(2));
+    window.saFirebaseSyncNeeded = true;
+    
+    const gameBalEl = document.getElementById('saGameBalance');
+    if (gameBalEl) gameBalEl.innerText = window.saSessionBalance.toFixed(2);
+    
+    playSaSynthSound('cashout');
+    
+    // Live floating celebration toast
+    showToast('success', 'CLAIM SUCCESS', `Cashout ${btnId} claimed ৳${winVal} at ${finalMult.toFixed(2)}x!`);
+    
+    // Record log internally for session history list display
+    window.jdbSessionHistoryLogs.push({
+        type: 'Cashout',
+        controller: btnId,
+        stake: active.stake,
+        multiplier: finalMult,
+        win: winVal,
+        timestamp: new Date()
+    });
+    
+    window.updateJdbButtonUI(btnId);
+};
+
+// Render outcome Pills tracker horizontal list
+window.renderOutcomePills = () => {
+    const container = document.getElementById('jdbHistoryDots');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    const slice = window.jdbPreviousRounds.slice(-10).reverse();
+    
+    slice.forEach(mult => {
+        const pill = document.createElement('div');
+        pill.style.padding = '3px 8px';
+        pill.style.borderRadius = '20px';
+        pill.style.fontSize = '9px';
+        pill.style.fontWeight = '950';
+        pill.style.fontFamily = 'JetBrains Mono';
+        pill.style.whiteSpace = 'nowrap';
+        
+        if (mult >= 10) {
+            pill.style.background = 'rgba(234, 179, 8, 0.2)';
+            pill.style.color = '#ffd700';
+            pill.style.border = '1px solid #ffd700';
+        } else if (mult >= 2.0) {
+            pill.style.background = 'rgba(59, 130, 246, 0.2)';
+            pill.style.color = '#3b82f6';
+            pill.style.border = '1px solid #3b82f6';
+        } else {
+            pill.style.background = 'rgba(255, 255, 255, 0.05)';
+            pill.style.color = '#a1a1aa';
+            pill.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+        }
+        
+        pill.innerText = `${mult.toFixed(2)}x`;
+        container.appendChild(pill);
+    });
+};
+
+// Core gameplay cycle loop handling
+window.startJdbGameplayLoop = () => {
+    let loopStartTime = Date.now();
+    
+    // Helper function starting next round countdown
+    function startCountdown() {
+        if (window.activeGameType !== 'flight') return;
+        window.jdbFlightStatus = 'countdown';
+        window.jdbFlightMultiplier = 1.00;
+        window.jdbCountdownTime = 10.0;
+        
+        // Reset betting states
+        window.jdbActiveBets = { 1: null, 2: null };
+        window.resetJdbFlightRadarUI();
+        
+        const overlay = document.getElementById('jdbCountdownOverlay');
+        const crashOver = document.getElementById('jdbCrashOverlay');
+        if (overlay) overlay.style.display = 'flex';
+        if (crashOver) crashOver.style.display = 'none';
+        
+        const label = document.getElementById('jdbGameStatusLabel');
+        if (label) label.innerText = 'PREPARING ENGINES';
+        
+        const multEl = document.getElementById('jdbLiveMultiplier');
+        if (multEl) {
+            multEl.innerText = '1.00x';
+            multEl.style.color = '#ffd700';
+            multEl.style.animation = 'none';
+        }
+        
+        window.updateJdbButtonUI(1);
+        window.updateJdbButtonUI(2);
+        
+        let counterTick = setInterval(() => {
+            if (window.activeGameType !== 'flight' || window.jdbFlightStatus !== 'countdown') {
+                clearInterval(counterTick);
+                return;
+            }
+            
+            window.jdbCountdownTime = Math.max(0, window.jdbCountdownTime - 0.1);
+            
+            const timerEl = document.getElementById('jdbCountdownTimer');
+            const barEl = document.getElementById('jdbCountdownBar');
+            if (timerEl) timerEl.innerText = `${window.jdbCountdownTime.toFixed(1)}s`;
+            if (barEl) {
+                // Shrinking progress animation helper
+                const percent = (window.jdbCountdownTime / 10.0) * 100;
+                barEl.style.transform = `scaleX(${percent / 100})`;
+            }
+            
+            if (window.jdbCountdownTime <= 0) {
+                clearInterval(counterTick);
+                launchFlight();
+            }
+        }, 100);
+    }
+    
+    // Launching JDB Golden Plane trajectory
+    function launchFlight() {
+        if (window.activeGameType !== 'flight') return;
+        window.jdbFlightStatus = 'flying';
+        window.jdbFlightMultiplier = 1.00;
+        
+        const overlay = document.getElementById('jdbCountdownOverlay');
+        if (overlay) overlay.style.display = 'none';
+        
+        const label = document.getElementById('jdbGameStatusLabel');
+        if (label) label.innerText = 'JET ASCENDING';
+        
+        window.updateJdbButtonUI(1);
+        window.updateJdbButtonUI(2);
+        
+        // Calculate highly realistic crash point based on standard RTP configuration logic
+        const rVal = Math.random();
+        // 97% server configuration yield, crash point exponential progression bounds
+        let crashGoal = (0.97 / (1.00 - rVal));
+        if (crashGoal < 1.0) crashGoal = 1.00;
+        else if (crashGoal > 150) crashGoal = parseFloat((150 + Math.random() * 50).toFixed(2)); // CAP max payout density
+        
+        window.jdbCrashPoint = parseFloat(crashGoal.toFixed(2));
+        console.log(`[JDB Casino RTP Trace] Next Flight target Crashpoint seed: ${window.jdbCrashPoint}x`);
+        
+        const startSecs = Date.now();
+        
+        let flightTick = setInterval(() => {
+            if (window.activeGameType !== 'flight' || window.jdbFlightStatus !== 'flying') {
+                clearInterval(flightTick);
+                return;
+            }
+            
+            const seconds = (Date.now() - startSecs) / 1000;
+            // Progressive quadratic acceleration speed scaling matching Directive 8
+            const rawMult = 1.00 + Math.pow(seconds, 1.45) * 0.06;
+            window.jdbFlightMultiplier = parseFloat(rawMult.toFixed(2));
+            
+            // Render Live multiplier counter numbers glowing dynamically
+            const multEl = document.getElementById('jdbLiveMultiplier');
+            if (multEl) {
+                multEl.innerText = `${window.jdbFlightMultiplier.toFixed(2)}x`;
+                if (window.jdbFlightMultiplier >= 10) {
+                    multEl.style.color = '#ef4444'; // Red alert on gigantic scores
+                    multEl.style.animation = 'saPulse 0.3s infinite alternate';
+                } else if (window.jdbFlightMultiplier >= 2) {
+                    multEl.style.color = '#3b82f6'; // Blue alert
+                }
+            }
+            
+            window.updateJdbFlightRadarUI(seconds);
+            playSaSynthSound('tick');
+            
+            // Check Twin Dual Bet Controller parameters and auto cashouts
+            for (let b = 1; b <= 2; b++) {
+                const bet = window.jdbActiveBets[b];
+                if (bet && !bet.cashedOut) {
+                    // Update current manual cashout value dynamically on button label
+                    const liveWin = bet.stake * window.jdbFlightMultiplier;
+                    const winLabel = document.getElementById(`jdbActionBtnWin${b}`);
+                    if (winLabel) winLabel.innerText = `CLAIM ৳${liveWin.toFixed(2)}`;
+                    
+                    // Trigger automated cashout claim if threshold matches
+                    if (bet.autoCashout && window.jdbFlightMultiplier >= bet.autoCashout) {
+                        window.claimJdbCashout(b);
+                    }
+                }
+            }
+            
+            // Handle Flight collision / Flew away crash point triggering
+            if (window.jdbFlightMultiplier >= window.jdbCrashPoint) {
+                clearInterval(flightTick);
+                triggerCrash();
+            }
+        }, 80);
+    }
+    
+    // Exploding Golden Plane crash sequence
+    function triggerCrash() {
+        window.jdbFlightStatus = 'crashed';
+        
+        // Hide plane icon and trigger alert shaking overlay
+        const crashOver = document.getElementById('jdbCrashOverlay');
+        const crashedMult = document.getElementById('jdbCrashedMultiplier');
+        if (crashOver) crashOver.style.display = 'flex';
+        if (crashedMult) crashedMult.innerText = `CRASHED @ ${window.jdbFlightMultiplier.toFixed(2)}x`;
+        
+        playSaSynthSound('crash');
+        
+        // Process lost bets
+        let sessionDelta = 0;
+        let roundBetsLog = [];
+        
+        for (let b = 1; b <= 2; b++) {
+            const bet = window.jdbActiveBets[b];
+            if (bet) {
+                if (!bet.cashedOut) {
+                    // Lost Dual Bet
+                    bet.cashedOut = true;
+                    bet.winAmount = 0;
+                    
+                    // Output session metrics
+                    window.jdbSessionHistoryLogs.push({
+                        type: 'Lost',
+                        controller: b,
+                        stake: bet.stake,
+                        multiplier: window.jdbFlightMultiplier,
+                        win: 0,
+                        timestamp: new Date()
+                    });
+                }
+                
+                // Add to standard server log synchronization queue (Directive 6 compatibility)
+                window.saSessionLogs.push({
+                    gameName: "JDB Cash Flight",
+                    betAmount: bet.stake,
+                    winAmount: bet.winAmount,
+                    multiplier: window.jdbFlightMultiplier,
+                    timestamp: new Date().toISOString()
+                });
+                
+                window.saFirebaseSyncNeeded = true;
+            }
+            window.updateJdbButtonUI(b);
+        }
+        
+        // Append outcome pill to Horizontal display layout tracker
+        window.jdbPreviousRounds.unshift(window.jdbFlightMultiplier);
+        window.renderOutcomePills();
+        
+        // Sleep on screen for 2.5 seconds, then launch a fresh countdown
+        setTimeout(() => {
+            if (window.activeGameType !== 'flight') return;
+            if (window.jdbFlightStatus === 'crashed') {
+                startCountdown();
+            }
+        }, 2500);
+    }
+    
+    // Start initial chain
+    startCountdown();
+};
+
+window.listenSimpleEarnTasks = () => {
+    console.log("listenSimpleEarnTasks called: JDB Cash Flight layout verified.");
     const overlay = document.getElementById('saLoadingOverlay');
     const entryView = document.getElementById('saEntryView');
     const gameView = document.getElementById('saGameView');
@@ -9618,38 +10826,16 @@ function listenSimpleEarnTasks() {
     if (overlay) overlay.style.display = 'none';
     if (entryView) entryView.style.display = 'block';
     if (gameView) gameView.style.display = 'none';
-    
-    if (typeof window.loadSuperAceBetSelect === 'function') {
-        window.loadSuperAceBetSelect();
-    }
-}
-window.listenSimpleEarnTasks = listenSimpleEarnTasks;
-
-window.initializeSuperAceBoard = () => {
-    const cells = document.querySelectorAll('.sa-cell');
-    cells.forEach(cell => {
-        const text = cell.innerText.trim();
-        if (text && text.length <= 8) {
-            cell.innerHTML = window.getSymbolHTML(text);
-            cell.className = 'sa-cell';
-            const cleanText = String(text).trim();
-            if (cleanText === "Wild" || cleanText === "Joker" || cleanText === "Joker_Gold" || cleanText === "WILD") {
-                cell.classList.add('sa-cell-wild');
-            } else if (cleanText === "Scatter" || cleanText === "SCATTER") {
-                cell.classList.add('sa-cell-scatter');
-            } else if (["A", "Q", "Spade", "Club"].includes(cleanText)) {
-                cell.classList.add('sa-cell-black');
-            } else {
-                cell.classList.add('sa-cell-red');
-            }
-        }
-    });
 };
 
-window.enterSuperAceGame = () => {
+// Common initialization routine for full-screen immersive casino setup
+window.saPrepareEnteringGame = () => {
     const overlay = document.getElementById('saLoadingOverlay');
-    const entryView = document.getElementById('saEntryView');
-    const gameView = document.getElementById('saGameView');
+    const textEl = document.getElementById('saLoadingOverlayText');
+    const subEl = document.getElementById('saLoadingOverlaySub');
+    
+    if (textEl) textEl.innerText = "Syncing Secured Wallet...";
+    if (subEl) subEl.innerText = "Connecting accounts to secure CryptoForge cluster...";
     
     // Set classes for immersive full-screen game mode
     document.body.classList.add('sa-game-playing');
@@ -9722,16 +10908,43 @@ window.enterSuperAceGame = () => {
         gameBalEl.innerText = window.saSessionBalance.toFixed(2);
     }
     
-    if (typeof window.loadSuperAceBetSelect === 'function') {
-        window.loadSuperAceBetSelect();
+    // Clear any active slot auto-play triggers
+    window.saSlotAutoActive = false;
+    if (typeof window.updateSaSlotAutoUI === 'function') {
+        window.updateSaSlotAutoUI();
+    }
+};
+
+window.enterCashFlightGame = () => {
+    // 1. Prepare ambient casino environments
+    window.saPrepareEnteringGame();
+    window.activeGameType = "flight";
+    
+    // 2. Setup game view components
+    const flightContainer = document.getElementById('saCrashGameContainer');
+    const slotContainer = document.getElementById('saSlotGameContainer');
+    const titleText = document.getElementById('saGameHeaderTitle');
+    
+    if (flightContainer) flightContainer.style.display = 'flex';
+    if (slotContainer) slotContainer.style.display = 'none';
+    if (titleText) titleText.innerText = "JDB CASH FLIGHT";
+    const headerIcon = document.getElementById('saGameHeaderIcon');
+    if (headerIcon) {
+        headerIcon.className = "fa-solid fa-plane-up";
+        headerIcon.style.transform = "rotate(45deg)";
     }
     
-    window.initializeSuperAceBoard();
+    // 3. Render previous outcomes lists & start loops
+    window.renderOutcomePills();
     
-    // Render immediate internal bet history
-    if (typeof window.renderInternalGameHistory === 'function') {
-        window.renderInternalGameHistory();
+    if (typeof window.startJdbGameplayLoop === 'function') {
+        window.startJdbGameplayLoop();
     }
+    
+    // 4. Trigger delay transitions
+    const overlay = document.getElementById('saLoadingOverlay');
+    const entryView = document.getElementById('saEntryView');
+    const gameView = document.getElementById('saGameView');
     
     setTimeout(() => {
         if (overlay) overlay.style.display = 'none';
@@ -9741,6 +10954,56 @@ window.enterSuperAceGame = () => {
             playSaSynthSound('bigwin');
         }
     }, 1500);
+};
+
+window.enterSuperAceSlotGame = () => {
+    // 1. Prepare ambient casino environments
+    window.saPrepareEnteringGame();
+    window.activeGameType = "slot";
+    
+    // 2. Setup game view components
+    const flightContainer = document.getElementById('saCrashGameContainer');
+    const slotContainer = document.getElementById('saSlotGameContainer');
+    const titleText = document.getElementById('saGameHeaderTitle');
+    
+    if (flightContainer) flightContainer.style.display = 'none';
+    if (slotContainer) slotContainer.style.display = 'block';
+    if (titleText) titleText.innerText = "SUPER ACE SLOT";
+    const headerIcon = document.getElementById('saGameHeaderIcon');
+    if (headerIcon) {
+        headerIcon.className = "fa-solid fa-star";
+        headerIcon.style.transform = "none";
+    }
+    
+    // 3. Initialize dynamic slot layouts
+    if (typeof window.initializeSuperAceBoard === 'function') {
+        window.initializeSuperAceBoard();
+    }
+    if (typeof window.loadSuperAceBetSelect === 'function') {
+        window.loadSuperAceBetSelect();
+    }
+    if (typeof window.updateSaSlotMultiplierTrack === 'function') {
+        window.updateSaSlotMultiplierTrack(1); // Set default track x1
+    }
+    
+    // 4. Trigger transitions
+    const overlay = document.getElementById('saLoadingOverlay');
+    const entryView = document.getElementById('saEntryView');
+    const gameView = document.getElementById('saGameView');
+    
+    setTimeout(() => {
+        if (overlay) overlay.style.display = 'none';
+        if (entryView) entryView.style.display = 'none';
+        if (gameView) gameView.style.display = 'block';
+        if (typeof playSaSynthSound === 'function') {
+            playSaSynthSound('bigwin');
+        }
+    }, 1500);
+};
+
+// Kept for backward compatibility references
+window.enterSuperAceGame = () => {
+    window.enterCashFlightGame();
 };
 
 window.saIsSyncing = false;
@@ -9768,96 +11031,61 @@ window.saveSuperAceSessionToFirestore = async () => {
         return;
     }
     
-    console.log(`[Super Ace Sync] Initiating reliable client-side transaction. Net profit/loss: ৳${netChange}`);
+    console.log(`[Super Ace Sync] Initiating secure server-side integration. Net profit/loss: ৳${netChange}`);
     
     const logsToSave = [...window.saSessionLogs];
     
     try {
-        // Step 1: Securely update the user's balance atomically using a client transaction
-        // Since the user is authenticated as 'uid', they have direct, native permission to update '/users/{uid}'
-        await runTransaction(db, async (transaction) => {
-            const userDocRef = doc(db, 'users', uid);
-            const userSnap = await transaction.get(userDocRef);
-            if (!userSnap.exists()) {
-                throw new Error("User document does not exist in Firestore!");
-            }
-            const userData = userSnap.data();
-            const currentDbBal = Number(userData.mainBalance || userData.balance || 0);
-            const updatedBalance = Number((currentDbBal + netChange).toFixed(2));
-            
-            // Atomically update both balance fields on the server
-            transaction.update(userDocRef, {
-                balance: updatedBalance,
-                mainBalance: updatedBalance,
-                updatedAt: new Date().toISOString()
-            });
+        // Fetch JWT ID token from authenticated web client for secure server-side validation and atomic database sync
+        const token = await auth.currentUser.getIdToken();
+        
+        // Post current session's net balance variation and game tasks/spins logs securely to our Express cluster
+        const response = await fetch('/api/game/super-ace/sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                netChange: netChange,
+                gameName: window.activeGameType === "slot" ? "Super Ace" : "JDB Cash Flight",
+                logs: logsToSave
+            })
         });
         
-        console.log("[Super Ace Sync] Secure user balance transaction completed successfully.");
-
-        // Step 2: Save game logs separately so any permission restrictions on game_task_history do not block the critical balance save
-        try {
-            for (const log of logsToSave) {
-                const logId = `sa_sim_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-                const logDocRef = doc(db, 'game_task_history', logId);
-                await setDoc(logDocRef, {
-                    userId: uid,
-                    timestamp: log.timestamp || new Date().toISOString(),
-                    betAmount: Number(log.betAmount) || 0,
-                    winAmount: Number(log.winAmount) || 0,
-                    multiplier: Number(log.multiplier) || 1,
-                    gameName: "Super Ace"
-                });
-            }
-            console.log("[Super Ace Sync] Game task history logs synchronized successfully.");
-        } catch (logErr) {
-            console.warn("[Super Ace Sync] Non-blocking permission warning on game history log:", logErr);
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `Server returned HTTP status ${response.status}`);
         }
-
-        // Step 3: Log to transactions collection separately
-        try {
-            const txId = `tx_sa_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-            const txDocRef = doc(db, 'transactions', txId);
-            await setDoc(txDocRef, {
-                userId: uid,
-                type: "game_spin_session",
-                amount: netChange,
-                source: `Super Ace Session ${netChange >= 0 ? 'Profit' : 'Loss'}`,
-                createdAt: new Date().toISOString(),
-                status: "completed"
-            });
-            console.log("[Super Ace Sync] Transaction history log saved successfully.");
-        } catch (txErr) {
-            console.warn("[Super Ace Sync] Non-blocking permission warning on transaction log:", txErr);
-        }
-
+        
+        const resData = await response.json();
+        console.log("[Super Ace Sync] Secure server logs and balance sync completed successfully:", resData.message);
+ 
         window.saSessionLogs = [];
         window.saFirebaseSyncNeeded = false;
         window.saSessionStartBalance = window.saSessionBalance; // Align local starting point
         
+        if (currentUserData) {
+            currentUserData.mainBalance = window.saSessionBalance;
+            currentUserData.balance = window.saSessionBalance;
+        }
+        if (typeof updateHeader === 'function') {
+            updateHeader();
+        }
         if (typeof window.renderTaskHistory === 'function') {
             window.renderTaskHistory();
         }
     } catch (err) {
-        console.error("[Super Ace Sync] Reliable Sync failed completely:", err);
+        console.error("[Super Ace Sync] Sync failed:", err);
         throw err; // Bubble up error to block exit/inform user
     } finally {
         window.saIsSyncing = false;
     }
 };
 
-// Automatic tab-close/reload sync safety net
-window.addEventListener('beforeunload', (event) => {
-    if (window.saFirebaseSyncNeeded && !window.saIsSyncing) {
-        // Fire of firestore save. Although async, in many modern environments 
-        // the promise is initialized prior to page destruction.
-        window.saveSuperAceSessionToFirestore();
-    }
-});
-
 window.exitSuperAceGame = async () => {
-    if (window.isSaSpinning) {
-        showToast('warning', 'Notice', 'Please wait until the active spin finishes before you exit the game.');
+    if (window.isSaSpinning || window.saIsSlotSpinning) {
+        showToast('warning', 'Notice', 'Please wait until the active game/spin finishes before you exit the game.');
         return;
     }
     
@@ -9901,9 +11129,8 @@ window.exitSuperAceGame = async () => {
     const entryView = document.getElementById('saEntryView');
     const gameView = document.getElementById('saGameView');
     
+    window.activeGameType = null;
     window.saAutoActive = false;
-    const autoToggle = document.getElementById('saAutoToggle');
-    if (autoToggle) autoToggle.checked = false;
     
     if (entryView) entryView.style.display = 'block';
     if (gameView) gameView.style.display = 'none';
@@ -9954,37 +11181,17 @@ window.exitSuperAceGame = async () => {
     }
 };
 
-window.toggleSaInternalHistory = async () => {
-    const box = document.getElementById('saInternalHistoryBox');
-    if (!box) return;
-    
-    if (box.style.display === 'none' || box.style.display === '') {
-        box.style.display = 'flex';
-        await window.renderInternalGameHistory();
-    } else {
-        box.style.display = 'none';
-    }
-};
-
-window.renderInternalGameHistory = async () => {
-    const internalList = document.getElementById('saInternalHistoryList');
-    if (!internalList) return;
-    
-    internalList.innerHTML = '';
-    const localLogs = [...(window.saSessionLogs || [])].reverse();
-    
-    if (localLogs.length === 0) {
-        internalList.innerHTML = '<p style="text-align:center; padding:12px; font-size:11px; color:var(--muted)">No spins in this session yet. Let\'s play!</p>';
+window.renderInternalGameHistory = () => {
+    const list = document.getElementById('saInternalHistoryList');
+    if (!list) return;
+    list.innerHTML = '';
+    const logs = [...(window.jdbSessionHistoryLogs || [])].reverse();
+    if (logs.length === 0) {
+        list.innerHTML = `<p style="text-align:center; padding:12px; font-size:11px; color:#a1a1aa; font-family:'JetBrains Mono';">No flight logs recorded in this session yet.</p>`;
         return;
     }
-    
-    localLogs.forEach((log, index) => {
-        const dStr = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : 'N/A';
-        const win = log.winAmount || 0;
-        const bet = log.betAmount || 0;
-        const mult = log.multiplier || 1;
-        const isWin = win > 0;
-        
+    logs.forEach((log) => {
+        const timeStr = log.timestamp ? log.timestamp.toLocaleTimeString() : '';
         const row = document.createElement('div');
         row.style.background = 'rgba(255,255,255,0.02)';
         row.style.border = '1px solid rgba(255,255,255,0.05)';
@@ -9996,348 +11203,33 @@ window.renderInternalGameHistory = async () => {
         row.style.fontSize = '11px';
         row.style.marginBottom = '4px';
         
+        const isWin = log.type === 'Cashout';
         row.innerHTML = `
             <div>
                 <div style="font-weight:700; color:#fff; display:flex; align-items:center; gap:4px">
-                    Spin #${localLogs.length - index} <span style="font-size:9px; background:rgba(89,162,255,0.15); color:#59a2ff; padding:1px 4px; border-radius:4px; font-weight:500;">Local Session</span>
+                    Dual Bet ${log.controller} <span style="font-size:9px; background:${isWin ? 'rgba(0,255,163,0.15)' : 'rgba(239,68,68,0.15)'}; color:${isWin ? '#00ffa3' : '#ef4444'}; padding:1px 4px; border-radius:4px; font-weight:500;">${log.type}</span>
                 </div>
-                <div style="font-size:9.5px; color:var(--muted); margin-top:2px">${dStr}</div>
+                <div style="font-size:9.5px; color:#a1a1aa; margin-top:2px">${timeStr}</div>
             </div>
             <div style="text-align:right">
-                <div style="font-weight:800; color:${isWin ? '#00ffa3' : 'var(--muted)'}">
-                    ${isWin ? `+৳${win.toFixed(2)}` : '৳0.00'}
+                <div style="font-weight:800; color:${isWin ? '#00ffa3' : '#a1a1aa'}">
+                    ${isWin ? `+৳${log.win.toFixed(2)}` : '৳0.00'}
                 </div>
-                <div style="font-size:9.5px; color:rgba(255,255,255,0.4); margin-top:2px">Bet: ৳${bet.toFixed(2)} • ${mult}x</div>
+                <div style="font-size:9.5px; color:rgba(255,255,255,0.4); margin-top:2px">Bet: ৳${log.stake.toFixed(2)} • ${log.multiplier.toFixed(2)}x</div>
             </div>
         `;
-        internalList.appendChild(row);
+        list.appendChild(row);
     });
 };
 
-window.spinSuperAce = async () => {
-    if (window.isSaSpinning) return;
-    
-    if (!currentUserData) {
-        showToast('error', 'Error', 'Please sign in first');
-        return;
-    }
-    
-    const betSelect = document.getElementById('saBetSelect');
-    if (!betSelect) return;
-    const betAmount = Number(betSelect.value);
-    
-    // Check local session balance
-    if (window.saSessionBalance < betAmount) {
-        showToast('error', 'Insufficient Balance', `Your balance is ৳${window.saSessionBalance.toFixed(2)}, please lower bet size.`);
-        window.saAutoActive = false;
-        const autoToggle = document.getElementById('saAutoToggle');
-        if (autoToggle) autoToggle.checked = false;
-        return;
-    }
-    
-    window.isSaSpinning = true;
-    const spinBtn = document.getElementById('saSpinBtn');
-    if (spinBtn) {
-        spinBtn.disabled = true;
-        spinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
-    }
-    
-    let interval = null;
-    
-    try {
-        // Step 1: Deduct locally instantly with no blocking DB lag
-        window.saSessionBalance = Math.max(0, window.saSessionBalance - betAmount);
-        currentUserData.balance = window.saSessionBalance;
-        currentUserData.mainBalance = window.saSessionBalance;
-        const saGameBalEl = document.getElementById('saGameBalance');
-        if (saGameBalEl) {
-            saGameBalEl.innerText = window.saSessionBalance.toFixed(2);
-        }
-        if (typeof updateHeader === 'function') {
-            updateHeader();
-        }
-        
-        window.saFirebaseSyncNeeded = true;
-        
-        // Start Cascade Reel animation
-        for (let c = 0; c < 4; c++) {
-            const reel = document.getElementById(`saReel_${c}`);
-            if (reel) {
-                reel.classList.remove('sa-reel-stopping');
-                reel.classList.add('sa-reel-spinning');
-            }
-        }
-        
-        const simSymbols = ["A", "K", "Q", "J", "10", "Heart", "Diamond", "Spade", "Club", "Wild", "Scatter"];
-        interval = setInterval(() => {
-            for (let c = 0; c < 4; c++) {
-                const reel = document.getElementById(`saReel_${c}`);
-                if (reel && reel.classList.contains('sa-reel-spinning')) {
-                    for (let r = 0; r < 4; r++) {
-                        const cell = document.getElementById(`sa_${r}_${c}`);
-                        if (cell) {
-                            const sym = simSymbols[Math.floor(Math.random() * (simSymbols.length - 2))]; 
-                            cell.innerHTML = window.getSymbolHTML(sym);
-                            cell.className = 'sa-cell';
-                            if (sym === "Wild" || sym === "Joker" || sym === "Joker_Gold" || sym === "WILD") {
-                                cell.classList.add('sa-cell-wild');
-                            } else if (sym === "Scatter" || sym === "SCATTER") {
-                                cell.classList.add('sa-cell-scatter');
-                            } else if (["A", "Q", "Spade", "Club"].includes(sym)) {
-                                cell.classList.add('sa-cell-black');
-                            } else {
-                                cell.classList.add('sa-cell-red');
-                            }
-                        }
-                    }
-                }
-            }
-            if (typeof playSaSynthSound === 'function') {
-                playSaSynthSound('spin');
-            }
-        }, 80);
-        
-        // Setup local win determinations
-        const isWinningSpin = Math.random() < 0.45;
-        let finalMultiplier = 1;
-        let winAmount = 0;
-        let winningLines = [];
-        
-        const grid = [
-            ["", "", "", ""],
-            ["", "", "", ""],
-            ["", "", "", ""],
-            ["", "", "", ""]
-        ];
-        
-        for (let r = 0; r < 4; r++) {
-            for (let c = 0; c < 4; c++) {
-                grid[r][c] = simSymbols[Math.floor(Math.random() * (simSymbols.length - 3))];
-            }
-        }
-        
-        if (isWinningSpin) {
-            const winRow = Math.floor(Math.random() * 4);
-            const matchSymbol = ["A", "K", "Q", "Heart", "Diamond", "Wild"][Math.floor(Math.random() * 6)];
-            const winLength = Math.floor(Math.random() * 2) + 3; // match 3 or 4 columns
-            
-            for (let c = 0; c < winLength; c++) {
-                grid[winRow][c] = matchSymbol;
-            }
-            
-            if (Math.random() < 0.35) {
-                grid[winRow][Math.floor(Math.random() * 3)] = "Wild";
-            }
-            
-            winningLines.push(winRow);
-            
-            const multiChoices = [1, 2, 3, 5];
-            finalMultiplier = multiChoices[Math.floor(Math.random() * multiChoices.length)];
-            
-            const weights = { "Wild": 4.5, "A": 3.0, "K": 2.2, "Q": 1.6, "Heart": 1.5, "Diamond": 1.1 };
-            const weight = weights[matchSymbol] || 1.0;
-            winAmount = Number((betAmount * weight * finalMultiplier).toFixed(2));
-        } else {
-            // No horizontal matches
-            for (let r = 0; r < 4; r++) {
-                for (let c = 2; c < 4; c++) {
-                    if (grid[r][c] === grid[r][c-1] && grid[r][c-1] === grid[r][c-2]) {
-                        grid[r][c] = simSymbols[(simSymbols.indexOf(grid[r][c-1]) + 2) % (simSymbols.length - 3)];
-                    }
-                }
-            }
-        }
-        
-        const stopReel = (c, finalGrid) => {
-            const reel = document.getElementById(`saReel_${c}`);
-            if (reel) {
-                reel.classList.remove('sa-reel-spinning');
-                reel.classList.add('sa-reel-stopping');
-            }
-            
-            for (let r = 0; r < 4; r++) {
-                const cell = document.getElementById(`sa_${r}_${c}`);
-                if (cell) {
-                    const sym = finalGrid[r][c];
-                    cell.innerHTML = window.getSymbolHTML(sym);
-                    cell.className = 'sa-cell';
-                    
-                    if (sym === "Wild" || sym === "Joker" || sym === "Joker_Gold" || sym === "WILD") {
-                        cell.classList.add('sa-cell-wild');
-                    } else if (sym === "Scatter" || sym === "SCATTER") {
-                        cell.classList.add('sa-cell-scatter');
-                    } else if (["A", "Q", "Spade", "Club"].includes(sym)) {
-                        cell.classList.add('sa-cell-black');
-                    } else {
-                        cell.classList.add('sa-cell-red');
-                    }
-                }
-            }
-            if (typeof playSaSynthSound === 'function') {
-                playSaSynthSound('hit');
-            }
-        };
-        
-        // Stagger stops from left to right: Reel 0 (600ms) down to Reel 3 (1200ms)
-        await new Promise((resolve) => {
-            setTimeout(() => stopReel(0, grid), 600);
-            setTimeout(() => stopReel(1, grid), 800);
-            setTimeout(() => stopReel(2, grid), 1000);
-            setTimeout(() => {
-                stopReel(3, grid);
-                if (interval) clearInterval(interval);
-                setTimeout(resolve, 200);
-            }, 1200);
-        });
-        
-        await new Promise(res => setTimeout(res, 300));
-        
-        // Multiplier bar highlights
-        document.querySelectorAll('.combo-pill').forEach(pill => {
-            pill.style.background = '#1e212a';
-            pill.style.color = '#ff9f1c';
-            pill.style.boxShadow = 'none';
-        });
-        
-        const pillEl = document.getElementById(`saCombo_${finalMultiplier}`);
-        if (pillEl && winAmount > 0) {
-            pillEl.style.background = 'linear-gradient(to right, #ffd700, #ff9f1c)';
-            pillEl.style.color = '#000';
-            pillEl.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.7)';
-        }
-        
-        // Win pop visualization
-        if (winAmount > 0) {
-            winningLines.forEach(row => {
-                for (let col = 0; col < 4; col++) {
-                    const cell = document.getElementById(`sa_${row}_${col}`);
-                    if (cell) cell.classList.add('sa-cell-winning');
-                }
-            });
-            
-            if (typeof playSaSynthSound === 'function') {
-                playSaSynthSound(finalMultiplier >= 3 ? 'bigwin' : 'hit');
-            }
-        } else {
-            if (typeof playSaSynthSound === 'function') {
-                playSaSynthSound('lose');
-            }
-        }
-        
-        // Apply win balance
-        window.saSessionBalance = Number((window.saSessionBalance + winAmount).toFixed(2));
-        currentUserData.balance = window.saSessionBalance;
-        currentUserData.mainBalance = window.saSessionBalance;
-        const saGameBalElWin = document.getElementById('saGameBalance');
-        if (saGameBalElWin) {
-            saGameBalElWin.innerText = window.saSessionBalance.toFixed(2);
-        }
-        if (typeof updateHeader === 'function') {
-            updateHeader();
-        }
-        
-        // Buffer local transaction log
-        window.saSessionLogs.push({
-            betAmount,
-            winAmount,
-            multiplier: finalMultiplier,
-            timestamp: new Date().toISOString()
-        });
-        window.saFirebaseSyncNeeded = true;
-        
-        // Update live win counters
-        const winCountEl = document.getElementById('saWinCount');
-        if (winCountEl) {
-            winCountEl.innerText = `৳${winAmount.toFixed(2)}`;
-            if (winAmount > 0) {
-                winCountEl.style.color = "#00ffa3";
-                winCountEl.style.animation = "saPulse 0.4s ease-in-out 2";
-            } else {
-                winCountEl.style.color = "var(--muted)";
-                winCountEl.style.animation = "none";
-            }
-        }
-        
-    } catch (err) {
-        console.error("Super Ace simulated spin exception:", err);
-    } finally {
-        if (interval) clearInterval(interval);
-        window.isSaSpinning = false;
-        
-        if (spinBtn) {
-            spinBtn.disabled = false;
-            spinBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> SPIN NOW';
-        }
-        
-        // Cycle auto spin safely
-        if (window.saAutoActive) {
-            setTimeout(() => {
-                if (window.saAutoActive && !window.isSaSpinning) {
-                    window.spinSuperAce();
-                }
-            }, 1200);
-        }
-    }
-};
-
-window.renderTaskHistory = async () => {
-    const list = document.getElementById('saHistoryList');
-    if (!list) return;
-    if (!currentUserData) {
-        list.innerHTML = '<p style="text-align:center; padding:30px; color:var(--muted)">Please sign in first</p>';
-        return;
-    }
-    
-    list.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted)"><i class="fas fa-spinner fa-spin"></i> Loading logs...</p>';
-    
-    try {
-        const uid = (auth.currentUser && auth.currentUser.uid) || (currentUserData ? (currentUserData.uid_fs || currentUserData.uid) : null);
-        if (!uid) {
-            list.innerHTML = '<p style="text-align:center; padding:30px; color:var(--muted)">Session identification missing. Please sign in again.</p>';
-            return;
-        }
-        const q = query(collection(db, 'game_task_history'), where('userId', '==', uid));
-        const snap = await getDocs(q);
-        
-        if (snap.empty) {
-            list.innerHTML = '<p style="text-align:center; padding:30px; color:var(--muted)">No spin logs found.</p>';
-            return;
-        }
-        
-        let logs = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        logs.sort((a,b) => {
-            const da = a.timestamp ? new Date(a.timestamp) : 0;
-            const db = b.timestamp ? new Date(b.timestamp) : 0;
-            return db - da;
-        });
-        
-        list.innerHTML = '';
-        logs.slice(0, 15).forEach(log => {
-            const dStr = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : 'N/A';
-            const win = log.winAmount || 0;
-            const bet = log.betAmount || 0;
-            const mult = log.multiplier || 1;
-            const isWin = win > 0;
-            
-            const item = document.createElement('div');
-            item.className = "flex justify-between items-center bg-[#1a1c24] p-3 rounded-xl border border-white/5";
-            item.innerHTML = `
-                <div>
-                    <div class="text-[13px] font-bold text-white">Super Ace Spin</div>
-                    <div class="text-[10px] text-gray-500 mt-1">${dStr}</div>
-                </div>
-                <div class="text-right">
-                    <div class="text-[13px] font-extrabold ${isWin ? 'text-[#00ffa3]' : 'text-gray-500'}">
-                        ${isWin ? `+৳${win.toFixed(2)}` : '৳0.00'}
-                    </div>
-                    <div class="text-[10px] text-gray-400 mt-1">Bet: ৳${bet.toFixed(2)} • ${mult}x</div>
-                </div>
-            `;
-            list.appendChild(item);
-        });
-    } catch (err) {
-        console.warn("Failed to retrieve spin logs:", err);
-        list.innerHTML = '<p style="text-align:center; padding:20px; color:var(--danger)">Logs currently unavailable offline</p>';
+window.toggleSaInternalHistory = () => {
+    const box = document.getElementById('saInternalHistoryBox');
+    if (!box) return;
+    if (box.style.display === 'none' || box.style.display === '') {
+        box.style.display = 'flex';
+        window.renderInternalGameHistory();
+    } else {
+        box.style.display = 'none';
     }
 };
 
