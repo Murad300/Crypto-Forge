@@ -1,7 +1,8 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { dbCompat, adminCompat as admin, authenticateBackendSystem } from "./firebase-compat";
+import { dbCompat, adminCompat as admin, authenticateBackendSystem, ensureAuthenticatedSystem, getRawAuth } from "./firebase-compat";
+import realAdmin from "firebase-admin";
 import cron from "node-cron";
 import fs from "fs";
 import nodemailer from "nodemailer";
@@ -976,6 +977,7 @@ expressApp.post("/api/deposit/approve", verifyAdmin, async (req: any, res: any) 
   if (!depositId) return res.status(400).json({ error: "Missing depositId parameter" });
 
   try {
+    await ensureAuthenticatedSystem();
     const result = await database.runTransaction(async (transaction) => {
       const depRef = database.collection("deposits").doc(depositId);
       const depSnap = await transaction.get(depRef);
@@ -1054,6 +1056,7 @@ expressApp.post("/api/deposit/reject", verifyAdmin, async (req: any, res: any) =
   if (!depositId) return res.status(400).json({ error: "Missing depositId parameter" });
 
   try {
+    await ensureAuthenticatedSystem();
     const result = await database.runTransaction(async (transaction) => {
       const depRef = database.collection("deposits").doc(depositId);
       const depSnap = await transaction.get(depRef);
@@ -1101,6 +1104,7 @@ expressApp.post("/api/withdraw/approve", verifyAdmin, async (req: any, res: any)
   if (!withdrawId) return res.status(400).json({ error: "Missing withdrawId parameter" });
 
   try {
+    await ensureAuthenticatedSystem();
     const result = await database.runTransaction(async (transaction) => {
       const witRef = database.collection("withdraws").doc(withdrawId);
       const witSnap = await transaction.get(witRef);
@@ -1148,6 +1152,7 @@ expressApp.post("/api/withdraw/reject", verifyAdmin, async (req: any, res: any) 
   if (!withdrawId) return res.status(400).json({ error: "Missing withdrawId parameter" });
 
   try {
+    await ensureAuthenticatedSystem();
     const result = await database.runTransaction(async (transaction) => {
       const witRef = database.collection("withdraws").doc(withdrawId);
       const witSnap = await transaction.get(witRef);
@@ -1274,6 +1279,16 @@ expressApp.post("/api/game/super-ace/sync", verifyToken, async (req: any, res: a
   }
 
   try {
+    // Authenticate/ensure the backend system has valid token credentials to write and update the database
+    await ensureAuthenticatedSystem();
+
+    const auth = getRawAuth();
+    const serverUser = auth ? auth.currentUser : null;
+    const serverEmail = serverUser ? serverUser.email : "none";
+    const serverUid = serverUser ? serverUser.uid : "none";
+    console.log(`[Super Ace Sync Admin Info] Server authenticating session as: Email=${serverEmail}, UID=${serverUid} to sync user ${userId}`);
+
+    // Run the database transaction securely using our authenticating compat Firestore layer
     await database.runTransaction(async (transaction: any) => {
       const userRef = database.collection("users").doc(userId);
       const userSnap = await transaction.get(userRef);
@@ -1285,6 +1300,8 @@ expressApp.post("/api/game/super-ace/sync", verifyToken, async (req: any, res: a
       const currentDbBal = Number(userData.mainBalance || userData.balance || 0);
       const updatedBalance = Number((currentDbBal + netChange).toFixed(2));
       
+      console.log(`[SA Transaction Trace] Fetching user ${userId}: currentDbBal=${currentDbBal}, newBal=${updatedBalance}`);
+
       // Update balance fields securely on the server
       transaction.update(userRef, {
         balance: updatedBalance,
@@ -1303,17 +1320,43 @@ expressApp.post("/api/game/super-ace/sync", verifyToken, async (req: any, res: a
             betAmount: Number(log.betAmount) || 0,
             winAmount: Number(log.winAmount) || 0,
             multiplier: Number(log.multiplier) || 1,
-            gameName: "Super Ace"
+            gameName: log.gameName || req.body.gameName || "Super Ace"
           });
         }
       }
+
+      // Calculate total bet and total win for the session
+      let totalBetValue = 0;
+      let totalWinValue = 0;
+      if (Array.isArray(logs)) {
+        for (const log of logs) {
+          totalBetValue += Number(log.betAmount) || 0;
+          totalWinValue += Number(log.winAmount) || 0;
+        }
+      }
+
+      // Also record to the global transactions history log
+      const txId = `tx_sa_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const txRef = database.collection("transactions").doc(txId);
+      transaction.set(txRef, {
+        userId: userId,
+        type: "game_spin_session",
+        amount: netChange,
+        totalBet: totalBetValue,
+        totalWin: totalWinValue,
+        source: req.body.gameName || "Super Ace",
+        createdAt: new Date().toISOString(),
+        status: "completed",
+        gameName: req.body.gameName || "Super Ace",
+        spins: logs || []
+      });
     });
 
-    console.log(`[Super Ace Server Sync] Synchronized successfully for user ${userId}. Net profit/loss: ${netChange}`);
+    console.log(`[Super Ace Server Sync] Secure compatibility transaction succeeded for user ${userId}. Net change: ${netChange}`);
     res.json({ success: true, message: "Session earnings synchronized successfully." });
   } catch (error: any) {
-    console.error("[Super Ace Server Sync] Transaction failed:", error);
-    res.status(500).json({ error: error.message || "Failed to synchronize session earnings" });
+    console.error("[Super Ace Server Sync] Server Sync Handler error:", error);
+    res.status(500).json({ error: error.message || "Failed to synchronize balance securely." });
   }
 });
 
