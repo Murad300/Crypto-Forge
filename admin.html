@@ -349,7 +349,7 @@ body.dark-mode {
         <div class="nav-item" data-tab="packages" id="tab-packages"><i class="fa-solid fa-box-open"></i>Packages<span class="badge" id="packagesBadge" style="display:none">0</span></div>
         <div class="nav-item" data-tab="gateway" id="tab-gateway"><i class="fa-solid fa-gears"></i>Config</div>
         <div class="nav-item" data-tab="homepage" id="tab-homepage"><i class="fa-solid fa-wand-magic-sparkles"></i>Earning Tasks</div>
-        <div class="nav-item" data-tab="super_ace" id="tab-super-ace"><i class="fa-solid fa-gamepad"></i>Super Ace</div>
+        <div class="nav-item" data-tab="super_ace" id="tab-super-ace"><i class="fa-solid fa-gamepad"></i>Game Control</div>
         <div class="nav-item" data-tab="system" id="tab-system"><i class="fa-solid fa-screwdriver-wrench"></i>System</div>
     </nav>
 
@@ -601,30 +601,92 @@ body.dark-mode {
 
             <div class="tab-content" id="super_aceTab">
                 <div style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); margin-bottom:20px">
-                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--primary)"><i class="fa-solid fa-gamepad" style="margin-right:8px"></i>Super Ace Game Control</h3>
-                    <p style="font-size:12px; color:var(--muted)">Configure the RTP (Return to Player) rate, available betting steps, and big win limits for the Super Ace slot game of the Earn/Task section.</p>
+                    <h3 style="font-size:16px; margin-bottom:10px; color:var(--primary)"><i class="fa-solid fa-gamepad" style="margin-right:8px"></i>Game Zone Control Menu (গেম কন্ট্রোল)</h3>
+                    <p style="font-size:12px; color:var(--muted)">Configure the RTP (Return to Player) rate, system bounds, and request Google Gemini AI recommendations for each of the registered Game Zone platforms.</p>
                 </div>
 
-                <div style="background:var(--card); padding:24px; border-radius:16px; border:1px solid var(--border); display:flex; flex-direction:column; gap:20px; max-width:600px">
-                    <div>
-                        <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Win Rate / RTP (%)</label>
-                        <input type="number" id="superAceRtp" min="1" max="100" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="96">
-                        <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Default: 96%. Controls the frequency and payout of random spins.</span>
-                    </div>
+                <!-- Sub-tab Bar -->
+                <div style="display:flex; gap:12px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px">
+                    <button id="subTabSuperAceBtn" onclick="switchGameSubTab('super_ace')" style="padding:10px 18px; border:none; background:var(--primary); color:white; font-size:13px; font-weight:700; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.2s">
+                        <i class="fa-solid fa-star"></i> Super Ace Slot
+                    </button>
+                    <button id="subTabCrashBtn" onclick="switchGameSubTab('crash')" style="padding:10px 18px; border:none; background:rgba(255,255,255,0.02); color:var(--text); font-size:13px; font-weight:700; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; border:1px solid var(--border); transition:all 0.2s">
+                        <i class="fa-solid fa-plane-up"></i> JDB Cash Flight
+                    </button>
+                </div>
 
-                    <div>
-                        <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Big Win Multiplier Limit</label>
-                        <input type="number" id="superAceBigWinLimit" min="5" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="100">
-                        <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">The absolute maximum multiplier allowed for a Big Win event (e.g. 50x, 100x).</span>
-                    </div>
+                <!-- Section A: Super Ace Slot Panel -->
+                <div id="subTabSuperAcePanel" style="display:flex; flex-direction:column; gap:20px;">
+                    <div style="background:var(--card); padding:24px; border-radius:16px; border:1px solid var(--border); display:flex; flex-direction:column; gap:20px; max-width:600px">
+                        <h4 style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px; color:var(--primary)"><i class="fa-solid fa-gear"></i> Super Ace Settings</h4>
+                        
+                        <div>
+                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Win Rate / RTP (%)</label>
+                            <input type="number" id="superAceRtp" min="1" max="100" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="96">
+                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Default: 96%. Controls the frequency and payout of random spins.</span>
+                        </div>
 
-                    <div>
-                        <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Betting Steps (Comma-separated)</label>
-                        <input type="text" id="superAceBetSteps" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="1, 2, 3, 5, 8, 10, 20">
-                        <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Active bet sizes players can select (comma-separated, e.g. 1, 2, 3, 5, 8, 10, 20).</span>
-                    </div>
+                        <div>
+                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Big Win Multiplier Limit</label>
+                            <input type="number" id="superAceBigWinLimit" min="5" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="100">
+                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">The absolute maximum multiplier allowed for a Big Win event (e.g. 50x, 100x).</span>
+                        </div>
 
-                    <button onclick="saveSuperAceConfig()" class="btn" style="background:var(--primary); color:white; height:44px; border-radius:10px; font-weight:700; border:none; margin-top:10px; cursor:pointer">Save Configurations</button>
+                        <div>
+                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Betting Steps (Comma-separated)</label>
+                            <input type="text" id="superAceBetSteps" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="1, 2, 3, 5, 8, 10, 20">
+                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Active bet sizes players can select.</span>
+                        </div>
+
+                        <!-- Gemini AI Suggestion box -->
+                        <div id="geminiSuperAceAdvice" style="display:none; background:rgba(26,115,232,0.06); border:1px dashed var(--primary); padding:12px 16px; border-radius:10px; font-size:12px; line-height:1.4">
+                            <strong><i class="fa-solid fa-sparkles" style="color:var(--primary); margin-right:4px"></i> Google Gemini AI Recommendation:</strong>
+                            <p id="geminiSuperAceText" style="margin-top:6px; color:var(--text)"></p>
+                        </div>
+
+                        <div style="display:flex; gap:12px; margin-top:10px">
+                            <button onclick="requestGeminiRTP('super-ace')" class="btn" style="flex:1; background:rgba(0,150,136,0.1); color:#009688; border:1px solid rgba(0,150,136,0.3); height:44px; border-radius:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Ask Gemini RTP
+                            </button>
+                            <button onclick="saveSuperAceConfig()" class="btn" style="flex:1.2; background:var(--primary); color:white; height:44px; border-radius:10px; font-weight:700; border:none; cursor:pointer">
+                                Save Configurations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section B: JDB Cash Flight Panel -->
+                <div id="subTabCrashPanel" style="display:none; flex-direction:column; gap:20px;">
+                    <div style="background:var(--card); padding:24px; border-radius:16px; border:1px solid var(--border); display:flex; flex-direction:column; gap:20px; max-width:600px">
+                        <h4 style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px; color:var(--primary)"><i class="fa-solid fa-plane"></i> JDB Cash Flight Settings</h4>
+                        
+                        <div>
+                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Win Yield / RTP (%)</label>
+                            <input type="number" id="crashRtp" min="1" max="100" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="97">
+                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Default: 97%. Controls the return percentage of plane flight crash multipliers.</span>
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Maximum Flight Multiplier Cap</label>
+                            <input type="number" id="crashMaxMultiplier" min="2" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="150">
+                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Maximum payout multiplier multiplier limit (e.g. 150x, 200x) before airplane flees away automatically.</span>
+                        </div>
+
+                        <!-- Gemini AI Suggestion box -->
+                        <div id="geminiCrashAdvice" style="display:none; background:rgba(26,115,232,0.06); border:1px dashed var(--primary); padding:12px 16px; border-radius:10px; font-size:12px; line-height:1.4">
+                            <strong><i class="fa-solid fa-sparkles" style="color:var(--primary); margin-right:4px"></i> Google Gemini AI Recommendation:</strong>
+                            <p id="geminiCrashText" style="margin-top:6px; color:var(--text)"></p>
+                        </div>
+
+                        <div style="display:flex; gap:12px; margin-top:10px">
+                            <button onclick="requestGeminiRTP('crash')" class="btn" style="flex:1; background:rgba(0,150,136,0.1); color:#009688; border:1px solid rgba(0,150,136,0.3); height:44px; border-radius:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Ask Gemini RTP
+                            </button>
+                            <button onclick="saveCrashConfigAdmin()" class="btn" style="flex:1.2; background:var(--primary); color:white; height:44px; border-radius:10px; font-weight:700; border:none; cursor:pointer">
+                                Save Configurations
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1195,7 +1257,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
                 switchPackageSubTab('rigs');
             }
             if(tabId === 'homepage') loadTasks();
-            if(tabId === 'super_ace') loadSuperAceConfig();
+            if(tabId === 'super_ace') loadUnifiedGameConfigs();
             if(tabId === 'dashboard') { loadStats(); listenRecentActivity(); }
             if(tabId === 'deposits') listenDeposits();
             if(tabId === 'withdraws') listenWithdraws();
@@ -2539,6 +2601,118 @@ window.loadGatewayConfig = async () => {
         const liveInput = document.getElementById('liveNoticeInput');
         if(liveInput) liveInput.value = d.notice || "";
     }
+};
+
+window.switchGameSubTab = (gameId) => {
+    const sBtn = document.getElementById('subTabSuperAceBtn');
+    const cBtn = document.getElementById('subTabCrashBtn');
+    const sPanel = document.getElementById('subTabSuperAcePanel');
+    const cPanel = document.getElementById('subTabCrashPanel');
+    
+    if (gameId === 'super_ace') {
+        sBtn.style.background = 'var(--primary)';
+        sBtn.style.color = 'white';
+        cBtn.style.background = 'rgba(255,255,255,0.02)';
+        cBtn.style.color = 'var(--text)';
+        sPanel.style.display = 'flex';
+        cPanel.style.display = 'none';
+    } else {
+        cBtn.style.background = 'var(--primary)';
+        cBtn.style.color = 'white';
+        sBtn.style.background = 'rgba(255,255,255,0.02)';
+        sBtn.style.color = 'var(--text)';
+        sPanel.style.display = 'none';
+        cPanel.style.display = 'flex';
+    }
+};
+
+window.loadCrashConfigAdmin = async () => {
+    try {
+        const response = await fetch('/api/game/crash/config');
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('crashRtp').value = data.rtp || 97;
+            document.getElementById('crashMaxMultiplier').value = data.maxMultiplier || 150;
+        }
+    } catch (err) {
+        console.error("Error loading JDB Cash Flight configuration:", err);
+        showToast("Error loading JDB Cash Flight settings: " + err.message, "error");
+    }
+};
+
+window.saveCrashConfigAdmin = async () => {
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const rtp = parseFloat(document.getElementById('crashRtp').value) || 97;
+        const maxMultiplier = parseFloat(document.getElementById('crashMaxMultiplier').value) || 150;
+
+        const response = await fetch('/api/game/crash/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ rtp, maxMultiplier })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Server error occurred during save');
+        }
+
+        showToast('JDB Cash Flight configurations successfully saved to Firestore!', 'success');
+    } catch (err) {
+        console.error("Error saving JDB Cash Flight configuration:", err);
+        showToast('Error: ' + err.message, 'error');
+    }
+};
+
+window.requestGeminiRTP = async (gameType) => {
+    try {
+        const token = await auth.currentUser.getIdToken();
+        showToast('Consulting Google Gemini AI engines... Please wait.', 'info');
+        
+        const response = await fetch('/api/admin/gemini-rtp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ gameType })
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Gemini server error');
+        }
+        
+        const data = await response.json();
+        
+        if (gameType === 'super-ace') {
+            document.getElementById('superAceRtp').value = data.rtp;
+            document.getElementById('superAceBigWinLimit').value = data.bigWinLimit;
+            document.getElementById('superAceBetSteps').value = data.betSteps.join(', ');
+            
+            document.getElementById('geminiSuperAceText').innerText = data.rationale || "Success";
+            document.getElementById('geminiSuperAceAdvice').style.display = 'block';
+            showToast('Gemini suggested Super Ace RTP successfully calculated!', 'success');
+        } else {
+            document.getElementById('crashRtp').value = data.rtp;
+            document.getElementById('crashMaxMultiplier').value = data.maxMultiplier;
+            
+            document.getElementById('geminiCrashText').innerText = data.rationale || "Success";
+            document.getElementById('geminiCrashAdvice').style.display = 'block';
+            showToast('Gemini suggested JDB Cash Flight RTP successfully calculated!', 'success');
+        }
+    } catch (err) {
+        console.error("Error requesting Gemini RTP recommendations:", err);
+        showToast('Gemini suggested recommendation error: ' + err.message, 'error');
+    }
+};
+
+window.loadUnifiedGameConfigs = async () => {
+    await window.loadSuperAceConfig();
+    await window.loadCrashConfigAdmin();
 };
 
 window.loadSuperAceConfig = async () => {
