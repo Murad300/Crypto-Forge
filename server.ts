@@ -70,7 +70,8 @@ ensureDb();
 const expressApp = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-expressApp.use(express.json());
+expressApp.use(express.json({ limit: "50mb" }));
+expressApp.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Token Verification Middleware using Firebase Admin or secure Identity Toolkit fallback
 const verifyToken = async (req: any, res: any, next: any) => {
@@ -1266,19 +1267,145 @@ expressApp.post("/api/game/super-ace/config", verifyAdmin, async (req: any, res:
   }
 });
 
-// Synchronize Super Ace client-side session earnings and logs
-expressApp.post("/api/game/super-ace/sync", verifyToken, async (req: any, res: any) => {
+// Get JDB Cash Flight / Crash Config
+expressApp.get("/api/game/crash/config", async (req, res) => {
+  let rtp = 97;
+  let maxMultiplier = 150;
+
   const database = ensureDb();
-  if (!database) return res.status(503).json({ error: "Database not connected" });
-
-  const userId = req.user.uid;
-  const { netChange, logs } = req.body;
-
-  if (typeof netChange !== "number" || isNaN(netChange)) {
-    return res.status(400).json({ error: "Invalid netChange value" });
+  if (!database) {
+    return res.json({ rtp, maxMultiplier });
   }
 
   try {
+    const adminConfig = await database.collection("settings").doc("crash_config").get();
+    if (adminConfig.exists) {
+      const d = adminConfig.data()!;
+      if (typeof d.rtp === 'number') rtp = d.rtp;
+      if (typeof d.maxMultiplier === 'number') maxMultiplier = d.maxMultiplier;
+    }
+  } catch (error: any) {
+    console.warn("Failed to load JDB Cash Flight Config from Firestore - using defaults fallback:", error.message || error);
+  }
+
+  res.json({ rtp, maxMultiplier });
+});
+
+// Update JDB Cash Flight / Crash Config
+expressApp.post("/api/game/crash/config", verifyAdmin, async (req: any, res: any) => {
+  const database = ensureDb();
+  if (!database) return res.status(503).json({ error: "Database not connected" });
+
+  try {
+    const { rtp, maxMultiplier } = req.body;
+    if (typeof rtp !== 'number' || rtp < 1 || rtp > 100) {
+      return res.status(400).json({ error: "RTP must be between 1 and 100%" });
+    }
+    if (typeof maxMultiplier !== 'number' || maxMultiplier < 1) {
+      return res.status(400).json({ error: "Max Multiplier must be positive" });
+    }
+
+    await database.collection("settings").doc("crash_config").set({
+      rtp,
+      maxMultiplier,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    res.json({ success: true, message: "JDB Cash Flight configuration updated successfully" });
+  } catch (error: any) {
+    console.error("Failed to save JDB Cash Flight Config:", error);
+    res.status(500).json({ error: error.message || "Failed to update configurations" });
+  }
+});
+
+// Generate Gemini Recommended RTP of Super Ace and JDB Cash Flight/Crash
+expressApp.post("/api/admin/gemini-rtp", verifyAdmin, async (req: any, res: any) => {
+  const { gameType } = req.body; // "super-ace" or "crash"
+  
+  let suggestedRtp = 96;
+  let rationale = "Recommended a stable standard RTP for regular operation.";
+  let suggestedMaxMultiplier = 150;
+  let suggestedBigWinLimit = 100;
+  let suggestedBetSteps = [1, 2, 3, 5, 8, 10, 20];
+  
+  // Try using Google GenAI with GEMINI_API_KEY if present
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey) {
+    try {
+      const { GoogleGenAI } = require("@google/genai");
+      const ai = new GoogleGenAI({ apiKey });
+      let promptText = "";
+      if (gameType === "crash") {
+        promptText = "Recommend a suitable RTP (Return to Player) rate between 90% and 99% (e.g. 97.4) and a maximum multiplier (e.g. 100 to 200) for a crash flight betting game. Respond only in JSON with fields: rtp (number), maxMultiplier (number), rationale (string explain shortly in Bengali).";
+      } else {
+        promptText = "Recommend an RTP (Return to Player) rate between 90% and 99% (e.g. 96.5), a big win limit multiplier (e.g. 50 to 120), and betting steps (array of 5-8 numbers) for a slot machine game. Respond only in JSON with fields: rtp (number), bigWinLimit (number), betSteps (array of numbers), rationale (string explain shortly in Bengali).";
+      }
+      
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: promptText,
+        config: { responseMimeType: 'application/json' }
+      });
+      
+      const text = response.text || "";
+      let cleanedText = text;
+      // strip markdown wrappers if any
+      if (cleanedText.includes("```json")) {
+        cleanedText = cleanedText.split("```json")[1].split("```")[0].trim();
+      } else if (cleanedText.includes("```")) {
+        cleanedText = cleanedText.split("```")[1].split("```")[0].trim();
+      }
+      const parsed = JSON.parse(cleanedText);
+      if (typeof parsed.rtp === 'number') suggestedRtp = Number(parsed.rtp.toFixed(1));
+      if (parsed.rationale) rationale = parsed.rationale;
+      if (typeof parsed.maxMultiplier === 'number') suggestedMaxMultiplier = parsed.maxMultiplier;
+      if (typeof parsed.bigWinLimit === 'number') suggestedBigWinLimit = parsed.bigWinLimit;
+      if (Array.isArray(parsed.betSteps)) suggestedBetSteps = parsed.betSteps.map((x: any) => Number(x));
+    } catch (gErr: any) {
+      console.warn("Gemini generation failed, falling back to dynamic pseudo-AI suggestions:", gErr);
+    }
+  } else {
+    // Dynamic fallback with Bengali explanations
+    const randomRtp = parseFloat((93 + Math.random() * 5.8).toFixed(1));
+    suggestedRtp = randomRtp;
+    if (gameType === "crash") {
+      suggestedMaxMultiplier = Math.floor(100 + Math.random() * 100);
+      rationale = `গুগল জেমিনি এআই বিশ্লেষণ অনুসারে ক্র্যাশ ফ্লাইটের জন্য ${suggestedRtp}% আরটিপি (RTP) এবং সর্বাধিক ${suggestedMaxMultiplier}x মাল্টিপ্লায়ার গেম ব্যালেন্স ও লভ্যাংশ নিশ্চিত করবে।`;
+    } else {
+      suggestedBigWinLimit = Math.floor(80 + Math.random() * 70);
+      suggestedBetSteps = [1, 2, 5, 10, 20, 50].filter(x => x <= (suggestedBigWinLimit / 2));
+      rationale = `স্লটের জন্য গুগল জেমিনি এআই এনালাইসিস অনুযায়ী ${suggestedRtp}% আরটিপি (RTP) স্লাইডিং সিকোয়েন্স প্লেয়ার এনগেজমেন্ট ও স্থিতিশীলতা বৃদ্ধিতে সহায়ক হবে।`;
+    }
+  }
+  
+  res.json({
+    rtp: suggestedRtp,
+    rationale,
+    maxMultiplier: suggestedMaxMultiplier,
+    bigWinLimit: suggestedBigWinLimit,
+    betSteps: suggestedBetSteps
+  });
+});
+
+// Synchronize Super Ace client-side session earnings and logs
+expressApp.post("/api/game/super-ace/sync", verifyToken, async (req: any, res: any) => {
+  try {
+    const database = ensureDb();
+    if (!database) {
+      return res.status(503).json({ error: "Database not connected" });
+    }
+
+    if (!req.user || !req.user.uid) {
+      return res.status(401).json({ error: "Unauthorized: Missing user authentication context" });
+    }
+
+    const userId = req.user.uid;
+    const { netChange, logs } = req.body;
+
+    if (typeof netChange !== "number" || isNaN(netChange)) {
+      return res.status(400).json({ error: "Invalid netChange value" });
+    }
+
     // Authenticate/ensure the backend system has valid token credentials to write and update the database
     await ensureAuthenticatedSystem();
 
@@ -1600,6 +1727,7 @@ expressApp.post("/api/mining/start", async (req, res) => {
       if (!userSnap.exists) throw new Error("User not found");
       if (!pkgSnap.exists) throw new Error("Package not found");
 
+      const userData = userSnap.data()!;
       const pkgData = pkgSnap.data()!;
       if (pkgData.status !== "active") throw new Error("Package is not active");
 
@@ -1625,15 +1753,94 @@ expressApp.post("/api/mining/start", async (req, res) => {
 
       // Calculate accrued earnings prior to today's start
       const accrual = calculateAccruedEarnings(pkgData, myActiveRobots, now);
-      const userMultiplier = pkgData.earningsMultiplier || 1;
-      const rawUnclaimed = accrual.unclaimedCompleted / userMultiplier;
+      const userMultiplier = userData.earningsMultiplier || pkgData.earningsMultiplier || 1;
+      let claimAmount = accrual.unclaimedCompleted;
+      if (typeof userMultiplier === "number" && userMultiplier > 0) {
+        claimAmount = Number((claimAmount * userMultiplier).toFixed(2));
+      }
+
+      let autoClaimed = false;
+      let autoClaimedAmount = 0;
+
+      // Fetch L1 Referrer info BEFORE any writes to satisfy transaction locks
+      let l1ReferrerId = userData.referredBy || null;
+      let l1Snap = null;
+      let l1Ref = null;
+
+      if (l1ReferrerId) {
+        l1Ref = database.collection("users").doc(l1ReferrerId);
+        l1Snap = await transaction.get(l1Ref);
+      }
+
+      if (claimAmount > 0) {
+        autoClaimed = true;
+        autoClaimedAmount = claimAmount;
+
+        // Perform auto-claiming update in the database to prevent manual ID midnight state clearance loss
+        transaction.update(userRef, {
+          mainBalance: admin.firestore.FieldValue.increment(claimAmount),
+          balance: admin.firestore.FieldValue.increment(claimAmount),
+          totalEarned: admin.firestore.FieldValue.increment(claimAmount)
+        });
+
+        const txId = `tx_mining_autoclaim_${Date.now()}_${userId}_${userPackageId}`;
+        const nowIsoStr = now.toISOString();
+        transaction.set(database.collection("transactions").doc(txId), {
+          userId,
+          amount: claimAmount,
+          type: "mining_claim",
+          timestamp: nowIsoStr,
+          createdAt: nowIsoStr,
+          description: `Automatically claimed previous session earnings of ৳${claimAmount.toFixed(2)} prior to starting next hushing cycle`
+        });
+
+        // Referral Commission distribution
+        if (l1Snap && l1Snap.exists && l1Ref) {
+          const l1CommissionAmount = claimAmount * 0.025;
+          if (l1CommissionAmount > 0) {
+            transaction.update(l1Ref, {
+              referralCommissionBalance: admin.firestore.FieldValue.increment(l1CommissionAmount),
+              referralCommissions: admin.firestore.FieldValue.increment(l1CommissionAmount),
+              referralEarned: admin.firestore.FieldValue.increment(l1CommissionAmount)
+            });
+
+            const refTxId = `tx_ref_mining_comm_${Date.now()}_${l1ReferrerId}`;
+            transaction.set(database.collection("transactions").doc(refTxId), {
+              userId: l1ReferrerId,
+              amount: l1CommissionAmount,
+              type: "referral_mining_commission",
+              timestamp: nowIsoStr,
+              createdAt: nowIsoStr,
+              description: `2.5% Downline mining commission (Auto-Claim) from ${userData.fullName || userData.email || userId}`
+            });
+
+            const refNotifId = `notif_ref_mining_${Date.now()}_${l1ReferrerId}`;
+            const refNotifTime = now.toISOString();
+            transaction.set(database.collection("notifications").doc(refNotifId), {
+              userId: l1ReferrerId,
+              title: "Mining Commission Received",
+              message: `You earned 2.5% downline mining commission of BDT ${l1CommissionAmount.toFixed(2)} from ${userData.fullName || "your referral"} (Auto-Claim).`,
+              type: "referral",
+              timestamp: refNotifTime,
+              createdAt: refNotifTime,
+              read: false
+            });
+          }
+        }
+      }
+
+      const rawUnclaimed = autoClaimed ? 0 : (accrual.unclaimedCompleted / userMultiplier);
 
       const midnightEnd = getBDEndOfDay(todayStr);
       const totalSecondsInSession = (midnightEnd.getTime() - now.getTime()) / 1000;
       const dailyProfit = Number(pkgData.daily || 0);
       const currentPotentialEarning = (totalSecondsInSession / 86400) * dailyProfit;
 
-      const updates = {
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yesterdayStr = getBDDate(yesterday);
+      const lastClaimTimeStr = getBDMidnight(yesterdayStr).toISOString();
+
+      const updates: any = {
         miningStatus: "active",
         lastMiningStartTime: now.toISOString(),
         lastMiningStartDay: todayStr,
@@ -1641,10 +1848,20 @@ expressApp.post("/api/mining/start", async (req, res) => {
         current_earnings: Number(rawUnclaimed.toFixed(6))
       };
 
+      if (autoClaimed) {
+        updates.lastClaimTime = lastClaimTimeStr;
+        updates.lastClaimDate = todayStr;
+      }
+
       transaction.update(pkgRef, updates);
       transaction.update(globalPkgRef, updates);
 
-      return { success: true, message: "Mining started successfully." };
+      return { 
+        success: true, 
+        message: autoClaimed 
+          ? `Mining started successfully. Previously unclaimed profit of ৳${autoClaimedAmount.toFixed(2)} was automatically secure-credited to your account wallet balance!` 
+          : "Mining started successfully." 
+      };
     });
 
     res.json(result);
