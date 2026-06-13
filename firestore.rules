@@ -82,19 +82,19 @@ service cloud.firestore {
     // --- Packages & Configs ---
     match /packages/{docId} {
       allow read: if true; 
-      allow write: if false; 
+      allow write: if isAdmin(); 
     }
     match /robots_config/{docId} {
       allow read: if true; 
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /config/{docId} {
       allow read: if true; 
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /admin/{docId} {
       allow read: if true; 
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // --- Mining & Work ---
