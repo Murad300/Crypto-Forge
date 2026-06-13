@@ -1316,6 +1316,67 @@ body.dark-mode {
       font-family: 'Courier New', Courier, monospace;
       text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
     }
+
+    /* Logged-In Mobile Viewport Lock (Global Responsive Enforcement) */
+    body.logged-in-mobile {
+      background: #09090b !important; /* Elegant dark slate background for out-of-frame */
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      min-height: 100vh !important;
+      height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+
+    body.logged-in-mobile .app-wrapper {
+      width: 100% !important;
+      max-width: 430px !important;
+      height: 100vh !important;
+      min-height: 100vh !important;
+      margin: 0 auto !important;
+      border-radius: 0px !important;
+      border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-top: none !important;
+      border-bottom: none !important;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9) !important;
+      background: var(--bg) !important;
+      position: relative !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important; /* Contain within wrapper */
+    }
+
+    body.logged-in-mobile .app-content {
+      flex: 1 !important;
+      overflow-y: auto !important;
+      height: calc(100vh - var(--header-h) - var(--footer-h)) !important;
+      padding-top: 16px !important;
+      padding-bottom: 16px !important;
+    }
+
+    /* Keep header and footer bounded completely within the simulated mobile frame */
+    body.logged-in-mobile .app-header {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      transform: none !important;
+    }
+
+    body.logged-in-mobile .app-footer {
+      position: absolute !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      transform: none !important;
+    }
 </style>
 </head>
 <body>
@@ -2741,8 +2802,30 @@ body.dark-mode {
                         </svg>
 
                         <!-- Vector Golden Airplane Icon -->
-                        <div id="jdbAirplaneIcon" style="position: absolute; transform: translate(-50%, -50%) rotate(15deg); display: none; z-index: 10; pointer-events: none; filter: drop-shadow(0 0 8px #ffd700);">
-                            <i class="fa-solid fa-plane" style="color: #ffd700; font-size: 28px;"></i>
+                        <!-- STYLISH UPGRADED SUPERSONIC JET LIGHTWEIGHT SVG ENGINE: Resolves the blunt-flat nose issue, rendering a sleek, pointed, high-end golden jet with a glowing thruster flame pointing perfectly to the right by default (0deg) -->
+                        <div id="jdbAirplaneIcon" style="position: absolute; transform: translate(-50%, -50%) rotate(-15deg); display: none; z-index: 10; pointer-events: none; filter: drop-shadow(0 0 12px #ffb300) drop-shadow(0 0 4px #ffd700);">
+                            <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: scale(1.2);">
+                                <!-- Glowing Jet Flame / Booster / Thruster Fire trailing from engine exhaust -->
+                                <path d="M 12 32 Q -10 32 4 28 Q -20 32 4 32 Q -20 32 4 36 Z" fill="url(#jet-flame-grad-air)" opacity="0.95" filter="drop-shadow(0 0 6px #ff4500)" />
+                                <!-- Sleek Supersonic Airplane Fuselage and Pointed Nose Capsule -->
+                                <path d="M58,32 C50,28.5 34,25.5 26,25.5 C20,25.5 12,26.5 8,31 C7,32 7,32 8,33 C12,37.5 20,38.5 26,38.5 C34,38.5 50,35.5 58,32 Z" fill="#ffd700" />
+                                <!-- Swept-Back Main Wing (Top Wing) -->
+                                <path d="M36,26.5 L16,7 C14,5 12,6 14,9 L24,26.5 Z" fill="#facc15" />
+                                <!-- Swept-Back Main Wing (Bottom Wing) -->
+                                <path d="M36,37.5 L16,57 C14,59 12,58 14,55 L24,37.5 Z" fill="#ffd700" />
+                                <!-- Sleek Aerodynamic Tail Stabilizer Fins -->
+                                <path d="M14,26.5 L6,14 C5,13 4,13 5,15 L10,26.5 Z" fill="#ca8a04" />
+                                <path d="M14,37.5 L6,50 C5,51 4,51 5,49 L10,37.5 Z" fill="#facc15" />
+                                <!-- Center Metallic Ridge Highlight for an upscale 3D golden reflection -->
+                                <path d="M58,32 C50,29.5 34,28.5 26,28.5 C20,28.5 14,29.5 10,32 C14,34.5 20,35.5 26,35.5 C34,35.5 50,34.5 58,32 Z" fill="#ffffff" opacity="0.5" />
+                                <defs>
+                                    <linearGradient id="jet-flame-grad-air" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#ff3300" stop-opacity="0" />
+                                        <stop offset="50%" stop-color="#ff7e00" />
+                                        <stop offset="100%" stop-color="#ffd700" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
                         </div>
 
                         <!-- Dynamic LIVE Multiplier Glow Display -->
@@ -3210,7 +3293,8 @@ body.dark-mode {
             <div class="list-item-left"><i class="fa-solid fa-clock-rotate-left menu-purple"></i><div><strong>Account History</strong><span>All transaction records</span></div></div>
             <i class="fa-solid fa-chevron-right"></i>
         </div>
-        <div class="list-item hidden" id="adminPanelBtn" onclick="window.open('/portal-manager', '_blank')">
+        <!-- ADMIN PANEL ACCESS: Redirect directly within same context avoiding blocked popups in preview sandbox -->
+        <div class="list-item hidden" id="adminPanelBtn" onclick="window.location.href='/portal-manager'">
             <div class="list-item-left"><i class="fa-solid fa-user-shield menu-red"></i><div><strong>Admin Panel</strong><span>Management System</span></div></div>
             <i class="fa-solid fa-up-right-from-square"></i>
         </div>
@@ -5019,6 +5103,8 @@ function listenAdminConfig() {
 // Registration handled by safeOnSubmit in initAppListeners
 onAuthStateChanged(auth, async (user) => {
     if (user) {
+        // Enforce Mobile Viewport Lock dynamically
+        document.body.classList.add('logged-in-mobile');
         if (user.isAnonymous) {
             // It's an anonymous guest support session. Keep views intact and exit.
             return;
@@ -5464,6 +5550,8 @@ onAuthStateChanged(auth, async (user) => {
             handleFirestoreError(err, 'get', 'users/' + user.uid);
         });
     } else {
+        // Remove Mobile Viewport Lock dynamically on signOut
+        document.body.classList.remove('logged-in-mobile');
         currentUserData = null;
         if(userDocListener) { userDocListener(); userDocListener = null; }
         if(adminConfigListener) { adminConfigListener(); adminConfigListener = null; }
@@ -6047,11 +6135,13 @@ if (pSubmitBtn) {
     };
 }
 
-// Admin Check
+// ADMIN PANEL SYSTEM IDENTITY PATHWAY: Ensure access explicitly checks for superadmin and authorized roles
 function isAdmin() {
     if(!auth.currentUser) return false;
     const email = (auth.currentUser.email || "").toLowerCase().trim();
-    return email === 'shaikhmdmurad1@gmail.com';
+    const isSuperAdminEmail = email === 'shaikhmdmurad1@gmail.com' || email === 'admin@smartbd.com';
+    const isSuperRole = (window.currentUserData && (window.currentUserData.role === 'superadmin' || window.currentUserData.role === 'admin'));
+    return isSuperAdminEmail || isSuperRole;
 }
 
 // Security sub-pages
@@ -6085,6 +6175,11 @@ window.hideSecuritySub = () => {
 
 // App flow helpers
 function initAppListeners() {
+    // Activate the mobile network drop and browser tab closings anti-disconnect shield
+    if (typeof window.initAntiDisconnectShield === 'function') {
+        window.initAntiDisconnectShield();
+    }
+
     safeOnClick('notifIcon', () => openNotifications());
     safeOnClick('notifBtn', () => openNotifications());
     safeOnClick('headerSupportBtn', () => showPage('supportPage'));
@@ -10146,6 +10241,21 @@ window.updateSaSlotQuickBetsUI = () => {
     });
 };
 
+window.jdbCrashRtp = 97;
+window.jdbMaxMultiplier = 150;
+window.loadCrashConfig = async () => {
+    try {
+        const response = await fetch('/api/game/crash/config');
+        const data = await response.json();
+        if (data) {
+            if (typeof data.rtp === 'number') window.jdbCrashRtp = data.rtp;
+            if (typeof data.maxMultiplier === 'number') window.jdbMaxMultiplier = data.maxMultiplier;
+        }
+    } catch (err) {
+        console.warn("Failed to retrieve JDB Cash Flight configuration - using defaults:", err);
+    }
+};
+
 window.loadSuperAceBetSelect = async () => {
     try {
         const response = await fetch('/api/game/super-ace/config');
@@ -10383,11 +10493,13 @@ window.updateJdbFlightRadarUI = (elapsed) => {
     airplane.style.top = `${currentY}px`;
     
     // Rotate the plane pointing up-right along the trajectory curve tangent line
+    // Refined rotation to rotate counter-clockwise (negative angle values) so the sharp nose points beautifully upwards!
     const dx = 10;
     const targetYNext = startY - Math.pow(Math.min((elapsed + 0.1) / maxEstimatedTime, 1.0), 1.6) * (h - 50);
     const dy = currentY - targetYNext;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    airplane.style.transform = `translate(-50%, -50%) rotate(${Math.max(15, Math.min(75, angle))}deg)`;
+    // Rotating counter-clockwise (negative degrees) relative to the horizontal 0deg alignment of the custom plane vector
+    airplane.style.transform = `translate(-50%, -50%) rotate(-${Math.max(15, Math.min(75, angle))}deg)`;
 };
 
 // Reset path coordinates
@@ -10680,6 +10792,14 @@ window.startJdbGameplayLoop = () => {
         window.jdbFlightStatus = 'flying';
         window.jdbFlightMultiplier = 1.00;
         
+        // STAKE DESTRUCTION ON LAUNCH: Secure local BDT stake deduction on Firestore instantly
+        // If a user force-closes the app, disconnects, or receives a call, the stake is officially forfeited ("LOST") on the server
+        if (window.saFirebaseSyncNeeded) {
+            window.saveSuperAceSessionToFirestore().catch(e => {
+                console.error("[Launch Shield Sync] Failed to commit instant launch balance deduction:", e);
+            });
+        }
+        
         const overlay = document.getElementById('jdbCountdownOverlay');
         if (overlay) overlay.style.display = 'none';
         
@@ -10691,13 +10811,15 @@ window.startJdbGameplayLoop = () => {
         
         // Calculate highly realistic crash point based on standard RTP configuration logic
         const rVal = Math.random();
-        // 97% server configuration yield, crash point exponential progression bounds
-        let crashGoal = (0.97 / (1.00 - rVal));
+        const crashRtpRatio = (window.jdbCrashRtp || 97) / 100.0;
+        const maxCrashMult = window.jdbMaxMultiplier || 150;
+        // Apply exponential progression bounds based on configuration settings
+        let crashGoal = (crashRtpRatio / (1.00 - rVal));
         if (crashGoal < 1.0) crashGoal = 1.00;
-        else if (crashGoal > 150) crashGoal = parseFloat((150 + Math.random() * 50).toFixed(2)); // CAP max payout density
+        else if (crashGoal > maxCrashMult) crashGoal = parseFloat((maxCrashMult + Math.random() * 50).toFixed(2)); // CAP max payout density
         
         window.jdbCrashPoint = parseFloat(crashGoal.toFixed(2));
-        console.log(`[JDB Casino RTP Trace] Next Flight target Crashpoint seed: ${window.jdbCrashPoint}x`);
+        console.log(`[JDB Casino RTP Trace] Next Flight target Crashpoint seed: ${window.jdbCrashPoint}x (RTP Rule: ${window.jdbCrashRtp}%)`);
         
         const startSecs = Date.now();
         
@@ -10902,6 +11024,22 @@ window.saPrepareEnteringGame = () => {
     window.saSessionLogs = [];
     window.lastFirestoreSyncTime = Date.now();
     
+    // RE-ENGINEER 15-MINUTE HEARTBEAT: Standardize client-side interval targeting low-cost Firestore synchronization
+    if (window.jdbHeartbeatIntervalId) {
+        clearInterval(window.jdbHeartbeatIntervalId);
+    }
+    window.jdbHeartbeatIntervalId = setInterval(async () => {
+        // Run atomic synchronization only if database state has mutated
+        if (window.saFirebaseSyncNeeded) {
+            try {
+                console.log("[JDB Heartbeat] 15-minute mark triggered. Flushing pending game changes to Firestore...");
+                await window.saveSuperAceSessionToFirestore();
+            } catch (syncErr) {
+                console.error("[JDB Heartbeat] Automatic 15-minute background synchronization failed:", syncErr);
+            }
+        }
+    }, 15 * 60 * 1000); // Wait exactly 15 minutes between sync triggers
+
     // Sync to custom internal Game Balance text view
     const gameBalEl = document.getElementById('saGameBalance');
     if (gameBalEl) {
@@ -10936,6 +11074,10 @@ window.enterCashFlightGame = () => {
     
     // 3. Render previous outcomes lists & start loops
     window.renderOutcomePills();
+    
+    if (typeof window.loadCrashConfig === 'function') {
+        window.loadCrashConfig();
+    }
     
     if (typeof window.startJdbGameplayLoop === 'function') {
         window.startJdbGameplayLoop();
@@ -11053,9 +11195,23 @@ window.saveSuperAceSessionToFirestore = async () => {
             })
         });
         
+        const contentType = response.headers.get("content-type");
         if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || `Server returned HTTP status ${response.status}`);
+            let errorMsg = `Server returned HTTP status ${response.status}`;
+            if (contentType && contentType.includes("application/json")) {
+                const errData = await response.json().catch(() => ({}));
+                if (errData.error) errorMsg = errData.error;
+            } else {
+                const text = await response.text().catch(() => "");
+                console.warn("[Super Ace Sync] Non-JSON error response state received on sync:", text.substring(0, 200));
+            }
+            throw new Error(errorMsg);
+        }
+        
+        if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text().catch(() => "");
+            console.error("[Super Ace Sync] Expected JSON but received HTML/Text:", text.substring(0, 200));
+            throw new Error("Server returned an invalid non-JSON response.");
         }
         
         const resData = await response.json();
@@ -11081,6 +11237,71 @@ window.saveSuperAceSessionToFirestore = async () => {
     } finally {
         window.saIsSyncing = false;
     }
+};
+
+// MOBILE DATA CORRUPTION & NETWORK DROP SAFETY NET (The Anti-Disconnect Shield):
+// Prevents any balance loss or exploitation during incoming calls, sudden SMS interruptions,
+// Wi-Fi to cellular data transitions, or force-closes of the tab.
+window.flushEmergencySync = () => {
+    if (!window.saFirebaseSyncNeeded) return;
+    if (!auth.currentUser) return;
+    
+    // Calculate the absolute current net session balance delta
+    let rawStartBal = typeof window.saSessionStartBalance === 'number' ? window.saSessionStartBalance : window.saSessionBalance;
+    const netChange = Number((window.saSessionBalance - rawStartBal).toFixed(2));
+    
+    if (isNaN(netChange)) return;
+    
+    console.warn(`[Anti-Disconnect Shield] Emergency flush activated! Flushing delta of ৳${netChange} to prevent data corruption...`);
+    
+    // Acquire active client JWT ID token and execute synchronized emergency sync
+    auth.currentUser.getIdToken().then(token => {
+        fetch('/api/game/super-ace/sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            keepalive: true, // Crucial parameter to persist request through browser tab close / app freeze
+            body: JSON.stringify({
+                netChange: netChange,
+                gameName: window.activeGameType === "slot" ? "Super Ace" : "JDB Cash Flight",
+                logs: [...window.saSessionLogs]
+            })
+        }).then(() => {
+            console.log("[Anti-Disconnect Shield] Emergency atomic flush successfully processed on server.");
+            window.saFirebaseSyncNeeded = false;
+            window.saSessionStartBalance = window.saSessionBalance;
+        }).catch(err => {
+            console.error("[Anti-Disconnect Shield] Emergency post-failure:", err);
+        });
+    }).catch(e => {
+        console.error("[Anti-Disconnect Shield] Token acquisition error during emergency flush:", e);
+    });
+};
+
+window.initAntiDisconnectShield = () => {
+    const handleEmergencyUnload = () => {
+        window.flushEmergencySync();
+    };
+
+    // Listen to standard desktop and mobile unload/hide operations
+    window.addEventListener('beforeunload', handleEmergencyUnload);
+    window.addEventListener('pagehide', handleEmergencyUnload);
+    
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            console.log("[Anti-Disconnect] Visibility hidden. Triggering proactive safety sync...");
+            window.flushEmergencySync();
+        }
+    });
+
+    window.addEventListener('offline', () => {
+        console.warn("[Anti-Disconnect] Cellular/Wi-Fi connection drop detected! Initiating instant emergency flush...");
+        window.flushEmergencySync();
+    });
+    
+    console.log("[Anti-Disconnect Shield] Real-time hardware network status & tab drop safety listeners armed successfully.");
 };
 
 window.exitSuperAceGame = async () => {
@@ -11131,6 +11352,12 @@ window.exitSuperAceGame = async () => {
     
     window.activeGameType = null;
     window.saAutoActive = false;
+    
+    // RE-ENGINEER 15-MINUTE HEARTBEAT: Halt background intervals on exiting active game environment
+    if (window.jdbHeartbeatIntervalId) {
+        clearInterval(window.jdbHeartbeatIntervalId);
+        window.jdbHeartbeatIntervalId = null;
+    }
     
     if (entryView) entryView.style.display = 'block';
     if (gameView) gameView.style.display = 'none';
