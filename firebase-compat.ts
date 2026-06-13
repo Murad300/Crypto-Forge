@@ -164,7 +164,7 @@ export async function authenticateBackendSystem() {
         return uid;
       } catch (err: any) {
         const errCode = err.code || "";
-        console.warn(`⚠️ Auth attempt failed for ${email}. Code: ${errCode}, Message: ${err.message}`);
+        console.log(`ℹ️ Auth attempt failed for ${email} with password: ${password.substring(0, 3)}... Code: ${errCode}, Message: ${err.message}`);
 
         // If user does not exist, attempt to register them dynamically
         if (errCode === "auth/user-not-found" || errCode === "auth/invalid-credential" || errCode === "auth/invalid-email" || errCode === "auth/wrong-password") {
@@ -190,7 +190,11 @@ export async function authenticateBackendSystem() {
 
             return uid;
           } catch (regErr: any) {
-            console.warn(`⚠️ Failed to register ${email} dynamically:`, regErr.message);
+            if (regErr.code === "auth/email-already-in-use") {
+              console.log(`ℹ️ User ${email} is already registered in Firebase Auth, skipping dynamic creation for this password combination.`);
+            } else {
+              console.warn(`⚠️ Failed to register ${email} dynamically:`, regErr.message);
+            }
           }
         }
       }
@@ -227,8 +231,8 @@ export async function ensureAuthenticatedSystem() {
       console.log("No authenticated system user found. Authenticating on-demand...");
       await authenticateBackendSystem();
     } else {
-      // Force token refresh to make sure we don't present an expired/invalid token to Firestore rules
-      await auth.currentUser.getIdToken(true);
+      // Use cached token or auto-refresh if expired. Never force true here to avoid hitting Google's rate-limits on every single endpoint hit.
+      await auth.currentUser.getIdToken(false);
     }
   } catch (err: any) {
     console.warn("⚠️ Failed to ensure system authentication, retrying full sign-in:", err.message);
