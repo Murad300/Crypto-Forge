@@ -76,12 +76,33 @@
         "pass": { "type": "string" }
       },
       "required": ["host", "port", "secure", "user", "pass"]
+    },
+    "LudoMatch": {
+      "title": "Ludo Match",
+      "description": "State tracking for active or completed Ludo game sessions",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "gameId": { "type": "string" },
+        "betAmount": { "type": "number" },
+        "opponentName": { "type": "string" },
+        "finalOutcome": { "type": "string", "enum": ["win", "loss"] },
+        "status": { "type": "string", "enum": ["active", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "winClaimed": { "type": "boolean" }
+      },
+      "required": ["userId", "gameId", "betAmount", "status", "createdAt"]
     }
   },
   "firestore": {
     "/settings/{settingsId}": {
       "schema": "SmtpSettings",
       "description": "Dynamic system settings including secure email setup"
+    },
+    "/ludo_matches/{matchId}": {
+      "schema": "LudoMatch",
+      "description": "Active or completed Ludo tourney game sessions"
     },
     "/users/{userId}": {
       "schema": "User",
