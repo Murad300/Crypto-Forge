@@ -608,48 +608,48 @@ body.dark-mode {
                 <!-- Sub-tab Bar -->
                 <div style="display:flex; gap:12px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px">
                     <button id="subTabSuperAceBtn" onclick="switchGameSubTab('super_ace')" style="padding:10px 18px; border:none; background:var(--primary); color:white; font-size:13px; font-weight:700; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.2s">
-                        <i class="fa-solid fa-star"></i> Super Ace Slot
+                        <i class="fa-solid fa-dice"></i> Ludo Game Live Control
                     </button>
                     <button id="subTabCrashBtn" onclick="switchGameSubTab('crash')" style="padding:10px 18px; border:none; background:rgba(255,255,255,0.02); color:var(--text); font-size:13px; font-weight:700; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; border:1px solid var(--border); transition:all 0.2s">
                         <i class="fa-solid fa-plane-up"></i> JDB Cash Flight
                     </button>
                 </div>
 
-                <!-- Section A: Super Ace Slot Panel -->
+                <!-- Section A: Ludo Game Panel -->
                 <div id="subTabSuperAcePanel" style="display:flex; flex-direction:column; gap:20px;">
                     <div style="background:var(--card); padding:24px; border-radius:16px; border:1px solid var(--border); display:flex; flex-direction:column; gap:20px; max-width:600px">
-                        <h4 style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px; color:var(--primary)"><i class="fa-solid fa-gear"></i> Super Ace Settings</h4>
+                        <h4 style="font-size:14px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px; color:var(--primary)"><i class="fa-solid fa-gear"></i> Ludo Control Settings (লুডু গেম সেটিংস)</h4>
                         
                         <div>
-                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Win Rate / RTP (%)</label>
-                            <input type="number" id="superAceRtp" min="1" max="100" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="96">
-                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Default: 96%. Controls the frequency and payout of random spins.</span>
+                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Match Payout Direction (ম্যাচের ফলাফল ডিরেকশন)</label>
+                            <select id="ludoOverride" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-weight:700;">
+                                <option value="random">No Override / RTP Based (স্বাভাবিক আরটিপি অনুযায়ী র্যান্ডম খেলা)</option>
+                                <option value="force_win">Force User Win (প্লেয়ারকে নিশ্চিত উইন করান)</option>
+                                <option value="force_loss">Force User Loss (প্লেয়ারকে নিশ্চিত লস করান)</option>
+                            </select>
+                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Allows you to manually override any active Ludo Game outcome instantly.</span>
                         </div>
 
                         <div>
-                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Big Win Multiplier Limit</label>
-                            <input type="number" id="superAceBigWinLimit" min="5" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="100">
-                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">The absolute maximum multiplier allowed for a Big Win event (e.g. 50x, 100x).</span>
+                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Base Win Rate / RTP (%)</label>
+                            <input type="number" id="superAceRtp" min="0" max="100" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="50">
+                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Default: 50%. The default win rate used when the "Match Payout Direction" is set to "No Override / RTP Based".</span>
                         </div>
 
-                        <div>
-                            <label style="display:block; font-size:12px; font-weight:700; margin-bottom:6px; text-transform:uppercase; color:var(--text)">Betting Steps (Comma-separated)</label>
-                            <input type="text" id="superAceBetSteps" style="width:100%; height:44px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text)" value="1, 2, 3, 5, 8, 10, 20">
-                            <span style="font-size:11px; color:var(--muted); margin-top:4px; display:block">Active bet sizes players can select.</span>
-                        </div>
-
-                        <!-- Gemini AI Suggestion box -->
-                        <div id="geminiSuperAceAdvice" style="display:none; background:rgba(26,115,232,0.06); border:1px dashed var(--primary); padding:12px 16px; border-radius:10px; font-size:12px; line-height:1.4">
-                            <strong><i class="fa-solid fa-sparkles" style="color:var(--primary); margin-right:4px"></i> Google Gemini AI Recommendation:</strong>
-                            <p id="geminiSuperAceText" style="margin-top:6px; color:var(--text)"></p>
+                        <!-- Info details box -->
+                        <div style="background:rgba(255,193,7,0.06); border:1px dashed #ffc107; padding:12px 16px; border-radius:10px; font-size:12px; line-height:1.4">
+                            <strong><i class="fa-solid fa-circle-exclamation" style="color:#ffc107; margin-right:4px"></i> Ludo Rules Overview:</strong>
+                            <ul style="margin: 6px 0 0 16px; padding: 0; color: var(--text-muted);">
+                                <li>Allows bets: ৳50, ৳100, ৳200, ৳500, ৳1000</li>
+                                <li>Winning rewards the double of bet amount (2x payout)</li>
+                                <li>Deducts the bet immediately on matching to avoid connection cheats</li>
+                                <li>Admin panel settings are applied dynamically on every match</li>
+                            </ul>
                         </div>
 
                         <div style="display:flex; gap:12px; margin-top:10px">
-                            <button onclick="requestGeminiRTP('super-ace')" class="btn" style="flex:1; background:rgba(0,150,136,0.1); color:#009688; border:1px solid rgba(0,150,136,0.3); height:44px; border-radius:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> Ask Gemini RTP
-                            </button>
-                            <button onclick="saveSuperAceConfig()" class="btn" style="flex:1.2; background:var(--primary); color:white; height:44px; border-radius:10px; font-weight:700; border:none; cursor:pointer">
-                                Save Configurations
+                            <button onclick="saveSuperAceConfig()" class="btn" style="flex:1; background:var(--primary); color:white; height:44px; border-radius:10px; font-weight:700; border:none; cursor:pointer">
+                                Save Ludo Settings (সেটিংস সংরক্ষণ করুন)
                             </button>
                         </div>
                     </div>
@@ -2717,34 +2717,33 @@ window.loadUnifiedGameConfigs = async () => {
 
 window.loadSuperAceConfig = async () => {
     try {
-        const response = await fetch('/api/game/super-ace/config');
+        const response = await fetch('/api/game/ludo/config');
         if (response.ok) {
             const data = await response.json();
-            document.getElementById('superAceRtp').value = data.rtp || 96;
-            document.getElementById('superAceBigWinLimit').value = data.bigWinLimit || 100;
-            document.getElementById('superAceBetSteps').value = data.betSteps ? data.betSteps.join(', ') : "1, 2, 3, 5, 8, 10, 20";
+            document.getElementById('superAceRtp').value = (typeof data.rtp === 'number') ? data.rtp : 50;
+            if (document.getElementById('ludoOverride')) {
+                document.getElementById('ludoOverride').value = data.override || 'random';
+            }
         }
     } catch (err) {
-        console.error("Error loading Super Ace configuration:", err);
-        showToast("Error loading Super Ace settings: " + err.message, "error");
+        console.error("Error loading Ludo configuration:", err);
+        showToast("Error loading Ludo settings: " + err.message, "error");
     }
 };
 
 window.saveSuperAceConfig = async () => {
     try {
         const token = await auth.currentUser.getIdToken();
-        const rtp = parseFloat(document.getElementById('superAceRtp').value) || 96;
-        const bigWinLimit = parseFloat(document.getElementById('superAceBigWinLimit').value) || 100;
-        const betStepsRaw = document.getElementById('superAceBetSteps').value;
-        const betSteps = betStepsRaw.split(',').map(s => parseFloat(s.trim())).filter(s => !isNaN(s));
+        const rtp = parseFloat(document.getElementById('superAceRtp').value) || 50;
+        const override = document.getElementById('ludoOverride') ? document.getElementById('ludoOverride').value : 'random';
 
-        const response = await fetch('/api/game/super-ace/config', {
+        const response = await fetch('/api/game/ludo/config', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ rtp, bigWinLimit, betSteps })
+            body: JSON.stringify({ rtp, override })
         });
 
         if (!response.ok) {
@@ -2752,9 +2751,9 @@ window.saveSuperAceConfig = async () => {
             throw new Error(errData.error || 'Server error occurred');
         }
 
-        showToast('Super Ace configurations updated successfully!', 'success');
+        showToast('Ludo configurations updated successfully!', 'success');
     } catch (err) {
-        console.error("Error saving Super Ace configuration:", err);
+        console.error("Error saving Ludo configuration:", err);
         showToast('Error: ' + err.message, 'error');
     }
 };
