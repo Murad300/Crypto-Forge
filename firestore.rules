@@ -205,5 +205,10 @@ service cloud.firestore {
       allow read, create, update: if isSignedIn();
       allow delete: if isAdmin();
     }
+    
+    // --- Ludo Game Matches ---
+    match /ludo_matches/{docId} {
+      allow read, write: if isSignedIn();
+    }
   }
 }
