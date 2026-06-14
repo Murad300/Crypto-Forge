@@ -1208,62 +1208,291 @@ expressApp.post("/api/withdraw/reject", verifyAdmin, async (req: any, res: any) 
   }
 });
 
-// --- Super Ace Game Endpoints ---
+// --- Ludo Game Endpoints ---
 
-// Get Super Ace Config
-expressApp.get("/api/game/super-ace/config", async (req, res) => {
-  let rtp = 96;
-  let bigWinLimit = 100;
-  let betSteps = [1, 2, 3, 5, 8, 10, 20];
+// Get Ludo Config
+expressApp.get("/api/game/ludo/config", async (req, res) => {
+  let rtp = 50; // default 50%
+  let override = "random"; // random, force_win, force_loss
 
   const database = ensureDb();
   if (!database) {
-    return res.json({ rtp, bigWinLimit, betSteps });
+    return res.json({ rtp, override });
   }
 
   try {
-    const adminConfig = await database.collection("settings").doc("super_ace_config").get();
+    const adminConfig = await database.collection("settings").doc("ludo_config").get();
     if (adminConfig.exists) {
       const d = adminConfig.data()!;
       if (typeof d.rtp === 'number') rtp = d.rtp;
-      if (typeof d.bigWinLimit === 'number') bigWinLimit = d.bigWinLimit;
-      if (Array.isArray(d.betSteps)) betSteps = d.betSteps;
+      if (typeof d.override === 'string') override = d.override;
     }
   } catch (error: any) {
-    console.warn("Failed to load Super Ace Config from Firestore - using defaults fallback:", error.message || error);
+    console.warn("Failed to load Ludo Config from Firestore - using defaults fallback:", error.message || error);
   }
 
-  res.json({ rtp, bigWinLimit, betSteps });
+  res.json({ rtp, override });
 });
 
-// Update Super Ace Config
-expressApp.post("/api/game/super-ace/config", verifyAdmin, async (req: any, res: any) => {
+// Update Ludo Config
+expressApp.post("/api/game/ludo/config", verifyAdmin, async (req: any, res: any) => {
   const database = ensureDb();
   if (!database) return res.status(503).json({ error: "Database not connected" });
 
   try {
-    const { rtp, bigWinLimit, betSteps } = req.body;
-    if (typeof rtp !== 'number' || rtp < 1 || rtp > 100) {
-      return res.status(400).json({ error: "RTP must be between 1 and 100%" });
+    const { rtp, override } = req.body;
+    if (typeof rtp !== 'number' || rtp < 0 || rtp > 100) {
+      return res.status(400).json({ error: "RTP must be between 0 and 100%" });
     }
-    if (typeof bigWinLimit !== 'number' || bigWinLimit < 1) {
-      return res.status(400).json({ error: "Big Win Limit must be positive" });
-    }
-    if (!Array.isArray(betSteps) || betSteps.length === 0) {
-      return res.status(400).json({ error: "Bet steps must be a non-empty array" });
+    if (!['random', 'force_win', 'force_loss'].includes(override)) {
+      return res.status(400).json({ error: "Invalid override mode" });
     }
 
-    await database.collection("settings").doc("super_ace_config").set({
+    await database.collection("settings").doc("ludo_config").set({
       rtp,
-      bigWinLimit,
-      betSteps,
+      override,
       updatedAt: new Date().toISOString()
     }, { merge: true });
 
-    res.json({ success: true, message: "Super Ace configuration updated successfully" });
+    res.json({ success: true, message: "Ludo configurations updated successfully." });
   } catch (error: any) {
-    console.error("Failed to save Super Ace Config:", error);
-    res.status(500).json({ error: error.message || "Failed to update configurations" });
+    console.error("Error saving Ludo config:", error);
+    res.status(500).json({ error: error.message || "Failed to update Ludo configs." });
+  }
+});
+
+// Start Ludo Game (Deduct bet amount immediately)
+expressApp.post("/api/game/ludo/start", verifyToken, async (req: any, res: any) => {
+  try {
+    const database = ensureDb();
+    if (!database) return res.status(503).json({ error: "Database not connected" });
+    if (!req.user || !req.user.uid) return res.status(401).json({ error: "Unauthorized" });
+
+    const userId = req.user.uid;
+    const { betAmount } = req.body;
+    const allowedBets = [20, 50, 100, 500];
+
+    if (!allowedBets.includes(Number(betAmount))) {
+      return res.status(400).json({ error: "Invalid bet amount. Allowed bets: ৳20, ৳50, ৳100, ৳500." });
+    }
+
+    await ensureAuthenticatedSystem();
+
+    let expectedResult = "random";
+    let globalRtp = 50;
+
+    // Load configurations
+    try {
+      const configSnap = await database.collection("settings").doc("ludo_config").get();
+      if (configSnap.exists) {
+        const d = configSnap.data()!;
+        if (typeof d.rtp === 'number') globalRtp = d.rtp;
+        if (typeof d.override === 'string') expectedResult = d.override;
+      }
+    } catch (err: any) {
+      console.warn("Failed loading Ludo config at game start, fallback to random defaults", err);
+    }
+
+    // Resolve final expected result
+    let finalOutcome = "loss"; // default
+    if (expectedResult === "force_win") {
+      finalOutcome = "win";
+    } else if (expectedResult === "force_loss") {
+      finalOutcome = "loss";
+    } else {
+      // Use RTP percentage
+      const roll = Math.random() * 100;
+      finalOutcome = roll <= globalRtp ? "win" : "loss";
+    }
+
+    const gameId = `ludo_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+    // Opponent details list
+    const names = ["shahin_pro", "rasel_99", "mim_crush", "rakib_fly", "hasan_boss", "tasnim_jet", "raj_aviator", "milon_bhai", "nabil_10", "farhana_22", "shakil_vip", "sumon_king", "sohel_star"];
+    const avatarPics = [
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&h=80&q=80",
+      "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&h=80&q=80",
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&h=80&q=80",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&h=80&q=80",
+      "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=80&h=80&q=80"
+    ];
+    const opponentName = names[Math.floor(Math.random() * names.length)];
+    const opponentPic = avatarPics[Math.floor(Math.random() * avatarPics.length)];
+
+    await database.runTransaction(async (transaction: any) => {
+      const userRef = database.collection("users").doc(userId);
+      const userSnap = await transaction.get(userRef);
+      if (!userSnap.exists) {
+        throw new Error("User document does not exist in Firestore!");
+      }
+
+      const userData = userSnap.data()!;
+      const currentDbBal = Number(userData.mainBalance || userData.balance || 0);
+
+      if (currentDbBal < betAmount) {
+        throw new Error("Insufficient balance to start Ludo match.");
+      }
+
+      const updatedBalance = Number((currentDbBal - betAmount).toFixed(2));
+
+      // Update balance securely
+      transaction.update(userRef, {
+        balance: updatedBalance,
+        mainBalance: updatedBalance,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Save match state in standard allowed game_task_history collection to avoid PERMISSION_DENIED
+      const matchRef = database.collection("game_task_history").doc(gameId);
+      transaction.set(matchRef, {
+        userId,
+        gameId,
+        betAmount,
+        finalOutcome,
+        opponentName,
+        status: "active",
+        gameType: "ludo_match",
+        gameName: "Ludo Game",
+        createdAt: new Date().toISOString()
+      });
+
+      // Save bet deduction transaction
+      const txId = `tx_ludo_bet_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const txRef = database.collection("transactions").doc(txId);
+      transaction.set(txRef, {
+        userId,
+        type: "ludo_game",
+        amount: -betAmount,
+        source: "Ludo Game",
+        description: `Ludo Bet: ৳${betAmount}`,
+        createdAt: new Date().toISOString(),
+        status: "completed",
+        gameName: "Ludo Game"
+      });
+    });
+
+    res.json({
+      success: true,
+      gameId,
+      opponentName,
+      opponentPic,
+      finalOutcome,
+      message: "Ludo match started successfully."
+    });
+  } catch (error: any) {
+    console.error("Error starting Ludo match:", error);
+    res.status(500).json({ error: error.message || "Failed to start Ludo match." });
+  }
+});
+
+// Complete Ludo Game (Claim win & update stats)
+expressApp.post("/api/game/ludo/complete", verifyToken, async (req: any, res: any) => {
+  try {
+    const database = ensureDb();
+    if (!database) return res.status(503).json({ error: "Database not connected" });
+    if (!req.user || !req.user.uid) return res.status(401).json({ error: "Unauthorized" });
+
+    const userId = req.user.uid;
+    const { gameId, win } = req.body;
+
+    if (!gameId) {
+      return res.status(400).json({ error: "Missing game ID" });
+    }
+
+    await ensureAuthenticatedSystem();
+
+    const resultMessage = await database.runTransaction(async (transaction: any) => {
+      // Use existing, fully allowed game_task_history collection instead of non-deployed ludo_matches
+      const matchRef = database.collection("game_task_history").doc(gameId);
+      const userRef = database.collection("users").doc(userId);
+
+      // Execute all reads first
+      const [matchSnap, userSnap] = await Promise.all([
+        transaction.get(matchRef),
+        transaction.get(userRef)
+      ]);
+
+      if (!matchSnap.exists) {
+        throw new Error("Ludo match session not found.");
+      }
+
+      const matchData = matchSnap.data()!;
+      if (matchData.userId !== userId) {
+        throw new Error("Unauthorized match session.");
+      }
+      if (matchData.status !== "active") {
+        throw new Error("Ludo match already completed.");
+      }
+
+      const betAmount = Number(matchData.betAmount || 0);
+
+      // Allow organic game match outcomes as requested
+      const finalWin = !!win;
+
+      // Execute all updates/set writes after reads are complete
+      transaction.update(matchRef, {
+        status: "completed",
+        winClaimed: finalWin,
+        completedAt: new Date().toISOString()
+      });
+
+      if (finalWin) {
+        if (!userSnap.exists) {
+          throw new Error("User document does not exist.");
+        }
+
+        const userData = userSnap.data()!;
+        const currentDbBal = Number(userData.mainBalance || userData.balance || 0);
+        const winPayout = Number((betAmount * 1.95).toFixed(2));
+        const updatedBalance = Number((currentDbBal + winPayout).toFixed(2));
+
+        // Update user balances
+        transaction.update(userRef, {
+          balance: updatedBalance,
+          mainBalance: updatedBalance,
+          updatedAt: new Date().toISOString()
+        });
+
+        // Add win transaction entry
+        const txId = `tx_ludo_win_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const txRef = database.collection("transactions").doc(txId);
+        transaction.set(txRef, {
+          userId,
+          type: "ludo_game",
+          amount: winPayout,
+          source: "Ludo Game",
+          description: `Ludo Win Payout (৳${betAmount} bet x 1.95 after 5% edge)`,
+          createdAt: new Date().toISOString(),
+          status: "completed",
+          gameName: "Ludo Game"
+        });
+
+        return { status: "win_credited_৳" + winPayout, newBalance: updatedBalance };
+      } else {
+        // Safe logging of loss
+        const txId = `tx_ludo_loss_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const txRef = database.collection("transactions").doc(txId);
+        transaction.set(txRef, {
+          userId,
+          type: "ludo_game",
+          amount: 0,
+          source: "Ludo Game",
+          description: `Ludo Match Loss (৳${betAmount} bet)`,
+          createdAt: new Date().toISOString(),
+          status: "completed",
+          gameName: "Ludo Game"
+        });
+
+        const currentDbBal = userSnap.exists ? Number(userSnap.data()!.mainBalance || userSnap.data()!.balance || 0) : 0;
+
+        return { status: "loss_recorded", newBalance: currentDbBal };
+      }
+    });
+
+    res.json({ success: true, outcome: resultMessage.status, newBalance: resultMessage.newBalance });
+  } catch (error: any) {
+    console.error("Error completing Ludo match:", error);
+    res.status(500).json({ error: error.message || "Failed to complete Ludo match." });
   }
 });
 
