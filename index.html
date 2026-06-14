@@ -69,6 +69,7 @@ body.dark-mode {
 }
 
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;-webkit-tap-highlight-color:transparent}
+html, body { height: 100%; margin: 0; padding: 0; }
  body{background:#F8FAFC;color:var(--text);transition:background 0.3s, color 0.3s}
  input,button,select,textarea{font-family:inherit}
 .app-wrapper{max-width:480px;margin:10px auto;background:var(--bg);min-height:98vh;position:relative;box-shadow:0 10px 40px rgba(0,0,0,0.08);border-radius:24px;overflow:hidden;border:1px solid var(--border)}
@@ -927,7 +928,9 @@ body.dark-mode {
     .view-container {
         display: none;
         width: 100%;
-        min-height: 100vh;
+        min-height: 100%;
+        max-height: 100%;
+        overflow-y: auto;
     }
     .view-container.active { display: block; }
     .view-container.flex-center {
@@ -936,6 +939,7 @@ body.dark-mode {
         justify-content: center;
         background: var(--bg);
         padding: 20px;
+        flex-direction: column;
     }
     .view-container.flex-center.active { display: flex; }
 
@@ -1317,76 +1321,194 @@ body.dark-mode {
       text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
     }
 
+    /* General Responsive Optimization for Outer App-Wrapper */
+    @media (max-width: 480px) {
+      /* When logged out, let the scroll be continuous and natural on phone body */
+      body:not(.logged-in-mobile) {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+        min-height: 100dvh !important;
+        background: #F8FAFC;
+      }
+      body.dark-mode:not(.logged-in-mobile) {
+        background: #121212;
+      }
+      body:not(.logged-in-mobile) .app-wrapper {
+        margin: 0 !important;
+        border-radius: 0px !important;
+        border: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100dvh !important;
+        height: auto !important;
+        overflow-y: visible !important;
+      }
+      body:not(.logged-in-mobile) .view-container {
+        min-height: 100dvh !important;
+        height: auto !important;
+        overflow-y: visible !important;
+      }
+    }
+
     /* Logged-In Mobile Viewport Lock (Global Responsive Enforcement) */
+    html.logged-in-mobile,
     body.logged-in-mobile {
-      background: #09090b !important; /* Elegant dark slate background for out-of-frame */
-      display: flex !important;
-      justify-content: center !important;
-      align-items: center !important;
-      min-height: 100vh !important;
-      height: 100vh !important;
       margin: 0 !important;
       padding: 0 !important;
+      width: 100% !important;
+      height: 100vh !important;
       overflow: hidden !important;
     }
 
-    body.logged-in-mobile .app-wrapper {
-      width: 100% !important;
-      max-width: 430px !important;
-      height: 100vh !important;
-      min-height: 100vh !important;
-      margin: 0 auto !important;
-      border-radius: 0px !important;
-      border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-top: none !important;
-      border-bottom: none !important;
-      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9) !important;
-      background: var(--bg) !important;
-      position: relative !important;
-      display: flex !important;
-      flex-direction: column !important;
-      overflow: hidden !important; /* Contain within wrapper */
+    /* DESKTOP SIMULATOR ONLY (For larger screens) */
+    @media (min-width: 481px) {
+      html.logged-in-mobile,
+      body.logged-in-mobile {
+        background: #0b0713 !important; /* Elegant solid midnight dark background for outer space on desktop */
+      }
+      
+      html.logged-in-mobile .app-wrapper,
+      body.logged-in-mobile .app-wrapper {
+        margin: 0 auto !important;
+        width: 100% !important;
+        max-width: 430px !important;
+        height: 100vh !important;
+        background: var(--bg) !important; /* Let the app retain its standard white (light mode) or charcoal (dark mode) background naturally */
+        position: relative !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5) !important;
+        overflow: hidden !important;
+      }
+
+      html.logged-in-mobile .app-header,
+      body.logged-in-mobile .app-header {
+        position: fixed !important;
+        top: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 100% !important;
+        max-width: 430px !important;
+        height: var(--header-h) !important;
+        z-index: 9999 !important;
+        box-sizing: border-box !important;
+      }
+
+      html.logged-in-mobile #maintenanceNotice,
+      body.logged-in-mobile #maintenanceNotice {
+        position: fixed !important;
+        top: var(--header-h) !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 100% !important;
+        max-width: 430px !important;
+        z-index: 9998 !important;
+      }
+
+      html.logged-in-mobile .app-footer,
+      body.logged-in-mobile .app-footer {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 100% !important;
+        max-width: 430px !important;
+        height: var(--footer-h) !important;
+        z-index: 9999 !important;
+        box-sizing: border-box !important;
+      }
     }
 
-    /* Target the actual active app view container and force it to fill the locked viewport */
+    /* NATIVE MOBILE VIEWPORT ONLY (For smaller screens - Guarantees full-screen layout and eliminates black borders/margins) */
+    @media (max-width: 480px) {
+      html.logged-in-mobile,
+      body.logged-in-mobile {
+        background: var(--bg) !important; /* Matches current theme (light or dark) on real mobile screen - no black gaps */
+      }
+      
+      html.logged-in-mobile .app-wrapper,
+      body.logged-in-mobile .app-wrapper {
+        margin: 0 !important;
+        width: 100% !important; 
+        max-width: 100% !important;
+        height: 100vh !important;
+        background: var(--bg) !important; /* Flawless background integration supports light and dark themes */
+        border: none !important;
+        box-shadow: none !important;
+        position: relative !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+      }
+
+      html.logged-in-mobile .app-header,
+      body.logged-in-mobile .app-header {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        transform: none !important;
+        height: var(--header-h) !important;
+        z-index: 9999 !important;
+        box-sizing: border-box !important;
+      }
+
+      html.logged-in-mobile #maintenanceNotice,
+      body.logged-in-mobile #maintenanceNotice {
+        position: fixed !important;
+        top: var(--header-h) !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        transform: none !important;
+        z-index: 9998 !important;
+      }
+
+      html.logged-in-mobile .app-footer,
+      body.logged-in-mobile .app-footer {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        transform: none !important;
+        height: var(--footer-h) !important;
+        z-index: 9999 !important;
+        box-sizing: border-box !important;
+      }
+    }
+
+    html.logged-in-mobile #appView.app-view.active,
     body.logged-in-mobile #appView.app-view.active {
       display: flex !important;
       flex-direction: column !important;
-      flex: 1 !important;
       height: 100% !important;
       width: 100% !important;
       position: relative !important;
       overflow: hidden !important;
     }
 
+    html.logged-in-mobile .app-content,
     body.logged-in-mobile .app-content {
-      flex: 1 !important;
+      height: 100vh !important;
       overflow-y: auto !important;
-      height: calc(100vh - var(--header-h) - var(--footer-h)) !important;
-      padding-top: calc(var(--header-h) + 16px) !important;
-      padding-bottom: calc(var(--footer-h) + 16px) !important;
+      padding-top: 60px !important;
+      padding-bottom: 70px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
     }
 
-    /* Keep header and footer bounded completely within the simulated mobile frame */
-    body.logged-in-mobile .app-header {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      transform: none !important;
-    }
-
-    body.logged-in-mobile .app-footer {
-      position: absolute !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      transform: none !important;
+    /* Dynamic padding-top adjustment when maintenanceNotice is active (display: block) or displayed visible */
+    html.logged-in-mobile #maintenanceNotice[style*="display: block"] ~ .app-content,
+    html.logged-in-mobile #maintenanceNotice:not([style*="display: none"]) ~ .app-content,
+    body.logged-in-mobile #maintenanceNotice[style*="display: block"] ~ .app-content,
+    body.logged-in-mobile #maintenanceNotice:not([style*="display: none"]) ~ .app-content {
+      padding-top: 98px !important; /* 60px header + 38px notice height */
     }
 </style>
 </head>
@@ -5471,6 +5593,7 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         // Enforce Mobile Viewport Lock dynamically
         document.body.classList.add('logged-in-mobile');
+        document.documentElement.classList.add('logged-in-mobile');
         if (user.isAnonymous) {
             // It's an anonymous guest support session. Keep views intact and exit.
             return;
@@ -5918,6 +6041,7 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         // Remove Mobile Viewport Lock dynamically on signOut
         document.body.classList.remove('logged-in-mobile');
+        document.documentElement.classList.remove('logged-in-mobile');
         currentUserData = null;
         if(userDocListener) { userDocListener(); userDocListener = null; }
         if(adminConfigListener) { adminConfigListener(); adminConfigListener = null; }
