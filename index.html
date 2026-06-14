@@ -1349,12 +1349,23 @@ body.dark-mode {
       overflow: hidden !important; /* Contain within wrapper */
     }
 
+    /* Target the actual active app view container and force it to fill the locked viewport */
+    body.logged-in-mobile #appView.app-view.active {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      height: 100% !important;
+      width: 100% !important;
+      position: relative !important;
+      overflow: hidden !important;
+    }
+
     body.logged-in-mobile .app-content {
       flex: 1 !important;
       overflow-y: auto !important;
       height: calc(100vh - var(--header-h) - var(--footer-h)) !important;
-      padding-top: 16px !important;
-      padding-bottom: 16px !important;
+      padding-top: calc(var(--header-h) + 16px) !important;
+      padding-bottom: calc(var(--footer-h) + 16px) !important;
     }
 
     /* Keep header and footer bounded completely within the simulated mobile frame */
@@ -2417,9 +2428,12 @@ body.dark-mode {
 </div>
 <!-- Simple Earn Page -->
 <div id="simpleEarnPage" class="page">
-    <div class="deposit-header">
-        <i class="fa-solid fa-arrow-left" onclick="navigateTo('homePage')"></i>
-        <h3>Simple Earn</h3>
+    <div style="padding: 18px 18px 0px 18px; margin-bottom: 5px;">
+        <h2 id="simpleEarnTitleText" style="font-size: 20px; font-weight: 900; color: var(--text); font-family: var(--font-sans); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-circle-dollar-to-slot" style="color: #ffd700;"></i>
+            Simple Earn
+        </h2>
+        <p style="font-size: 11.5px; color: var(--muted); margin: 4px 0 0 0; font-weight: 500;">Lock and grow your digital assets with high efficiency pools</p>
     </div>
     <div id="saMainContentContainer" style="padding:16px; position:relative; min-height:510px;">
         <style>
@@ -2462,7 +2476,7 @@ body.dark-mode {
                 padding: 0 !important;
                 margin: 0 !important;
                 min-height: 100vh !important;
-                background-color: #13151b !important;
+                background: radial-gradient(circle at 50% 50%, #130a25 0%, #05030b 100%) !important;
             }
 
             .switch-modern input:checked + .slide-round {
@@ -2597,6 +2611,84 @@ body.dark-mode {
                 transform: translateY(-2px);
                 box-shadow: 0 12px 35px rgba(255, 215, 0, 0.25);
             }
+
+            /* Live propeller spinning keyframes */
+            @keyframes sa-prop-spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            .sa-spinning-propeller {
+                transform-origin: 82px 24px;
+                animation: sa-prop-spin 0.08s linear infinite !important;
+            }
+
+            /* Live Crash Game Background Overlays */
+            @keyframes saGridScroll {
+                0% { background-position: 0 0; }
+                100% { background-position: 0 40px; }
+            }
+            @keyframes saNebulaPulse {
+                0%, 100% { opacity: 0.22; transform: scale(1); }
+                50% { opacity: 0.38; transform: scale(1.12); }
+            }
+            .sa-live-grid-overlay {
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background-image: 
+                    linear-gradient(rgba(139, 92, 246, 0.06) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(139, 92, 246, 0.06) 1px, transparent 1px);
+                background-size: 24px 24px;
+                animation: saGridScroll 12s linear infinite;
+                pointer-events: none;
+                z-index: 1;
+            }
+            .sa-nebula-glow-1 {
+                position: absolute;
+                top: 8%; left: 4%; width: 220px; height: 220px;
+                background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+                border-radius: 50%;
+                filter: blur(22px);
+                animation: saNebulaPulse 10s ease-in-out infinite;
+                pointer-events: none;
+                z-index: 1;
+            }
+            .sa-nebula-glow-2 {
+                position: absolute;
+                bottom: 12%; right: 4%; width: 260px; height: 260px;
+                background: radial-gradient(circle, rgba(236, 72, 153, 0.18) 0%, transparent 70%);
+                border-radius: 50%;
+                filter: blur(28px);
+                animation: saNebulaPulse 14s ease-in-out infinite alternate;
+                pointer-events: none;
+                z-index: 1;
+            }
+            .sa-scanline {
+                position: absolute;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: linear-gradient(
+                    to bottom,
+                    rgba(255,255,255,0),
+                    rgba(255,255,255,0) 50%,
+                    rgba(139,92,246,0.02) 50%,
+                    rgba(139,92,246,0.02)
+                );
+                background-size: 100% 4px;
+                pointer-events: none;
+                z-index: 2;
+            }
+            .lobby-live-ticker-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 6px 10px;
+                background: rgba(255,255,255,0.02);
+                border: 1px solid rgba(255,215,0,0.06);
+                border-radius: 8px;
+                font-size: 11px;
+                color: #d4d4d8;
+                font-family: var(--font-mono);
+                animation: saSlideDown 0.3s ease-out;
+            }
         </style>
 
         <!-- (1) Loading Overlay -->
@@ -2630,8 +2722,14 @@ body.dark-mode {
             </div>
         </div>
 
+        <!-- Live Crash / Cosmic Hologram background visuals -->
+        <div class="sa-live-grid-overlay" style="z-index: 0;"></div>
+        <div class="sa-nebula-glow-1" style="z-index: 0;"></div>
+        <div class="sa-nebula-glow-2" style="z-index: 0;"></div>
+        <div class="sa-scanline" style="z-index: 0;"></div>
+
         <!-- (2) Beautiful Entry Card View with 4-column Game Zone -->
-        <div id="saEntryView" style="display: block;">
+        <div id="saEntryView" style="display: block; position: relative; z-index: 2;">
             <!-- Premium Category Title -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: 8px;">
                 <h4 style="font-size: 14px; font-weight: 800; color: var(--text); margin: 0; display: flex; align-items: center; gap: 6px; font-family: var(--font-sans);">
@@ -2647,16 +2745,31 @@ body.dark-mode {
                 <!-- Game 1: JDB Airplane Game -->
                 <div id="superAceGridItem" onclick="window.enterCashFlightGame()" style="display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: transform 0.15s; width: 100%;">
                     <!-- Custom Golden Jet Vector (JDB Airplane Logo style) -->
-                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #251642 0%, #0c0817 100%); border: 2.5px solid #ffd700; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(12, 8, 23, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);">
+                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #251642 0%, #0c0817 100%); border: 2.5px solid #ff4b5c; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(12, 8, 23, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);">
                         <!-- Grid lines simulation -->
-                        <div style="position: absolute; width: 100%; height: 100%; opacity: 0.15; background: repeating-linear-gradient(0deg, #ffd700, #ffd700 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, #ffd700, #ffd700 1px, transparent 1px, transparent 10px);"></div>
+                        <div style="position: absolute; width: 100%; height: 100%; opacity: 0.15; background: repeating-linear-gradient(0deg, #ff4b5c, #ff4b5c 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, #ff4b5c, #ff4b5c 1px, transparent 1px, transparent 10px);"></div>
                         
                         <!-- Smooth radar sweeping lighting effect -->
-                        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 180deg, transparent, rgba(255,215,0,0.1) 40deg, transparent 45deg); animation: saSpin 5s linear infinite; transform-origin: center;"></div>
+                        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 180deg, transparent, rgba(239,68,68,0.1) 40deg, transparent 45deg); animation: saSpin 5s linear infinite; transform-origin: center;"></div>
 
-                        <!-- Golden Jet plane moving subtly up and down -->
-                        <div style="position: absolute; top: 25%; z-index: 5; animation: cfPulseEx 2s ease-in-out infinite; transform-origin: center; filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));">
-                            <i class="fa-solid fa-plane-up" style="color: #ffd700; font-size: 26px; transform: rotate(45deg);"></i>
+                        <!-- Red Propeller Plane Icon moving subtly up and down -->
+                        <div style="position: absolute; top: 20%; z-index: 5; animation: cfPulseEx 2.2s ease-in-out infinite; transform-origin: center; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.85));">
+                            <svg width="42" height="30" viewBox="0 0 100 70" fill="none" style="transform: rotate(15deg);">
+                                <path d="M 15 58 L 80 43 L 82 45 L 17 60 Z" fill="#991b1b" />
+                                <path d="M 30 50 L 22 59 L 24 60 L 32 51 Z" fill="#dc2626" />
+                                <path d="M 68 43 L 64 50 L 66 51 L 70 44 Z" fill="#dc2626" />
+                                <path d="M 18 45 L 6 36 L 4 41 L 11 50 L 15 51 Z" fill="#b91c1c" />
+                                <path d="M 12 36 L 2 32 L 10 33 Z" fill="#ef4444" />
+                                <path d="M 24 43 C 32 40 40 38 48 38 L 74 24 C 82 20 85 22 83 26 L 80 34 C 74 38 62 44 48 48 C 36 51 24 50 20 48 Z" fill="#ef4444" />
+                                <path d="M 26 43 L 68 33 L 70 37 L 24 46 Z" fill="#7f1d1d" opacity="0.8" />
+                                <path d="M 45 33 C 48 24 58 24 60 28 L 56 34 Z" fill="#fee2e2" opacity="0.4" />
+                                <path d="M 65 29 L 71 35 M 71 29 L 65 35" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+                                <circle cx="82" cy="24" r="3.5" fill="#7f1d1d" />
+                                <g class="sa-spinning-propeller" style="transform-origin: 82px 24px;">
+                                    <path d="M 81 24 C 74 12 76 4 80 2 C 84 0 86 12 83 24 Z" fill="#ffffff" />
+                                    <path d="M 83 24 C 90 36 88 44 84 46 C 80 48 78 36 81 24 Z" fill="#ffffff" />
+                                </g>
+                            </svg>
                         </div>
                         
                         <!-- Mathematical line glow -->
@@ -2672,31 +2785,37 @@ body.dark-mode {
                     <span style="font-size: 10.5px; font-weight: 800; color: var(--text); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">Airplane</span>
                 </div>
 
-                <!-- Game 2: JDB Super Ace slots -->
-                <div id="superAceSlotGridItem" onclick="window.enterSuperAceSlotGame()" style="display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: transform 0.15s; width: 100%;">
-                    <!-- Premium Poker/Slots Card Vector style -->
-                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at 50% 30%, #4a0c0e 0%, #170404 100%); border: 2.5px solid #ff9f1c; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(23,4,4, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);">
-                        <!-- Grid lines red style -->
-                        <div style="position: absolute; width: 100%; height: 100%; opacity: 0.1; background: repeating-linear-gradient(0deg, #ff9f1c, #ff9f1c 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, #ff9f1c, #ff9f1c 1px, transparent 1px, transparent 10px);"></div>
+                <!-- Game 2: Ludo Game Live (Replaces JDB Super Ace Slots) -->
+                <div id="ludoGameGridItem" onclick="window.enterLudoGame()" style="display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: transform 0.15s; width: 100%;">
+                    <!-- Premium Ludo Board Vector style -->
+                    <div style="width: 100%; aspect-ratio: 1/1; border-radius: 14px; background: radial-gradient(circle at center, #1e293b 20%, #030712 100%); border: 2.5px solid #ff9f1c; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0, 0.4), inset 0 1px 2px rgba(255,255,255,0.3);">
                         
-                        <!-- Smooth sweeping lighting effect -->
-                        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 180deg, transparent, rgba(255,159,28,0.1) 40deg, transparent 45deg); animation: saSpin 5s linear infinite; transform-origin: center;"></div>
+                        <!-- Ludo Cross-Layout Background Lines -->
+                        <div style="position: absolute; inset: 4px; border-radius: 10px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 4px; opacity: 0.15;">
+                            <div style="background: #e11d48; border-radius: 4px;"></div>
+                            <div style="background: #2563eb; border-radius: 4px;"></div>
+                            <div style="background: #eab308; border-radius: 4px;"></div>
+                            <div style="background: #16a34a; border-radius: 4px;"></div>
+                        </div>
 
-                        <!-- Slots crown icon subtle floating -->
-                        <div style="position: absolute; top: 25%; z-index: 5; animation: cfPulseEx 2s ease-in-out infinite; transform-origin: center; filter: drop-shadow(0 0 8px rgba(255, 159, 28, 0.6));">
-                            <i class="fa-solid fa-crown" style="color: #ff9f1c; font-size: 26px;"></i>
+                        <!-- Smooth sweeping lighting effect -->
+                        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 180deg, transparent, rgba(255,159,28,0.08) 40deg, transparent 45deg); animation: saSpin 5s linear infinite; transform-origin: center;"></div>
+
+                        <!-- 3D Dice Icon floating in the center -->
+                        <div style="position: absolute; z-index: 5; animation: cfPulseEx 2s ease-in-out infinite; transform-origin: center; filter: drop-shadow(0 0 10px rgba(255, 159, 28, 0.5));">
+                            <i class="fa-solid fa-dice" style="color: #f7931a; font-size: 34px;"></i>
                         </div>
                         
-                        <!-- Mini cards suit indicators -->
-                        <div style="position: absolute; top: 6px; left: 8px; font-size: 8px; color: #ff9f1c; font-weight: 900;">A♦</div>
-                        <div style="position: absolute; bottom: 18px; right: 8px; font-size: 8px; color: #ff9f1c; font-weight: 900;">K♠</div>
+                        <!-- Mini dice numbers on corners -->
+                        <div style="position: absolute; top: 6px; left: 8px; font-size: 8px; color: #ff9f1c; font-weight: 900;">🎲 1</div>
+                        <div style="position: absolute; bottom: 18px; right: 8px; font-size: 8px; color: #ff9f1c; font-weight: 900;">🎲 6</div>
 
                         <!-- Text label inside icon wrapper -->
                         <div style="position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; z-index: 10;">
-                            <span style="font-size: 7.5px; font-weight: 950; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 6px #ff9f1c; letter-spacing: 0.2px; text-transform: uppercase;">SUPER ACE</span>
+                            <span style="font-size: 7.5px; font-weight: 950; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 6px #ff9f1c; letter-spacing: 0.2px; text-transform: uppercase;">LUDU LIVE</span>
                         </div>
                     </div>
-                    <span style="font-size: 10.5px; font-weight: 800; color: var(--text); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">Super Ace</span>
+                    <span style="font-size: 10.5px; font-weight: 800; color: var(--text); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">Ludo Game</span>
                 </div>
 
                 <!-- Game 3: COMING SOON Mines Placeholder (Identical visual card size) -->
@@ -2732,6 +2851,21 @@ body.dark-mode {
                 </div>
             </div>
 
+            <!-- Live Crash Multiplayer Bets Panel -->
+            <div style="background: rgba(17, 9, 28, 0.45); border: 1.5px solid rgba(255, 215, 0, 0.15); border-radius: 16px; padding: 14px; margin-top: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); position: relative; overflow: hidden; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+                <!-- Animated green dot line -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,215,0,0.1); padding-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:6.5px;">
+                        <span style="display:inline-block; width:8px; height:8px; background:#4cf086; border-radius:50%; box-shadow:0 0 10px #4cf086; animation: saPulse 1.2s infinite;"></span>
+                        <strong style="font-size:12px; font-weight:800; color:#ffd700; text-transform:uppercase; letter-spacing:0.5px; font-family:'Space Grotesk';">🔴 LIVE MULTIPLAYER HUB</strong>
+                    </div>
+                    <span id="saLiveUserCount" style="font-size:10px; color:#d4d4d8; font-weight:700; font-family:var(--font-mono);">1,384 Online</span>
+                </div>
+                <!-- Mini Scrolling Stream Ticker -->
+                <div id="saLobbyLiveTicker" style="display:flex; flex-direction:column; gap:6.5px; height:90px; overflow-y:hidden;">
+                    <!-- Rows will cycle and slide down dynamically -->
+                </div>
+            </div>
         </div>
 
         <!-- (3) Actual Real-Time Game View (Flexible full screen canvas) -->
@@ -2801,30 +2935,57 @@ body.dark-mode {
                             <path id="jdbFlightCurve" d="M 10 160 Q 30 150, 40 130" fill="none" stroke="#ffd700" stroke-width="4" stroke-linecap="round" style="filter: drop-shadow(0 0 6px #ffd700); display:none;"></path>
                         </svg>
 
-                        <!-- Vector Golden Airplane Icon -->
-                        <!-- STYLISH UPGRADED SUPERSONIC JET LIGHTWEIGHT SVG ENGINE: Resolves the blunt-flat nose issue, rendering a sleek, pointed, high-end golden jet with a glowing thruster flame pointing perfectly to the right by default (0deg) -->
-                        <div id="jdbAirplaneIcon" style="position: absolute; transform: translate(-50%, -50%) rotate(-15deg); display: none; z-index: 10; pointer-events: none; filter: drop-shadow(0 0 12px #ffb300) drop-shadow(0 0 4px #ffd700);">
-                            <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: scale(1.2);">
-                                <!-- Glowing Jet Flame / Booster / Thruster Fire trailing from engine exhaust -->
-                                <path d="M 12 32 Q -10 32 4 28 Q -20 32 4 32 Q -20 32 4 36 Z" fill="url(#jet-flame-grad-air)" opacity="0.95" filter="drop-shadow(0 0 6px #ff4500)" />
-                                <!-- Sleek Supersonic Airplane Fuselage and Pointed Nose Capsule -->
-                                <path d="M58,32 C50,28.5 34,25.5 26,25.5 C20,25.5 12,26.5 8,31 C7,32 7,32 8,33 C12,37.5 20,38.5 26,38.5 C34,38.5 50,35.5 58,32 Z" fill="#ffd700" />
-                                <!-- Swept-Back Main Wing (Top Wing) -->
-                                <path d="M36,26.5 L16,7 C14,5 12,6 14,9 L24,26.5 Z" fill="#facc15" />
-                                <!-- Swept-Back Main Wing (Bottom Wing) -->
-                                <path d="M36,37.5 L16,57 C14,59 12,58 14,55 L24,37.5 Z" fill="#ffd700" />
-                                <!-- Sleek Aerodynamic Tail Stabilizer Fins -->
-                                <path d="M14,26.5 L6,14 C5,13 4,13 5,15 L10,26.5 Z" fill="#ca8a04" />
-                                <path d="M14,37.5 L6,50 C5,51 4,51 5,49 L10,37.5 Z" fill="#facc15" />
-                                <!-- Center Metallic Ridge Highlight for an upscale 3D golden reflection -->
-                                <path d="M58,32 C50,29.5 34,28.5 26,28.5 C20,28.5 14,29.5 10,32 C14,34.5 20,35.5 26,35.5 C34,35.5 50,34.5 58,32 Z" fill="#ffffff" opacity="0.5" />
+                        <!-- Vector Custom Red Propeller Sport Plane Icon -->
+                        <!-- HIGH FIT VECTOR PROPELLER PLANE ENGINE: Recreates the exact sporty red airplane with cutout window, bold white 'X' stencil graphic, undercarriage skid stabilizer, and an independent ultra-fast spinning propeller at the front nose -->
+                        <div id="jdbAirplaneIcon" style="position: absolute; transform: translate(-50%, -50%) rotate(-15deg); display: none; z-index: 10; pointer-events: none; filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.9)) drop-shadow(0 0 5px rgba(220, 38, 38, 0.6));">
+                            <svg width="72" height="50" viewBox="0 0 100 70" fill="none" xmlns="http://www.w3.org/2000/svg" style="transform: scale(1.1);">
                                 <defs>
-                                    <linearGradient id="jet-flame-grad-air" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stop-color="#ff3300" stop-opacity="0" />
-                                        <stop offset="50%" stop-color="#ff7e00" />
-                                        <stop offset="100%" stop-color="#ffd700" />
+                                    <linearGradient id="bodyRedGrad" x1="0" y1="0" x2="100" y2="0">
+                                        <stop offset="0%" stop-color="#991b1b" />
+                                        <stop offset="50%" stop-color="#dc2626" />
+                                        <stop offset="100%" stop-color="#ef4444" />
+                                    </linearGradient>
+                                    <linearGradient id="propRedGrad" x1="0" y1="0" x2="0" y2="100">
+                                        <stop offset="0%" stop-color="#ef4444" />
+                                        <stop offset="100%" stop-color="#7f1d1d" />
                                     </linearGradient>
                                 </defs>
+
+                                <!-- Ground skid bar / stabilizer lower line -->
+                                <path d="M 15 58 L 80 43 L 82 45 L 17 60 Z" fill="#991b1b" />
+                                <path d="M 30 50 L 22 59 L 24 60 L 32 51 Z" fill="#dc2626" />
+                                <path d="M 68 43 L 64 50 L 66 51 L 70 44 Z" fill="#dc2626" />
+
+                                <!-- Tail fins / stabilizers with cutout shapes at back-left -->
+                                <path d="M 18 45 L 6 36 L 4 41 L 11 50 L 15 51 Z" fill="#b91c1c" />
+                                <path d="M 12 36 L 2 32 C 1 31 1 29 3 28 L 10 33 Z" fill="#ef4444" />
+                                <path d="M 8 32 C 6 25 15 24 16 33 Z" fill="none" stroke="#7f1d1d" stroke-width="2" />
+                                
+                                <!-- Sleek Red Fuselage & Swept back wing structure pointing up-right -->
+                                <path d="M 24 43 C 32 40 40 38 48 38 L 74 24 C 82 20 85 22 83 26 L 80 34 C 74 38 62 44 48 48 C 36 51 24 50 20 48 Z" fill="url(#bodyRedGrad)" />
+
+                                <!-- Distinctive Wing Sweep bottom cutout/highlight -->
+                                <path d="M 26 43 L 68 33 L 70 37 L 24 46 Z" fill="#7f1d1d" opacity="0.8" />
+                                <path d="M 28 44 L 62 35 L 64 38 L 26 47 Z" fill="#ef4444" />
+
+                                <!-- Cockpit canopy window at current top level -->
+                                <path d="M 45 33 C 48 24 58 24 60 28 L 56 34 Z" fill="#fee2e2" opacity="0.3" />
+                                <path d="M 48 31 C 51 25 56 25 57 28 L 54 32 Z" fill="#ffffff" opacity="0.8" />
+
+                                <!-- The distinctive bold white 'X' stencil cutout pattern on the side fuselage -->
+                                <path d="M 65 29 L 71 35 M 71 29 L 65 35" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+
+                                <!-- Front Propeller Mount on the nose -->
+                                <circle cx="82" cy="24" r="3.5" fill="#7f1d1d" />
+                                <circle cx="82" cy="24" r="2" fill="#fca5a5" />
+
+                                <!-- Custom Spinning Propeller -->
+                                <g class="sa-spinning-propeller" style="transform-origin: 82px 24px;">
+                                    <!-- Upper Blade Shape -->
+                                    <path d="M 81 24 C 74 12 76 4 80 2 C 84 0 86 12 83 24 Z" fill="url(#propRedGrad)" />
+                                    <!-- Lower Blade Shape -->
+                                    <path d="M 83 24 C 90 36 88 44 84 46 C 80 48 78 36 81 24 Z" fill="url(#propRedGrad)" stroke="#7f1d1d" stroke-width="1" />
+                                </g>
                             </svg>
                         </div>
 
@@ -2942,49 +3103,245 @@ body.dark-mode {
                     </div>
                 </div>
 
-                <!-- (Slot Section Container) JDB Super Ace slots content space -->
-                <div id="saSlotGameContainer" style="display: none; flex-direction: column; width: 100%;">
-                    <!-- Multiplier Track JILI indicator -->
-                    <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; background: rgba(0,0,0,0.4); padding: 6px; border-radius: 10px; border: 1px solid rgba(255,215,0,0.15);">
-                        <div id="saSlotMult1" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: #ff9f1c; color: #000; border: 1px solid #ff9f1c; transition: 0.2s;">x1</div>
-                        <div id="saSlotMult2" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,160,0,0.1); transition: 0.2s;">x2</div>
-                        <div id="saSlotMult3" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,160,0,0.1); transition: 0.2s;">x3</div>
-                        <div id="saSlotMult4" style="flex: 1; padding: 4px; text-align: center; border-radius: 6px; font-weight: 900; font-family: 'Space Grotesk', sans-serif; font-size: 13px; background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,160,0,0.1); transition: 0.2s;">x5</div>
-                    </div>
-
-                    <!-- The 5x3 Grid Board -->
-                    <div style="background: radial-gradient(circle at 50% 50%, #201735 0%, #0c0817 100%); border: 2.5px solid #ff9f1c; border-radius: 16px; padding: 6px; margin-bottom: 10px; position: relative; box-shadow: 0 8px 30px rgba(0,0,0,0.8), inset 0 0 25px rgba(255,159,28,0.05); overflow: hidden;">
-                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;" id="saSlotGrid">
-                            <!-- Dynamic cell items will render here: 15 cells (3 rows x 5 cols) -->
+                <!-- Ludo Game Interactive Board Container (Replaces Super Ace Slot Section) -->
+                <div id="saSlotGameContainer" style="display: none; flex-direction: column; width: 100%; font-family: 'Inter', sans-serif;">
+                    
+                    <!-- Ludo Matchmaking Screen / Initial Bet Select Screen (The Bet Selection Lobby) -->
+                    <div id="ludoSetupScreen" style="display: flex; flex-direction: column; gap: 18px; width: 100%; text-align: center; justify-content: center; padding: 24px 16px; background: linear-gradient(180deg, #0f172a 0%, #020617 100%); border-radius: 20px; border: 2.5px solid rgba(255, 159, 28, 0.25); box-shadow: 0 10px 40px rgba(0,0,0,0.8); box-sizing: border-box;">
+                        
+                        <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 950; color: #fff; text-shadow: 0 0 12px rgba(255, 159, 28, 0.6); letter-spacing: 0.8px; margin: 0; text-transform: uppercase;">
+                            1 VS 1 ONLINE LUDO CHALLENGE
+                        </h3>
+                        
+                        <div style="background: rgba(255,159,28,0.06); border: 1.5px solid rgba(255,159,28,0.3); border-radius: 14px; padding: 14px; text-align: left;">
+                            <span style="font-size: 11px; font-weight: 800; color: #ff9f1c; text-transform: uppercase; display: block; margin-bottom: 4px; font-family: 'Space Grotesk';">DISCLAIMER & PROTOCOL</span>
+                            <p style="margin: 0; font-size: 11px; color: #a1a1aa; line-height: 1.4; font-family: 'Inter';">
+                                ⚠️ You will be matched against a live, random real-world player. Leaving mid-game results in instant forfeiture.
+                            </p>
                         </div>
-                    </div>
 
-                    <!-- Controls Area -->
-                    <div style="background: #11091c; border: 1px solid rgba(255,159,28,0.15); border-radius: 14px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                        <!-- Active Stake selector -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 8px;">
-                            <span style="font-size: 10px; color: #a1a1aa; font-weight: bold; text-transform: uppercase;">Bet BDT</span>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <button onclick="window.adjustSaSlotBet(-1)" style="flex: none; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,159,28,0.1); border: 1px solid rgba(255,159,28,0.3); color: #ff9f1c; font-weight: 900; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">-</button>
-                                <span id="saSlotBetVal" style="font-size: 14px; font-weight: 950; color: #ff9f1c; font-family: 'JetBrains Mono', monospace; min-width: 44px; text-align: center;">10.00</span>
-                                <button onclick="window.adjustSaSlotBet(1)" style="flex: none; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,159,28,0.1); border: 1px solid rgba(255,159,28,0.3); color: #ff9f1c; font-weight: 900; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                        <!-- 4 Premium Glowing Betting Cards -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" id="ludoBetOptionsContainer">
+                            <!-- 20 BDT Match Card -->
+                            <div onclick="window.selectLudoBet(20)" id="ludoBetCard20" class="ludo-bet-card active-card" style="cursor: pointer; border-radius: 16px; padding: 14px; background: rgba(16, 185, 129, 0.05); border: 2.5px solid #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; box-sizing: border-box;">
+                                <i class="fa-solid fa-coins" style="color: #10b981; font-size: 22px; margin-bottom: 8px;"></i>
+                                <span style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: 900; color: #fff;">20 BDT Match</span>
+                                <span style="font-size: 10px; color: #10b981; font-weight: 800; margin-top: 4px;">PRIZE: ৳৪০</span>
+                            </div>
+                            
+                            <!-- 50 BDT Match Card -->
+                            <div onclick="window.selectLudoBet(50)" id="ludoBetCard50" class="ludo-bet-card" style="cursor: pointer; border-radius: 16px; padding: 14px; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; box-sizing: border-box;">
+                                <i class="fa-solid fa-coins" style="color: #ff9f1c; font-size: 22px; margin-bottom: 8px;"></i>
+                                <span style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: 900; color: #fff;">50 BDT Match</span>
+                                <span style="font-size: 10px; color: #ff9f1c; font-weight: 800; margin-top: 4px;">PRIZE: ৳১০০</span>
+                            </div>
+
+                            <!-- 100 BDT Match Card -->
+                            <div onclick="window.selectLudoBet(100)" id="ludoBetCard100" class="ludo-bet-card" style="cursor: pointer; border-radius: 16px; padding: 14px; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; box-sizing: border-box;">
+                                <i class="fa-solid fa-coins" style="color: #3b82f6; font-size: 22px; margin-bottom: 8px;"></i>
+                                <span style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: 900; color: #fff;">100 BDT Match</span>
+                                <span style="font-size: 10px; color: #3b82f6; font-weight: 800; margin-top: 4px;">PRIZE: ৳২০০</span>
+                            </div>
+
+                            <!-- 500 BDT Match Card -->
+                            <div onclick="window.selectLudoBet(500)" id="ludoBetCard500" class="ludo-bet-card" style="cursor: pointer; border-radius: 16px; padding: 14px; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; box-sizing: border-box;">
+                                <i class="fa-solid fa-coins" style="color: #a855f7; font-size: 22px; margin-bottom: 8px;"></i>
+                                <span style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: 900; color: #fff;">500 BDT Match</span>
+                                <span style="font-size: 10px; color: #a855f7; font-weight: 800; margin-top: 4px;">PRIZE: ৳১০০০</span>
                             </div>
                         </div>
 
-                        <!-- Bet steps quick selectors -->
-                        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 8px;" id="saSlotQuickBets">
-                            <!-- Dynamic quick bet buttons from config.betSteps -->
+                        <!-- Big action finding match -->
+                        <button onclick="window.startLudoMatchmaking()" style="width: 100%; height: 50px; background: linear-gradient(135deg, #ff9f1c 0%, #ff6b35 100%); border: none; border-radius: 14px; color: #fff; font-size: 14px; font-weight: 900; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,159,28,0.3); text-transform: uppercase;">
+                            <i class="fa-solid fa-gamepad"></i> Find Live Match (ম্যাচ খুঁজুন)
+                        </button>
+                    </div>
+
+                    <!-- Ludo Matchmaking Matching Loader Overlay screen -->
+                    <div id="ludoMatchmakingLoader" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px 10px; text-align: center;">
+                        <div style="position: relative; width: 110px; height: 110px; margin-bottom: 24px;">
+                            <!-- Pulsing radar ring -->
+                            <div style="position: absolute; inset: 0; border: 3px solid #ff9f1c; border-radius: 50%; opacity: 0.25; animation: saPulse 1.2s infinite;"></div>
+                            <div style="position: absolute; inset: 15px; border: 3px solid #2563eb; border-radius: 50%; opacity: 0.15; animation: saPulse 1.8s infinite;"></div>
+                            <!-- Circular actual spinning radar block -->
+                            <div style="position: absolute; inset: 0; border: 3px solid transparent; border-top-color: #ff9f1c; border-radius: 50%; animation: saSpin 1s linear infinite;"></div>
+                            <div style="position: absolute; inset: 32px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-dice" style="font-size: 34px; color: #ff9f1c; animation: cfPulseEx 1s infinite;"></i>
+                            </div>
+                        </div>
+                        
+                        <h4 id="ludoMatchStateText" style="margin: 0 0 6px 0; font-size: 15px; font-family: 'Space Grotesk'; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;">Searching for Active Opponent...</h4>
+                        <p style="margin: 0; font-size: 11px; color: #a1a1aa; line-height: 1.4;">উপযুক্ত অনলাইন প্রতিপক্ষ খোঁজা হচ্ছে, দয়া করে অপেক্ষা করুন...</p>
+                        
+                        <!-- Mini visual queue avatar matching layout -->
+                        <div style="display: flex; align-items: center; gap: 14px; margin-top: 28px; background: rgba(255,255,255,0.02); padding: 12px 24px; border-radius: 16px; border: 1.5px solid rgba(255,255,255,0.05); min-width: 240px; justify-content: center;">
+                            <div style="text-align: center;">
+                                <img id="ludoMyAvatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&h=80&q=80" style="width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid #10b981; object-fit: cover; box-shadow: 0 0 10px rgba(16,185,129,0.3);">
+                                <div style="font-size: 9px; color: #a1a1aa; font-weight: bold; margin-top: 5px;" id="ludoMyName">You</div>
+                            </div>
+                            <div style="font-size: 11px; font-weight: 900; color: #ff9f1c; animation: saPulse 0.8s infinite;">VS</div>
+                            <div style="text-align: center;">
+                                <div id="ludoOpponentLoaderBox" style="width: 44px; height: 44px; border-radius: 50%; border: 2px dashed rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4);">
+                                    <i class="fa-solid fa-question" style="color: #6b7280; font-size: 14px; animation: saPulse 1s infinite;"></i>
+                                </div>
+                                <img id="ludoOpponentPic" src="" style="width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid #ef4444; object-fit: cover; display: none; box-shadow: 0 0 10px rgba(239,68,68,0.3);">
+                                <div style="font-size: 9px; color: #a1a1aa; font-weight: bold; margin-top: 5px;" id="ludoOpponentName">Searching...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- The Ludo Live Board View screen (Highly commented, luxury neon styled dark canvas) -->
+                    <div id="ludoBoardScreen" style="display: none; flex-direction: column; width: 100%; position: relative;">
+                        <!-- Current Turn Notification bar -->
+                        <div id="ludoTurnNotifier" style="background: linear-gradient(90deg, #0f172a 0%, #020617 100%); border: 1.5px solid #10b981; padding: 10px; border-radius: 12px; font-family: 'Space Grotesk'; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="ludoTurnIndicatorDot" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block; animation: saPulse 1s infinite;"></span>
+                                <span id="ludoTurnText" style="font-size: 12px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 0.3px;">YOUR TURN TO ROLL!</span>
+                            </div>
+                            <div style="font-size: 11px; font-weight: 900; color: #ffd700;" id="ludoMatchBetHeader">PRIZE: ৳১০০</div>
                         </div>
 
-                        <!-- Spin action trigger -->
-                        <div style="display: flex; gap: 8px;">
-                            <button id="saSlotSpinBtn" onclick="window.triggerSaSlotSpin()" style="flex: 2; height: 44px; background: linear-gradient(180deg, #ff9f1c, #d97706); color: #000; border: none; border-radius: 10px; font-size: 13px; font-weight: 950; cursor: pointer; box-shadow: 0 4px 12px rgba(255,159,28,0.3); transition: transform 0.1s; text-transform: uppercase; letter-spacing: 0.5px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;">
-                                <span>SPIN SLOT</span>
-                                <span id="saSlotSpinSub" style="font-size: 7.5px; font-weight: 700; opacity: 0.8;">TAP TO SPIN</span>
+                        <!-- Match stats / player statuses -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; font-size: 11px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981;"></div>
+                                <span style="font-weight: 800; color: #4ade80; font-family: 'Space Grotesk';">YOU</span>
+                                <span style="color: #a1a1aa; font-family:'JetBrains Mono'" id="ludoMyTokensIn">Home: 0/2</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 6px #ef4444;"></div>
+                                <span style="font-weight: 800; color: #f87171; font-family: 'Space Grotesk';" id="ludoOpponentStatsName">OPPONENT</span>
+                                <span style="color: #a1a1aa; font-family:'JetBrains Mono'" id="ludoOpponentTokensIn">Home: 0/2</span>
+                            </div>
+                        </div>
+
+                        <!-- HTML Ludo Board Visualization (Optimized mobile sizing 280px-340px, premium casino custom neon theme) -->
+                        <div id="ludoVisualCanvas" style="width: 100%; aspect-ratio: 1/1; max-width: 320px; margin: 0 auto 12px auto; background: #020617; border: 4px solid #1e293b; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.8); display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr); position: relative; overflow: hidden; box-sizing: border-box;">
+                            
+                            <!-- Quadrant 1: Red Home Yard (Top-Left, index 0-5 in rows/cols) -->
+                            <div style="grid-column: 1/7; grid-row: 1/7; background: #310f17; border-right: 1.5px solid #ef4444; border-bottom: 1.5px solid #ef4444; display: flex; align-items: center; justify-content: center; padding: 10px;">
+                                <div style="zoom: 0.9; background: #020617; width: 75%; height: 75%; border-radius: 12px; border: 1.5px solid #ef4444; display: grid; grid-template-columns: 1fr 1fr; padding: 8px; box-sizing: border-box; align-items: center; justify-items: center; box-shadow: inset 0 0 10px rgba(239,68,68,0.3);">
+                                    <div class="ludo-pocket-red" id="redPocket1" style="width: 18px; height: 18px; border-radius: 50%; background: rgba(239,68,68,0.3); border: 2px solid #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.5); position: relative;"></div>
+                                    <div class="ludo-pocket-red" id="redPocket2" style="width: 18px; height: 18px; border-radius: 50%; background: rgba(239,68,68,0.3); border: 2px solid #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.5); position: relative;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Top Center Runway cells (Column 7-9, Row 1-6) -->
+                            <div style="grid-column: 7/10; grid-row: 1/7; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(6, 1fr); background: #090d16; border-bottom: 1.5px solid #334155;">
+                                <!-- Column 7-9, Row 1-6 -->
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(234,179,8,0.3); box-shadow: inset 0 0 4px #eab308;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(234,179,8,0.3); box-shadow: inset 0 0 4px #eab308;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(234,179,8,0.3); box-shadow: inset 0 0 4px #eab308;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(234,179,8,0.3); box-shadow: inset 0 0 4px #eab308;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(234,179,8,0.3); box-shadow: inset 0 0 4px #eab308;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                            </div>
+
+                            <!-- Quadrant 2: Yellow Home Yard (Top-Right, Column 10-15, Row 1-6) -->
+                            <div style="grid-column: 10/16; grid-row: 1/7; background: #1e1b13; border-left: 1.5px solid #eab308; border-bottom: 1.5px solid #eab308; display: flex; align-items: center; justify-content: center; padding: 10px; opacity: 0.7;">
+                                <div style="zoom: 0.9; background: #020617; width: 75%; height: 75%; border-radius: 12px; border: 1px dashed rgba(234,179,8,0.3); display: flex; align-items: center; justify-content: center;">
+                                    <i class="fa-solid fa-lock" style="color: rgba(234,179,8,0.2); font-size: 16px;"></i>
+                                </div>
+                            </div>
+
+                            <!-- Left Center Runway cells (Column 1-6, Row 7-9) -->
+                            <div style="grid-column: 1/7; grid-row: 7/10; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); background: #090d16; border-right: 1.5px solid #334155;">
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b; background: rgba(239,68,68,0.35); box-shadow: inset 0 0 4px #ef4444;"></div><div style="border: 0.5px solid #1e293b; background: rgba(239,68,68,0.35); box-shadow: inset 0 0 4px #ef4444;"></div><div style="border: 0.5px solid #1e293b; background: rgba(239,68,68,0.35); box-shadow: inset 0 0 4px #ef4444;"></div><div style="border: 0.5px solid #1e293b; background: rgba(239,68,68,0.35); box-shadow: inset 0 0 4px #ef4444;"></div><div style="border: 0.5px solid #1e293b; background: rgba(239,68,68,0.35); box-shadow: inset 0 0 4px #ef4444;"></div><div style="border: 0.5px solid #1e293b; background: rgba(239,68,68,0.35); box-shadow: inset 0 0 4px #ef4444;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                            </div>
+
+                            <!-- Center Home Triangle Yard (Column 7-9, Row 7-9) -->
+                            <div style="grid-column: 7/10; grid-row: 7/10; background: #0f172a; position: relative; border: 1.5px solid #64748b; box-shadow: inset 0 0 12px rgba(255,255,255,0.15);">
+                                <!-- Home Flag icon center -->
+                                <div style="position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index: 10;">
+                                    <i class="fa-solid fa-flag-checkered" style="color: #fff; font-size: 15px; filter: drop-shadow(0 0 6px #fff);"></i>
+                                </div>
+                            </div>
+
+                            <!-- Right Center Runway cells (Column 10-15, Row 7-9) -->
+                            <div style="grid-column: 10/16; grid-row: 7/10; display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); background: #090d16; border-left: 1.5px solid #334155;">
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b; background: rgba(37,99,235,0.35); box-shadow: inset 0 0 4px #2563eb;"></div><div style="border: 0.5px solid #1e293b; background: rgba(37,99,235,0.35); box-shadow: inset 0 0 4px #2563eb;"></div><div style="border: 0.5px solid #1e293b; background: rgba(37,99,235,0.35); box-shadow: inset 0 0 4px #2563eb;"></div><div style="border: 0.5px solid #1e293b; background: rgba(37,99,235,0.35); box-shadow: inset 0 0 4px #2563eb;"></div><div style="border: 0.5px solid #1e293b; background: rgba(37,99,235,0.35); box-shadow: inset 0 0 4px #2563eb;"></div><div style="border: 0.5px solid #1e293b; background: rgba(37,99,235,0.35); box-shadow: inset 0 0 4px #2563eb;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                            </div>
+
+                            <!-- Quadrant 3: Green Home Yard (Bottom-Left, Column 1-6, Row 10-15 - User Yard) -->
+                            <div style="grid-column: 1/7; grid-row: 10/16; background: #0a2d1d; border-right: 1.5px solid #10b981; border-top: 1.5px solid #10b981; display: flex; align-items: center; justify-content: center; padding: 10px;">
+                                <div style="zoom: 0.9; background: #020617; width: 75%; height: 75%; border-radius: 12px; border: 1.5px solid #10b981; display: grid; grid-template-columns: 1fr 1fr; padding: 8px; box-sizing: border-box; align-items: center; justify-items: center; box-shadow: inset 0 0 10px rgba(16,185,129,0.3);">
+                                    <div class="ludo-pocket-green" id="greenPocket1" style="width: 18px; height: 18px; border-radius: 50%; background: rgba(16,185,129,0.3); border: 2px solid #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); position: relative;"></div>
+                                    <div class="ludo-pocket-green" id="greenPocket2" style="width: 18px; height: 18px; border-radius: 50%; background: rgba(16,185,129,0.3); border: 2px solid #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.5); position: relative;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Center Runway cells (Column 7-9, Row 10-15) -->
+                            <div style="grid-column: 7/10; grid-row: 10/16; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(6, 1fr); background: #090d16; border-top: 1.5px solid #334155;">
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(16,183,90,0.35); box-shadow: inset 0 0 4px #10b981;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(16,183,90,0.35); box-shadow: inset 0 0 4px #10b981;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(16,183,90,0.35); box-shadow: inset 0 0 4px #10b981;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(16,183,90,0.35); box-shadow: inset 0 0 4px #10b981;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b; background: rgba(16,183,90,0.35); box-shadow: inset 0 0 4px #10b981;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                                <div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div><div style="border: 0.5px solid #1e293b;"></div>
+                            </div>
+
+                            <!-- Quadrant 4: Blue (Bottom-Right) -->
+                            <div style="grid-column: 10/16; grid-row: 10/16; background: #111a2e; border-left: 1.5px solid #2563eb; border-top: 1.5px solid #2563eb; display: flex; align-items: center; justify-content: center; padding: 10px; opacity: 0.7;">
+                                <div style="zoom: 0.9; background: #020617; width: 75%; height: 75%; border-radius: 12px; border: 1px dashed rgba(37,99,235,0.3); display: flex; align-items: center; justify-content: center;">
+                                    <i class="fa-solid fa-lock" style="color: rgba(37,99,235,0.2); font-size: 16px;"></i>
+                                </div>
+                            </div>
+
+                            <!-- HIGHLY RECOGNIZABLE LIVE FLOATING TOKENS (2 green tokens, 2 red tokens) -->
+                            <!-- User's Token 1 (Green) -->
+                            <div id="ludoMyToken1" class="ludo-token inline-green-pulse" style="position: absolute; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #5ff281 0%, #05a82c 100%); border: 2px solid #fff; box-shadow: 0 0 8px rgba(10, 255, 10, 0.8), 0 3px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;">
+                                <span style="font-size: 8px; font-weight: 900; color: #fff;">1</span>
+                            </div>
+                            <!-- User's Token 2 (Green) -->
+                            <div id="ludoMyToken2" class="ludo-token inline-green-pulse" style="position: absolute; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #5ff281 0%, #05a82c 100%); border: 2px solid #fff; box-shadow: 0 0 8px rgba(10, 255, 10, 0.8), 0 3px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;">
+                                <span style="font-size: 8px; font-weight: 900; color: #fff;">2</span>
+                            </div>
+
+                            <!-- Opponent's Token 1 (Red) -->
+                            <div id="ludoOpponentToken1" class="ludo-token inline-red-pulse" style="position: absolute; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff526c 0%, #be123c 100%); border: 2px solid #fff; box-shadow: 0 0 8px rgba(255, 10, 10, 0.8), 0 3px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;">
+                                <span style="font-size: 8px; font-weight: 900; color: #fff;">1</span>
+                            </div>
+                            <!-- Opponent's Token 2 (Red) -->
+                            <div id="ludoOpponentToken2" class="ludo-token inline-red-pulse" style="position: absolute; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff526c 0%, #be123c 100%); border: 2px solid #fff; box-shadow: 0 0 8px rgba(255, 10, 10, 0.8), 0 3px 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;">
+                                <span style="font-size: 8px; font-weight: 900; color: #fff;">2</span>
+                            </div>
+                        </div>
+
+                        <!-- Interactive rolling control container -->
+                        <div style="background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); box-sizing: border-box;">
+                            <div style="text-align: left; flex: 1;">
+                                <span style="font-size: 9px; color: #a1a1aa; font-weight: bold; text-transform: uppercase;">Rolled Value (দান)</span>
+                                <div id="ludoDiceStatus" style="font-size: 13px; font-weight: 900; color: #ff9f1c; margin-top: 2px;">READY TO ROLL</div>
+                            </div>
+                            
+                            <!-- 2D/3D Dice Box visual -->
+                            <div id="ludoDiceVisualBox" style="width: 44px; height: 44px; border-radius: 10px; background: #fff; color: #1e293b; display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: 0 0 10px rgba(255,255,255,0.15); font-weight: 900; transition: transform 0.1s ease-in-out;">
+                                <i class="fa-solid fa-dice-one"></i>
+                            </div>
+
+                            <button id="ludoRollBtn" onclick="window.rollLudoDice()" class="btn" style="flex: 1.3; height: 44px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; font-weight: 900; font-size: 12px; border-radius: 10px; cursor: pointer; border: none; text-transform: uppercase; box-shadow: 0 4px 12px rgba(16,185,129,0.25);">
+                                <i class="fa-solid fa-rotate"></i> Roll Dice
                             </button>
-                            <button id="saSlotAutoBtn" onclick="window.toggleSaSlotAuto()" style="flex: 1; height: 44px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,159,28,0.15); border-radius: 10px; color: #ff9f1c; font-size: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;">
-                                <i class="fa-solid fa-redo" style="font-size: 11px;" id="saSlotAutoIcon"></i>
-                                <span id="saSlotAutoLabel" style="font-size: 8px;">AUTO: OFF</span>
+                        </div>
+                    </div>
+
+                    <!-- Match outcome winner/loser popups -->
+                    <div id="ludoResultModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 99999; display: none; align-items: center; justify-content: center; padding: 20px;">
+                        <div style="background: #11091c; border: 2.5px solid #ff9f1c; border-radius: 20px; width: 100%; max-width: 340px; padding: 24px; text-align: center; box-shadow: 0 10px 30px rgba(255,159,28,0.2);">
+                            
+                            <div id="ludoResultIcon" style="font-size: 46px; color: #ff9f1c; margin-bottom: 14px; animation: saPulse 1.5s infinite;">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+
+                            <h3 id="ludoResultTitle" style="font-family: 'Space Grotesk'; font-size: 20px; font-weight: 900; margin: 0 0 8px 0; color: #fff; text-transform: uppercase;">Victory! JITESHEN!</h3>
+                            <p id="ludoResultDesc" style="font-size: 11.5px; color: #a1a1aa; line-height: 1.5; margin: 0 0 20px 0;">You won ৳১০০ double reward!</p>
+
+                            <button onclick="window.closeLudoResultModal()" style="width: 100%; height: 44px; background: var(--primary); border: none; border-radius: 10px; color: white; font-weight: 800; font-size: 13px; cursor: pointer;">
+                                Confirm & Claim Rewards
                             </button>
                         </div>
                     </div>
@@ -4971,6 +5328,15 @@ function listenRealTimeBadges(uid) {
 }
 
 async function showPage(pageId) {
+    // Proactively restore header and footer visibility in case of crash leftovers
+    if (document.body.classList.contains('sa-game-playing')) {
+        document.body.classList.remove('sa-game-playing');
+    }
+    const headerEl = document.querySelector('.app-header');
+    const footerEl = document.querySelector('.app-footer');
+    if (headerEl) headerEl.style.display = 'flex';
+    if (footerEl) footerEl.style.display = 'flex';
+
     if (!currentUserData) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         const el = document.getElementById(pageId);
@@ -9189,7 +9555,22 @@ async function startWork(docId, daily) {
             return;
         }
 
-        showToast('success', 'Rig Online ⚡', 'Decentralized mining hardware has started hashing successfully.');
+        // Display actual dynamic server notification message containing auto-claim details
+        const promoMsg = data.message || 'Decentralized mining hardware has started hashing successfully.';
+        showToast('success', 'Rig Online ⚡', promoMsg);
+
+        // Instantly force-fetch the user's latest Firestore document to update main balance on screen without delay
+        try {
+            const { getDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+            const snap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+            if (snap.exists()) {
+                currentUserData = { ...snap.data(), uid_fs: auth.currentUser.uid };
+                if (typeof updateHeader === 'function') updateHeader();
+                if (typeof renderWallet === 'function') renderWallet();
+            }
+        } catch (syncE) {
+            console.warn("Instant manual balance sync failed:", syncE);
+        }
         
         if (typeof window.syncPackagesFallback === 'function') {
             await window.syncPackagesFallback();
@@ -10939,6 +11320,72 @@ window.startJdbGameplayLoop = () => {
     startCountdown();
 };
 
+window.startLobbyTicker = () => {
+    if (window.saTickerIntervalId) {
+        clearInterval(window.saTickerIntervalId);
+    }
+    
+    const ticker = document.getElementById('saLobbyLiveTicker');
+    if (!ticker) return;
+    
+    const names = ["shahin_pro", "rasel_99", "mim_crush", "rakib_fly", "hasan_boss", "tasnim_jet", "raj_aviator", "milon_bhai", "nabil_10", "farhana_22", "shakil_vip", "sumon_king", "sohel_star"];
+    const stakes = [10, 20, 50, 100, 200, 500, 1000];
+    
+    const tickAction = () => {
+        const tCon = document.getElementById('saLobbyLiveTicker');
+        if (!tCon) return;
+        
+        const name = names[Math.floor(Math.random() * names.length)];
+        const stake = stakes[Math.floor(Math.random() * stakes.length)];
+        const isWin = Math.random() < 0.68; // 68% win rate for multiplayer lobby simulation
+        
+        // Update live online count subtly
+        const userCountEl = document.getElementById('saLiveUserCount');
+        if (userCountEl) {
+            const currentCount = 1200 + Math.floor(Math.random() * 400);
+            userCountEl.innerText = `${currentCount.toLocaleString()} Online`;
+        }
+        
+        let multiplierText = '';
+        let badgeStyle = '';
+        let iconHtml = '';
+        
+        if (isWin) {
+            const mult = (1.1 + Math.random() * 2.8).toFixed(2);
+            const winAmt = (stake * mult).toFixed(2);
+            multiplierText = `${mult}x (+৳${winAmt})`;
+            badgeStyle = 'background:rgba(76,240,134,0.12); color:#4cf086; border: 1px solid rgba(76,240,134,0.25);';
+            iconHtml = '<i class="fa-solid fa-plane-arrival"></i> ';
+        } else {
+            multiplierText = 'Flew Away';
+            badgeStyle = 'background:rgba(239,68,68,0.12); color:#ef4444; border: 1px solid rgba(239,68,68,0.25);';
+            iconHtml = '<i class="fa-solid fa-burst"></i> ';
+        }
+        
+        const row = document.createElement('div');
+        row.className = 'lobby-live-ticker-row';
+        row.style.marginBottom = '6px';
+        row.innerHTML = `
+            <span style="color:#d4d4d8;"><i class="fa-solid fa-user-astronaut" style="font-size:10px; margin-right:4px;"></i> ${name}</span>
+            <span style="color:#ffd700; font-weight:700;">৳${stake.toFixed(2)}</span>
+            <span style="${badgeStyle} font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:4px;">${iconHtml}${multiplierText}</span>
+        `;
+        
+        tCon.insertBefore(row, tCon.firstChild);
+        if (tCon.children.length > 3) {
+            tCon.removeChild(tCon.lastChild);
+        }
+    };
+    
+    // Seed initial ticks immediately
+    for (let i = 0; i < 3; i++) {
+        tickAction();
+    }
+    
+    // Cycle every 3 to 4.5 seconds
+    window.saTickerIntervalId = setInterval(tickAction, 3200 + Math.random() * 1000);
+};
+
 window.listenSimpleEarnTasks = () => {
     console.log("listenSimpleEarnTasks called: JDB Cash Flight layout verified.");
     const overlay = document.getElementById('saLoadingOverlay');
@@ -10948,6 +11395,11 @@ window.listenSimpleEarnTasks = () => {
     if (overlay) overlay.style.display = 'none';
     if (entryView) entryView.style.display = 'block';
     if (gameView) gameView.style.display = 'none';
+    
+    // Start lobby active ticker
+    setTimeout(() => {
+        window.startLobbyTicker();
+    }, 100);
 };
 
 // Common initialization routine for full-screen immersive casino setup
@@ -11098,37 +11550,255 @@ window.enterCashFlightGame = () => {
     }, 1500);
 };
 
-window.enterSuperAceSlotGame = () => {
-    // 1. Prepare ambient casino environments
-    window.saPrepareEnteringGame();
-    window.activeGameType = "slot";
+window.activeLudoBetAmount = 20;
+window.activeLudoGameId = null;
+window.ludoExpectedOutcome = "random"; // admin configured profit margins: win vs loss
+window.ludoCurrentTurn = "player"; // current active turn in ludo: "player" or "opponent" or "none"
+window.ludoMyToken1Step = 0; // step count for green token 1 (range 0 to 57)
+window.ludoMyToken2Step = 0; // step count for green token 2 (range 0 to 57)
+window.ludoOpponentToken1Step = 0; // step count for red token 1 (range 0 to 57)
+window.ludoOpponentToken2Step = 0; // step count for red token 2 (range 0 to 57)
+window.ludoIsRolling = false; // prevents multiple concurrent actions
+window.ludoLastRolledDiceValue = 0; // last dice rolled
+window.ludoAwaitingTokenMoveSelection = false; // waits for user tap on valid token
+
+window.ludoTurnTimerVal = 15;
+window.ludoTimerInterval = null;
+window.ludoPlayerConsecutiveMisses = 0;
+window.ludoOpponentConsecutiveMisses = 0;
+
+// Grid-compatible mathematical Ludo track coordinates mappings (0-14 coordinates on 15x15 board)
+const commonTrack = [
+    { col: 6, row: 14 }, // 0
+    { col: 6, row: 13 }, // 1
+    { col: 6, row: 12 }, // 2 (Green Launch Start)
+    { col: 6, row: 11 }, // 3
+    { col: 6, row: 10 }, // 4
+    { col: 6, row: 9 },  // 5
+    { col: 5, row: 8 },  // 6
+    { col: 4, row: 8 },  // 7
+    { col: 3, row: 8 },  // 8
+    { col: 2, row: 8 },  // 9
+    { col: 1, row: 8 },  // 10
+    { col: 0, row: 8 },  // 11
+    { col: 0, row: 7 },  // 12 (Common Left middle transition)
+    { col: 0, row: 6 },  // 13
+    { col: 1, row: 6 },  // 14
+    { col: 2, row: 6 },  // 15 (Red Launch Start)
+    { col: 3, row: 6 },  // 16
+    { col: 4, row: 6 },  // 17
+    { col: 5, row: 6 },  // 18
+    { col: 6, row: 5 },  // 19
+    { col: 6, row: 4 },  // 20
+    { col: 6, row: 3 },  // 21
+    { col: 6, row: 2 },  // 22
+    { col: 6, row: 1 },  // 23
+    { col: 6, row: 0 },  // 24
+    { col: 7, row: 0 },  // 25 (Common Top middle transition)
+    { col: 8, row: 0 },  // 26
+    { col: 8, row: 1 },  // 27
+    { col: 8, row: 2 },  // 28
+    { col: 8, row: 3 },  // 29
+    { col: 8, row: 4 },  // 30
+    { col: 8, row: 5 },  // 31
+    { col: 9, row: 6 },  // 32
+    { col: 10, row: 6 }, // 33
+    { col: 11, row: 6 }, // 34
+    { col: 12, row: 6 }, // 35
+    { col: 13, row: 6 }, // 36
+    { col: 14, row: 6 }, // 37
+    { col: 14, row: 7 }, // 38 (Common Right middle transition)
+    { col: 14, row: 8 }, // 39
+    { col: 13, row: 8 }, // 40
+    { col: 12, row: 8 }, // 41
+    { col: 11, row: 8 }, // 42
+    { col: 10, row: 8 }, // 43
+    { col: 9, row: 8 },  // 44
+    { col: 8, row: 9 },  // 45
+    { col: 8, row: 10 }, // 46
+    { col: 8, row: 11 }, // 47
+    { col: 8, row: 12 }, // 48
+    { col: 8, row: 13 }, // 49
+    { col: 8, row: 14 }, // 50
+    { col: 7, row: 14 }  // 51 (Common Bottom middle transition)
+].map(c => {
+    return { left: `${((c.col + 0.5) / 15 * 100).toFixed(1)}%`, top: `${((c.row + 0.5) / 15 * 100).toFixed(1)}%`, col: c.col, row: c.row };
+});
+
+const userTokenPath = [
+    ...Array.from({ length: 51 }, (_, i) => commonTrack[(2 + i) % 52]),
+    ...[
+        { col: 7, row: 13 }, // step 51 (Green Airport Runway)
+        { col: 7, row: 12 }, // step 52
+        { col: 7, row: 11 }, // step 53
+        { col: 7, row: 10 }, // step 54
+        { col: 7, row: 9 },  // step 55
+        { col: 7, row: 7 }   // step 56 (Goal victory center tile)
+    ].map(c => {
+        return { left: `${((c.col + 0.5) / 15 * 100).toFixed(1)}%`, top: `${((c.row + 0.5) / 15 * 100).toFixed(1)}%`, col: c.col, row: c.row };
+    })
+];
+
+const opponentTokenPath = [
+    ...Array.from({ length: 51 }, (_, i) => commonTrack[(15 + i) % 52]),
+    ...[
+        { col: 1, row: 7 }, // step 51 (Red Airport Runway)
+        { col: 2, row: 7 }, // step 52
+        { col: 3, row: 7 }, // step 53
+        { col: 4, row: 7 }, // step 54
+        { col: 5, row: 7 }, // step 55
+        { col: 7, row: 7 }  // step 56 (Goal victory center tile)
+    ].map(c => {
+        return { left: `${((c.col + 0.5) / 15 * 100).toFixed(1)}%`, top: `${((c.row + 0.5) / 15 * 100).toFixed(1)}%`, col: c.col, row: c.row };
+    })
+];
+
+const ludoUserTrackCoordinates = userTokenPath;
+const ludoOpponentTrackCoordinates = opponentTokenPath;
+
+// Sound / styling setup for ludo dynamic assets
+const ludoStyle = document.createElement('style');
+ludoStyle.innerHTML = `
+    @keyframes ludoPulseActive {
+        0% { transform: scale(1.1); box-shadow: 0 0 10px #ffd700, inset 0 0 4px #fff; }
+        50% { transform: scale(1.3); box-shadow: 0 0 22px #ffd700, inset 0 0 12px #fff; }
+        100% { transform: scale(1.1); box-shadow: 0 0 10px #ffd700, inset 0 0 4px #fff; }
+    }
+    .active-pulsing-token {
+        animation: ludoPulseActive 1s infinite ease-in-out !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+    }
+`;
+document.head.appendChild(ludoStyle);
+
+// Master helper to fetch coordinate layouts including yard pockets
+window.getLudoTokenCoordinates = (player, tokenId, step) => {
+    if (player === 'player') {
+        if (step === 0) {
+            const col = tokenId === 1 ? 2 : 3;
+            return {
+                col: col,
+                row: 12,
+                left: `${((col + 0.5) / 15 * 100).toFixed(1)}%`,
+                top: `${((12 + 0.5) / 15 * 100).toFixed(1)}%`
+            };
+        }
+        return userTokenPath[step - 1] || userTokenPath[56];
+    } else {
+        if (step === 0) {
+            const col = tokenId === 1 ? 2 : 3;
+            return {
+                col: col,
+                row: 2,
+                left: `${((col + 0.5) / 15 * 100).toFixed(1)}%`,
+                top: `${((2 + 0.5) / 15 * 100).toFixed(1)}%`
+            };
+        }
+        return opponentTokenPath[step - 1] || opponentTokenPath[56];
+    }
+};
+
+// Update dual visual layout positions of all 4 interactive tokens
+window.updateLudoTokensVisuals = () => {
+    const my1 = document.getElementById('ludoMyToken1');
+    const my2 = document.getElementById('ludoMyToken2');
+    const op1 = document.getElementById('ludoOpponentToken1');
+    const op2 = document.getElementById('ludoOpponentToken2');
+
+    // Green Token 1
+    if (my1) {
+        const pos = window.getLudoTokenCoordinates('player', 1, window.ludoMyToken1Step);
+        my1.style.left = pos.left;
+        my1.style.top = pos.top;
+    }
+
+    // Green Token 2
+    if (my2) {
+        const pos = window.getLudoTokenCoordinates('player', 2, window.ludoMyToken2Step);
+        my2.style.left = pos.left;
+        my2.style.top = pos.top;
+    }
+
+    // Red Token 1
+    if (op1) {
+        const pos = window.getLudoTokenCoordinates('opponent', 1, window.ludoOpponentToken1Step);
+        op1.style.left = pos.left;
+        op1.style.top = pos.top;
+    }
+
+    // Red Token 2
+    if (op2) {
+        const pos = window.getLudoTokenCoordinates('opponent', 2, window.ludoOpponentToken2Step);
+        op2.style.left = pos.left;
+        op2.style.top = pos.top;
+    }
+
+    // Update statistics dashboard counts
+    const myStatus = document.getElementById('ludoMyTokensIn');
+    const oppStatus = document.getElementById('ludoOpponentTokensIn');
     
-    // 2. Setup game view components
+    let myHomeCount = 0;
+    if (window.ludoMyToken1Step === 57) myHomeCount++;
+    if (window.ludoMyToken2Step === 57) myHomeCount++;
+
+    let oppHomeCount = 0;
+    if (window.ludoOpponentToken1Step === 57) oppHomeCount++;
+    if (window.ludoOpponentToken2Step === 57) oppHomeCount++;
+
+    if (myStatus) myStatus.innerText = `Home: ${myHomeCount}/2`;
+    if (oppStatus) oppStatus.innerText = `Home: ${oppHomeCount}/2`;
+};
+
+window.enterLudoGame = () => {
+    // Prepare ambient casino full-screen view
+    window.saPrepareEnteringGame();
+    window.activeGameType = "ludo";
+
+    // Toggle containers
     const flightContainer = document.getElementById('saCrashGameContainer');
     const slotContainer = document.getElementById('saSlotGameContainer');
     const titleText = document.getElementById('saGameHeaderTitle');
     
     if (flightContainer) flightContainer.style.display = 'none';
-    if (slotContainer) slotContainer.style.display = 'block';
-    if (titleText) titleText.innerText = "SUPER ACE SLOT";
+    if (slotContainer) slotContainer.style.display = 'flex';
+    if (titleText) titleText.innerText = "LUDO LIVE (লুডু গেম)";
+    
     const headerIcon = document.getElementById('saGameHeaderIcon');
     if (headerIcon) {
-        headerIcon.className = "fa-solid fa-star";
+        headerIcon.className = "fa-solid fa-dice";
         headerIcon.style.transform = "none";
     }
-    
-    // 3. Initialize dynamic slot layouts
-    if (typeof window.initializeSuperAceBoard === 'function') {
-        window.initializeSuperAceBoard();
+
+    // Default to Bet Selection Lobby
+    const lobby = document.getElementById('ludoSetupScreen');
+    const loader = document.getElementById('ludoMatchmakingLoader');
+    const board = document.getElementById('ludoBoardScreen');
+
+    if (lobby) lobby.style.display = 'flex';
+    if (loader) loader.style.display = 'none';
+    if (board) board.style.display = 'none';
+
+    // Highlight current main balance
+    const secureBal = document.getElementById('saGameBalance');
+    if (secureBal && currentUserData) {
+        const currentBal = typeof currentUserData.mainBalance === 'number' ? currentUserData.mainBalance : (currentUserData.balance || 0);
+        secureBal.innerText = Number(currentBal).toFixed(2);
     }
-    if (typeof window.loadSuperAceBetSelect === 'function') {
-        window.loadSuperAceBetSelect();
-    }
-    if (typeof window.updateSaSlotMultiplierTrack === 'function') {
-        window.updateSaSlotMultiplierTrack(1); // Set default track x1
-    }
-    
-    // 4. Trigger transitions
+
+    // Clear and update board token steps initial state
+    window.ludoMyToken1Step = 0;
+    window.ludoMyToken2Step = 0;
+    window.ludoOpponentToken1Step = 0;
+    window.ludoOpponentToken2Step = 0;
+    window.ludoCurrentTurn = "none";
+    window.ludoIsRolling = false;
+    window.ludoAwaitingTokenMoveSelection = false;
+
+    window.updateLudoTokensVisuals();
+    window.selectLudoBet(20); // Default BDT 20 match selected
+
+    // Transitions
     const overlay = document.getElementById('saLoadingOverlay');
     const entryView = document.getElementById('saEntryView');
     const gameView = document.getElementById('saGameView');
@@ -11137,15 +11807,846 @@ window.enterSuperAceSlotGame = () => {
         if (overlay) overlay.style.display = 'none';
         if (entryView) entryView.style.display = 'none';
         if (gameView) gameView.style.display = 'block';
-        if (typeof playSaSynthSound === 'function') {
-            playSaSynthSound('bigwin');
-        }
     }, 1500);
 };
 
-// Kept for backward compatibility references
+window.exitSuperAceGame = async () => {
+    // If inside a match, check forfeit
+    if (window.activeGameType === "ludo" && document.getElementById('ludoBoardScreen').style.display === 'block') {
+        const confirmExit = confirm("Are you sure? Exiting an active Ludo match counts as a FORFEIT and your bet amount will not be refunded!");
+        if (!confirmExit) return;
+        
+        // Trigger forfeit
+        await window.triggerLudoGameForfeit(false);
+        return;
+    }
+
+    const overlay = document.getElementById('saLoadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        const textEl = document.getElementById('saLoadingOverlayText');
+        if (textEl) textEl.innerText = "Exiting Game...";
+    }
+
+    setTimeout(() => {
+        window.ludoStopTurnTimer();
+        document.body.classList.remove('sa-game-playing');
+        const entryView = document.getElementById('saEntryView');
+        const gameView = document.getElementById('saGameView');
+        window.activeGameType = null;
+
+        if (entryView) entryView.style.display = 'block';
+        if (gameView) gameView.style.display = 'none';
+        
+        const header = document.querySelector('.app-header');
+        const footer = document.querySelector('.app-footer');
+        if (header) header.style.display = 'flex';
+        if (footer) footer.style.display = 'flex';
+
+        if (overlay) overlay.style.display = 'none';
+
+        // Update balance on main page
+        if (typeof updateHeader === 'function') updateHeader();
+    }, 1200);
+};
+
+window.selectLudoBet = (amt) => {
+    window.activeLudoBetAmount = amt;
+    [20, 50, 100, 500].forEach(a => {
+        const card = document.getElementById(`ludoBetCard${a}`);
+        if (card) {
+            card.style.border = '1px solid rgba(255,255,255,0.1)';
+            card.style.background = 'rgba(255,255,255,0.02)';
+            card.style.boxShadow = 'none';
+        }
+    });
+
+    const activeCard = document.getElementById(`ludoBetCard${amt}`);
+    if (activeCard) {
+        let themeColor = '#ff9f1c';
+        if (amt === 20) themeColor = '#10b981';
+        if (amt === 100) themeColor = '#3b82f6';
+        if (amt === 500) themeColor = '#a855f7';
+
+        activeCard.style.border = `2.5px solid ${themeColor}`;
+        activeCard.style.background = `rgba(255,255,255,0.03)`;
+        activeCard.style.boxShadow = `0 0 15px rgba(255,255,255,0.05)`;
+    }
+};
+
+// Start matchmaking sequence and deduct starting bet amount
+window.startLudoMatchmaking = async () => {
+    const balanceVal = currentUserData ? (currentUserData.mainBalance || currentUserData.balance || 0) : 0;
+    if (balanceVal < window.activeLudoBetAmount) {
+        showToast('error', 'Insufficient Balance', `You need at least ৳${window.activeLudoBetAmount} main balance to start this Ludo tournament match.`);
+        return;
+    }
+
+    // Toggle screen
+    document.getElementById('ludoSetupScreen').style.display = 'none';
+    document.getElementById('ludoMatchmakingLoader').style.display = 'flex';
+    document.getElementById('ludoMatchStateText').innerText = "Finding Opponent...";
+    document.getElementById('ludoOpponentLoaderBox').style.display = 'flex';
+    document.getElementById('ludoOpponentPic').style.display = 'none';
+    document.getElementById('ludoOpponentName').innerText = "Searching...";
+
+    if (typeof playSaSynthSound === 'function') playSaSynthSound('bet');
+
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/game/ludo/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ betAmount: window.activeLudoBetAmount })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Failed to start match");
+        }
+
+        const data = await response.json();
+        window.activeLudoGameId = data.gameId;
+        window.ludoExpectedOutcome = data.finalOutcome; // "win" or "loss"
+
+        // Deduct balance locally and sync UI
+        if (currentUserData) {
+            currentUserData.mainBalance = Number((currentUserData.mainBalance - window.activeLudoBetAmount).toFixed(2));
+            currentUserData.balance = currentUserData.mainBalance;
+            const secureBal = document.getElementById('saGameBalance');
+            if (secureBal) secureBal.innerText = Number(currentUserData.mainBalance).toFixed(2);
+        }
+        window.saSessionBalance = currentUserData.mainBalance;
+        if (typeof updateHeader === 'function') updateHeader();
+
+        // Play matching sound
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('cashexit');
+
+        // Match found simulation with dynamic API data
+        setTimeout(() => {
+            document.getElementById('ludoMatchStateText').innerText = "FOUND MATCH!";
+            document.getElementById('ludoOpponentLoaderBox').style.display = 'none';
+            
+            const oppPic = document.getElementById('ludoOpponentPic');
+            if (oppPic) {
+                oppPic.src = data.opponentPic || "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=80&h=80&q=80";
+                oppPic.style.display = 'block';
+            }
+            document.getElementById('ludoOpponentName').innerText = data.opponentName || "@shahin_pro";
+            document.getElementById('ludoOpponentStatsName').innerText = (data.opponentName || "OPPONENT").toUpperCase();
+
+            if (typeof playSaSynthSound === 'function') playSaSynthSound('multiplier');
+
+            // Enter board after countdown
+            setTimeout(() => {
+                document.getElementById('ludoMatchmakingLoader').style.display = 'none';
+                document.getElementById('ludoBoardScreen').style.display = 'flex';
+                
+                // Set match prize details
+                document.getElementById('ludoMatchBetHeader').innerText = `PRIZE: ৳${(window.activeLudoBetAmount * 1.95).toFixed(0)}`;
+                
+                // Reset token trackers
+                window.ludoMyToken1Step = 0;
+                window.ludoMyToken2Step = 0;
+                window.ludoOpponentToken1Step = 0;
+                window.ludoOpponentToken2Step = 0;
+                window.ludoCurrentTurn = "player";
+                window.ludoIsRolling = false;
+                window.ludoAwaitingTokenMoveSelection = false;
+                window.ludoPlayerConsecutiveMisses = 0;
+                window.ludoOpponentConsecutiveMisses = 0;
+
+                // Register clickable triggers on Green user tokens
+                const t1 = document.getElementById('ludoMyToken1');
+                const t2 = document.getElementById('ludoMyToken2');
+                if (t1) {
+                    t1.onclick = () => window.ludoClickToken(1);
+                    t1.style.pointerEvents = 'auto';
+                }
+                if (t2) {
+                    t2.onclick = () => window.ludoClickToken(2);
+                    t2.style.pointerEvents = 'auto';
+                }
+
+                window.updateLudoTokensVisuals();
+                window.ludoStartTurnTimer();
+                window.setLudoTurnNotice("YOUR TURN TO ROLL!", true);
+            }, 2000);
+
+        }, 3200);
+
+    } catch (err) {
+        console.error("Matchmaking start error:", err);
+        showToast('error', 'Error starting match', err.message);
+        document.getElementById('ludoSetupScreen').style.display = 'flex';
+        document.getElementById('ludoMatchmakingLoader').style.display = 'none';
+    }
+};
+
+window.setLudoTurnNotice = (msg, isUserTurn) => {
+    const bar = document.getElementById('ludoTurnNotifier');
+    const dot = document.getElementById('ludoTurnIndicatorDot');
+    const text = document.getElementById('ludoTurnText');
+    const btn = document.getElementById('ludoRollBtn');
+
+    if (bar) {
+        bar.style.borderColor = isUserTurn ? '#10b981' : '#ef4444';
+        bar.style.background = isUserTurn ? 'linear-gradient(90deg, #064e3b 0%, #020617 100%)' : 'linear-gradient(90deg, #7f1d1d 0%, #020617 100%)';
+    }
+    if (dot) {
+        dot.style.background = isUserTurn ? '#10b981' : '#ef4444';
+        dot.style.boxShadow = isUserTurn ? '0 0 10px #10b981' : '0 0 10px #ef4444';
+    }
+    if (text) text.innerText = msg;
+    
+    if (btn) {
+        if (isUserTurn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.4';
+            btn.style.cursor = 'not-allowed';
+            btn.style.background = '#4b5563';
+        }
+    }
+};
+
+// Calculate all possible move structures for selected player
+window.ludoGetValidMoves = (player, diceValue) => {
+    const list = [];
+    if (player === 'player') {
+        if (window.ludoMyToken1Step < 57) {
+            if (window.ludoMyToken1Step === 0) {
+                if (diceValue === 6) list.push(1);
+            } else if (window.ludoMyToken1Step + diceValue <= 57) {
+                list.push(1);
+            }
+        }
+        if (window.ludoMyToken2Step < 57) {
+            if (window.ludoMyToken2Step === 0) {
+                if (diceValue === 6) list.push(2);
+            } else if (window.ludoMyToken2Step + diceValue <= 57) {
+                list.push(2);
+            }
+        }
+    } else {
+        if (window.ludoOpponentToken1Step < 57) {
+            if (window.ludoOpponentToken1Step === 0) {
+                if (diceValue === 6) list.push(1);
+            } else if (window.ludoOpponentToken1Step + diceValue <= 57) {
+                list.push(1);
+            }
+        }
+        if (window.ludoOpponentToken2Step < 57) {
+            if (window.ludoOpponentToken2Step === 0) {
+                if (diceValue === 6) list.push(2);
+            } else if (window.ludoOpponentToken2Step + diceValue <= 57) {
+                list.push(2);
+            }
+        }
+    }
+    return list;
+};
+
+// Handle client dice spinning sequence for players
+window.rollLudoDice = () => {
+    if (window.ludoCurrentTurn !== "player" || window.ludoIsRolling) return;
+    window.ludoIsRolling = true;
+    window.ludoStopTurnTimer();
+
+    if (typeof playSaSynthSound === 'function') playSaSynthSound('bet');
+
+    const diceBox = document.getElementById('ludoDiceVisualBox');
+    const diceStatus = document.getElementById('ludoDiceStatus');
+    const icons = ['fa-dice-one', 'fa-dice-two', 'fa-dice-three', 'fa-dice-four', 'fa-dice-five', 'fa-dice-six'];
+
+    let spinCounter = 0;
+    const intervalId = setInterval(() => {
+        if (diceBox) {
+            diceBox.innerHTML = `<i class="fa-solid ${icons[spinCounter % 6]} text-3xl text-emerald-400"></i>`;
+            diceBox.style.transform = `rotate(${spinCounter * 45}deg) scale(1.15)`;
+        }
+        spinCounter++;
+    }, 80);
+
+    setTimeout(() => {
+        clearInterval(intervalId);
+
+        // FAIR RANDOM DICE ROLL GENERATION (Strict 1 to 6)
+        const rolledVal = Math.floor(Math.random() * 6) + 1;
+
+        if (diceBox) {
+            diceBox.innerHTML = `<i class="fa-solid ${icons[rolledVal - 1]} text-4xl text-white"></i>`;
+            diceBox.style.transform = 'rotate(0deg) scale(1)';
+        }
+        
+        window.ludoLastRolledDiceValue = rolledVal;
+        if (diceStatus) {
+            diceStatus.innerText = `YOU ROLLED A ${rolledVal}`;
+            diceStatus.style.color = '#fff';
+        }
+
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('click');
+
+        const validMoves = window.ludoGetValidMoves('player', rolledVal);
+
+        if (validMoves.length === 0) {
+            if (diceStatus) {
+                diceStatus.innerText = `NO VALID MOVES WITH A ${rolledVal}!`;
+                diceStatus.style.color = '#ef4444';
+            }
+            showToast('info', 'No Valid Moves', `You rolled ${rolledVal} but need an exact 6 to launch a token from Yard or space to move.`);
+            
+            // Pass turn to Opponent after short visual reading pause
+            setTimeout(() => {
+                window.ludoCurrentTurn = "opponent";
+                window.ludoIsRolling = false;
+                window.ludoStartTurnTimer();
+                window.setLudoTurnNotice("OPPONENT IS THINKING...", false);
+                setTimeout(window.simulateOpponentTurn, 1500);
+            }, 1800);
+        } else {
+            // Wait for user interaction to select their move
+            window.ludoAwaitingTokenMoveSelection = true;
+            window.ludoApplyGlowEffects(validMoves);
+            window.ludoStartTurnTimer();
+        }
+    }, 850);
+};
+
+// Strategic selection of Opponent moves & execution helper
+window.simulateOpponentTurn = () => {
+    if (window.ludoCurrentTurn !== "opponent") return;
+    window.ludoStopTurnTimer();
+    
+    window.setLudoTurnNotice("OPPONENT IS ROLLING...", false);
+
+    const diceBox = document.getElementById('ludoDiceVisualBox');
+    const diceStatus = document.getElementById('ludoDiceStatus');
+    const icons = ['fa-dice-one', 'fa-dice-two', 'fa-dice-three', 'fa-dice-four', 'fa-dice-five', 'fa-dice-six'];
+
+    let spinCounter = 0;
+    const intervalId = setInterval(() => {
+        if (diceBox) {
+            diceBox.innerHTML = `<i class="fa-solid ${icons[spinCounter % 6]} text-3xl text-red-400"></i>`;
+            diceBox.style.transform = `rotate(${spinCounter * -45}deg) scale(1.15)`;
+        }
+        spinCounter++;
+    }, 80);
+
+    setTimeout(() => {
+        clearInterval(intervalId);
+
+        // FAIR RANDOM DICE ROLL GENERATION FOR OPPONENT (Strict 1 to 6)
+        const rolledVal = Math.floor(Math.random() * 6) + 1;
+
+        if (diceBox) {
+            diceBox.innerHTML = `<i class="fa-solid ${icons[rolledVal - 1]} text-4xl text-white"></i>`;
+            diceBox.style.transform = 'rotate(0deg) scale(1)';
+        }
+        if (diceStatus) {
+            diceStatus.innerText = `OPPONENT ROLLED A ${rolledVal}`;
+            diceStatus.style.color = '#fff';
+        }
+
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('click');
+
+        const validMoves = window.ludoGetValidMoves('opponent', rolledVal);
+
+        if (validMoves.length === 0) {
+            if (diceStatus) {
+                diceStatus.innerText = `OPPONENT HAS NO VALID MOVES WITH A ${rolledVal}!`;
+                diceStatus.style.color = '#ef4444';
+            }
+            setTimeout(() => {
+                window.ludoCurrentTurn = "player";
+                window.ludoIsRolling = false;
+                window.ludoStartTurnTimer();
+                window.setLudoTurnNotice("YOUR TURN TO ROLL!", true);
+            }, 1800);
+        } else {
+            // Simulated human intelligence thinking delay before selecting token
+            setTimeout(async () => {
+                let selectedTokenId = validMoves[0];
+                
+                // Real decision logic for Opponent
+                if (validMoves.length > 1) {
+                    let choiceMade = false;
+                    for (const tok of validMoves) {
+                        const currentStep = tok === 1 ? window.ludoOpponentToken1Step : window.ludoOpponentToken2Step;
+                        const nextStep = currentStep === 0 ? 1 : Math.min(currentStep + rolledVal, 57);
+                        const nextCoords = window.getLudoTokenCoordinates('opponent', tok, nextStep);
+                        if (nextCoords) {
+                            // Check if move would capture/cut player's Token 1
+                            if (window.ludoMyToken1Step > 0 && window.ludoMyToken1Step < 57) {
+                                const uc = window.getLudoTokenCoordinates('player', 1, window.ludoMyToken1Step);
+                                if (uc.col === nextCoords.col && uc.row === nextCoords.row) {
+                                    selectedTokenId = tok;
+                                    choiceMade = true;
+                                    break;
+                                }
+                            }
+                            // Check if move would capture/cut player's Token 2
+                            if (window.ludoMyToken2Step > 0 && window.ludoMyToken2Step < 57) {
+                                const uc = window.getLudoTokenCoordinates('player', 2, window.ludoMyToken2Step);
+                                if (uc.col === nextCoords.col && uc.row === nextCoords.row) {
+                                    selectedTokenId = tok;
+                                    choiceMade = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!choiceMade) {
+                        // Priority to entering center home goal (step 57)
+                        const nextStep1 = window.ludoOpponentToken1Step === 0 ? 1 : Math.min(window.ludoOpponentToken1Step + rolledVal, 57);
+                        const nextStep2 = window.ludoOpponentToken2Step === 0 ? 1 : Math.min(window.ludoOpponentToken2Step + rolledVal, 57);
+                        if (nextStep1 === 57) {
+                            selectedTokenId = 1;
+                        } else if (nextStep2 === 57) {
+                            selectedTokenId = 2;
+                        } else if (rolledVal === 6 && (window.ludoOpponentToken1Step === 0 || window.ludoOpponentToken2Step === 0)) {
+                            // Priority to release token from Yard on a 6
+                            selectedTokenId = window.ludoOpponentToken1Step === 0 ? 1 : 2;
+                        } else {
+                            // Otherwise, move token that is further ahead
+                            selectedTokenId = window.ludoOpponentToken1Step >= window.ludoOpponentToken2Step ? 1 : 2;
+                        }
+                    }
+                }
+
+                await window.ludoMoveToken('opponent', selectedTokenId, rolledVal);
+
+                if (window.ludoOpponentToken1Step === 57 && window.ludoOpponentToken2Step === 57) {
+                    window.triggerLudoGameFinish(false);
+                } else {
+                    // IF OPPONENT ROLLED A 6, THEY GET A BONUS TURN!
+                    if (rolledVal === 6) {
+                        showToast('info', 'Opponent bonus turn!', 'Red rolled a 6 and earned a bonus roll!');
+                        setTimeout(() => {
+                            window.simulateOpponentTurn();
+                        }, 1000);
+                    } else {
+                        window.ludoCurrentTurn = "player";
+                        window.ludoIsRolling = false;
+                        window.ludoStartTurnTimer();
+                        window.setLudoTurnNotice("YOUR TURN TO ROLL!", true);
+                    }
+                }
+            }, 1200);
+        }
+    }, 850);
+};
+
+// Moving active tokens with step-by-step physical pacing (fixed step skipping)
+window.ludoMoveToken = async (player, tokenId, diceValue) => {
+    window.ludoIsRolling = true;
+    window.ludoAwaitingTokenMoveSelection = false;
+    window.ludoClearGlowEffects();
+    window.ludoStopTurnTimer();
+
+    const isUser = (player === 'player');
+    const initialStep = isUser ? 
+        (tokenId === 1 ? window.ludoMyToken1Step : window.ludoMyToken2Step) :
+        (tokenId === 1 ? window.ludoOpponentToken1Step : window.ludoOpponentToken2Step);
+
+    let targetStep;
+    if (initialStep === 0) {
+        // Safe release to launch step (index 1) on exactly rolling a 6
+        targetStep = 1; 
+    } else {
+        targetStep = Math.min(initialStep + diceValue, 57);
+    }
+
+    let curStep = initialStep;
+    
+    return new Promise((resolve) => {
+        const interval = setInterval(() => {
+            if (curStep < targetStep) {
+                curStep++;
+                if (isUser) {
+                    if (tokenId === 1) window.ludoMyToken1Step = curStep;
+                    else window.ludoMyToken2Step = curStep;
+                } else {
+                    if (tokenId === 1) window.ludoOpponentToken1Step = curStep;
+                    else window.ludoOpponentToken2Step = curStep;
+                }
+                window.updateLudoTokensVisuals();
+                if (typeof playSaSynthSound === 'function') playSaSynthSound('click');
+            } else {
+                clearInterval(interval);
+                window.ludoCheckCombatCutting(player, tokenId, targetStep);
+                
+                if (isUser) {
+                    window.ludoPlayerConsecutiveMisses = 0;
+                } else {
+                    window.ludoOpponentConsecutiveMisses = 0;
+                }
+                resolve();
+            }
+        }, 220);
+    });
+};
+
+// Verification logic for cell overrides or token capture checks (Cut / resets to yard)
+window.ludoCheckCombatCutting = (currentPlayer, currentTokenId, currentStep) => {
+    const isUser = (currentPlayer === 'player');
+    const currentCoords = window.getLudoTokenCoordinates(currentPlayer, currentTokenId, currentStep);
+        
+    if (!currentCoords || currentStep === 0 || currentStep === 57) return; 
+
+    if (isUser) {
+        if (window.ludoOpponentToken1Step > 0 && window.ludoOpponentToken1Step < 57) {
+            const victimCoords = window.getLudoTokenCoordinates('opponent', 1, window.ludoOpponentToken1Step);
+            if (victimCoords && victimCoords.col === currentCoords.col && victimCoords.row === currentCoords.row) {
+                window.ludoOpponentToken1Step = 0;
+                window.ludoVisualCutEffect('ludoOpponentToken1');
+                showToast('success', 'TOKEN CUT!', 'Green smashed Red Token 1!');
+            }
+        }
+        if (window.ludoOpponentToken2Step > 0 && window.ludoOpponentToken2Step < 57) {
+            const victimCoords = window.getLudoTokenCoordinates('opponent', 2, window.ludoOpponentToken2Step);
+            if (victimCoords && victimCoords.col === currentCoords.col && victimCoords.row === currentCoords.row) {
+                window.ludoOpponentToken2Step = 0;
+                window.ludoVisualCutEffect('ludoOpponentToken2');
+                showToast('success', 'TOKEN CUT!', 'Green smashed Red Token 2!');
+            }
+        }
+    } else {
+        if (window.ludoMyToken1Step > 0 && window.ludoMyToken1Step < 57) {
+            const victimCoords = window.getLudoTokenCoordinates('player', 1, window.ludoMyToken1Step);
+            if (victimCoords && victimCoords.col === currentCoords.col && victimCoords.row === currentCoords.row) {
+                window.ludoMyToken1Step = 0;
+                window.ludoVisualCutEffect('ludoMyToken1');
+                showToast('error', 'TOKEN DESTROYED', 'Red smashed your Token 1!');
+            }
+        }
+        if (window.ludoMyToken2Step > 0 && window.ludoMyToken2Step < 57) {
+            const victimCoords = window.getLudoTokenCoordinates('player', 2, window.ludoMyToken2Step);
+            if (victimCoords && victimCoords.col === currentCoords.col && victimCoords.row === currentCoords.row) {
+                window.ludoMyToken2Step = 0;
+                window.ludoVisualCutEffect('ludoMyToken2');
+                showToast('error', 'TOKEN DESTROYED', 'Red smashed your Token 2!');
+            }
+        }
+    }
+    window.updateLudoTokensVisuals();
+};
+
+window.ludoVisualCutEffect = (tokenId) => {
+    const el = document.getElementById(tokenId);
+    if (!el) return;
+    if (typeof playSaSynthSound === 'function') playSaSynthSound('cashexit');
+    
+    el.style.transform = 'scale(2) rotate(180deg)';
+    el.style.filter = 'hue-rotate(90deg) brightness(1.5)';
+    setTimeout(() => {
+        el.style.transform = 'none';
+        el.style.filter = 'none';
+        window.updateLudoTokensVisuals();
+    }, 600);
+};
+
+// Glow valid user tokens for action choices
+window.ludoApplyGlowEffects = (validTokens) => {
+    window.ludoClearGlowEffects();
+    validTokens.forEach(tokenId => {
+        const el = document.getElementById(`ludoMyToken${tokenId}`);
+        if (el) {
+            el.classList.add('active-pulsing-token');
+            el.style.pointerEvents = 'auto';
+        }
+    });
+    const diceStatus = document.getElementById('ludoDiceStatus');
+    if (diceStatus) {
+        diceStatus.innerText = "CHOOSE A HIGHLIGHTED TOKEN TO ADVANCE!";
+        diceStatus.style.color = '#eab308';
+    }
+};
+
+window.ludoClearGlowEffects = () => {
+    [1, 2].forEach(tokenId => {
+        const el = document.getElementById(`ludoMyToken${tokenId}`);
+        if (el) {
+            el.classList.remove('active-pulsing-token');
+            el.style.pointerEvents = 'none';
+        }
+    });
+};
+
+// Process user token clicks during roll selection state
+window.ludoClickToken = async (tokenId) => {
+    if (window.ludoCurrentTurn !== 'player' || !window.ludoAwaitingTokenMoveSelection) return;
+    
+    const validMoves = window.ludoGetValidMoves('player', window.ludoLastRolledDiceValue);
+    if (!validMoves.includes(tokenId)) {
+        const tokenEl = document.getElementById(`ludoMyToken${tokenId}`);
+        if (tokenEl) {
+            tokenEl.style.transform = 'scale(0.8) rotate(-15deg)';
+            setTimeout(() => tokenEl.style.transform = 'scale(1)', 150);
+        }
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('cashexit');
+        showToast('warning', 'Action Blocked', 'This token cannot advance. Press a yellow pulsing token!');
+        return;
+    }
+
+    await window.ludoMoveToken('player', tokenId, window.ludoLastRolledDiceValue);
+
+    if (window.ludoMyToken1Step === 57 && window.ludoMyToken2Step === 57) {
+        window.triggerLudoGameFinish(true);
+    } else {
+        // IF USER ROLLED A 6, THEY GET A BONUS TURN!
+        if (window.ludoLastRolledDiceValue === 6) {
+            window.ludoCurrentTurn = 'player';
+            window.ludoIsRolling = false;
+            window.ludoAwaitingTokenMoveSelection = false;
+            window.ludoStartTurnTimer();
+            showToast('success', 'Bonus Roll!', 'You rolled a 6 and earned a bonus roll!');
+            window.setLudoTurnNotice("YOUR ROLL AGAIN (BONUS ROLL)!", true);
+        } else {
+            window.ludoCurrentTurn = 'opponent';
+            window.ludoIsRolling = false;
+            window.ludoAwaitingTokenMoveSelection = false;
+            window.ludoStartTurnTimer();
+            window.setLudoTurnNotice("OPPONENT IS THINKING...", false);
+            setTimeout(window.simulateOpponentTurn, 1500);
+        }
+    }
+};
+
+// Clock countdown timers controllers
+window.ludoStartTurnTimer = () => {
+    window.ludoStopTurnTimer();
+    window.ludoTurnTimerVal = 15;
+    
+    window.ludoInjectProgressBarElement();
+    const progressBar = document.getElementById('ludoTurnProgressBar');
+
+    if (progressBar) {
+        progressBar.style.width = '100%';
+        progressBar.style.backgroundColor = '#10b981';
+    }
+
+    window.ludoTimerInterval = setInterval(() => {
+        window.ludoTurnTimerVal--;
+        
+        const turnTextEl = document.getElementById('ludoTurnText');
+        if (turnTextEl) {
+            const baseMsg = window.ludoCurrentTurn === 'player' ? "YOUR TURN" : "OPPONENT TURN";
+            turnTextEl.innerText = `${baseMsg} | REMAINING: ${window.ludoTurnTimerVal}S`;
+        }
+
+        if (progressBar) {
+            progressBar.style.width = `${(window.ludoTurnTimerVal / 15) * 100}%`;
+            if (window.ludoTurnTimerVal <= 4) {
+                progressBar.style.backgroundColor = '#ef4444';
+            } else if (window.ludoTurnTimerVal <= 8) {
+                progressBar.style.backgroundColor = '#f59e0b';
+            } else {
+                progressBar.style.backgroundColor = '#10b981';
+            }
+        }
+
+        if (window.ludoCurrentTurn === 'player' && window.ludoTurnTimerVal <= 3 && window.ludoTurnTimerVal > 0) {
+            if (typeof playSaSynthSound === 'function') playSaSynthSound('click');
+        }
+
+        if (window.ludoTurnTimerVal <= 0) {
+            window.ludoHandleTimeout();
+        }
+    }, 1000);
+};
+
+window.ludoStopTurnTimer = () => {
+    if (window.ludoTimerInterval) {
+        clearInterval(window.ludoTimerInterval);
+        window.ludoTimerInterval = null;
+    }
+};
+
+window.ludoInjectProgressBarElement = () => {
+    const notifier = document.getElementById('ludoTurnNotifier');
+    if (!notifier) return;
+
+    let container = document.getElementById('ludoTurnProgressBarContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'ludoTurnProgressBarContainer';
+        container.style.cssText = "width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-top: 8px; width: 100%;";
+        
+        const bar = document.createElement('div');
+        bar.id = 'ludoTurnProgressBar';
+        bar.style.cssText = "width: 100%; height: 100%; background: #10b981; transition: width 1s linear, background-color 0.3s ease;";
+        container.appendChild(bar);
+
+        notifier.style.flexDirection = 'column';
+        notifier.style.alignItems = 'stretch';
+        notifier.style.gap = '2px';
+        notifier.appendChild(container);
+    }
+};
+
+window.ludoHandleTimeout = () => {
+    window.ludoStopTurnTimer();
+    
+    if (window.ludoCurrentTurn === 'player') {
+        window.ludoPlayerConsecutiveMisses++;
+        showToast('warning', 'Turn Missed', `You missed a turn! Limit: ${window.ludoPlayerConsecutiveMisses}/2`);
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('cashexit');
+
+        if (window.ludoPlayerConsecutiveMisses >= 2) {
+            window.triggerLudoGameForfeit(false);
+        } else {
+            window.ludoCurrentTurn = 'opponent';
+            window.ludoIsRolling = false;
+            window.ludoAwaitingTokenMoveSelection = false;
+            window.ludoClearGlowEffects();
+            window.ludoStartTurnTimer();
+            window.setLudoTurnNotice("OPPONENT IS THINKING...", false);
+            setTimeout(window.simulateOpponentTurn, 1500);
+        }
+    } else {
+        window.ludoOpponentConsecutiveMisses++;
+        showToast('info', 'Opponent Timeout', `Opponent missed a turn! Limit: ${window.ludoOpponentConsecutiveMisses}/2`);
+        
+        if (window.ludoOpponentConsecutiveMisses >= 2) {
+            window.triggerLudoGameForfeit(true);
+        } else {
+            window.ludoCurrentTurn = 'player';
+            window.ludoIsRolling = false;
+            window.ludoAwaitingTokenMoveSelection = false;
+            window.ludoStartTurnTimer();
+            window.setLudoTurnNotice("YOUR TURN TO ROLL!", true);
+        }
+    }
+};
+
+window.triggerLudoGameForfeit = async (userWon) => {
+    window.ludoStopTurnTimer();
+    window.ludoIsRolling = true;
+    window.ludoCurrentTurn = "none";
+
+    showToast(userWon ? 'success' : 'error', 'FORFEITURE SETTLED', userWon ? 'Opponent forfeited the match!' : 'You forfeited due to inactivity!');
+
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/game/ludo/complete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ gameId: window.activeLudoGameId, win: userWon })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            window.saSessionBalance = data.newBalance;
+            if (currentUserData) {
+                currentUserData.mainBalance = data.newBalance;
+                currentUserData.balance = data.newBalance;
+            }
+            if (typeof updateHeader === 'function') updateHeader();
+        }
+    } catch (err) {
+        console.error("Forfeit settle failure:", err);
+    }
+
+    const resultModal = document.getElementById('ludoResultModal');
+    const resultIcon = document.getElementById('ludoResultIcon');
+    const resultTitle = document.getElementById('ludoResultTitle');
+    const resultDesc = document.getElementById('ludoResultDesc');
+
+    if (userWon) {
+        if (resultIcon) resultIcon.className = "fa-solid fa-flag text-4xl";
+        if (resultIcon) resultIcon.style.color = "#4ade80";
+        if (resultTitle) resultTitle.innerText = "Automatic Victory!";
+        if (resultDesc) resultDesc.innerText = `Opponent disconnected. You received the full prize pool of ৳${(window.activeLudoBetAmount * 1.95).toFixed(0)}!`;
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('bigwin');
+    } else {
+        if (resultIcon) resultIcon.className = "fa-solid fa-circle-exclamation text-4xl";
+        if (resultIcon) resultIcon.style.color = "#ef4444";
+        if (resultTitle) resultTitle.innerText = "Forfeit Defeat";
+        if (resultDesc) resultDesc.innerText = `You missed 2 consecutive turns. Match has been settled in favor of Red (Opponent).`;
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('multiplier');
+    }
+
+    if (resultModal) {
+        resultModal.style.display = 'flex';
+    }
+};
+
+// Execute complete game finish sequence securely or update visual dialog
+window.triggerLudoGameFinish = async (userWon) => {
+    window.ludoStopTurnTimer();
+    window.ludoIsRolling = true;
+    window.ludoCurrentTurn = "none";
+
+    try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/game/ludo/complete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ gameId: window.activeLudoGameId, win: userWon })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Failed to complete matches");
+
+        window.saSessionBalance = data.newBalance;
+        if (currentUserData) {
+            currentUserData.mainBalance = data.newBalance;
+            currentUserData.balance = data.newBalance;
+        }
+        if (typeof updateHeader === 'function') updateHeader();
+
+    } catch (err) {
+        console.error("Complete api balance record sync error:", err);
+    }
+
+    const resultModal = document.getElementById('ludoResultModal');
+    const resultIcon = document.getElementById('ludoResultIcon');
+    const resultTitle = document.getElementById('ludoResultTitle');
+    const resultDesc = document.getElementById('ludoResultDesc');
+
+    if (userWon) {
+        if (resultIcon) resultIcon.className = "fa-solid fa-trophy text-4xl text-yellow-400";
+        if (resultIcon) resultIcon.style.color = "#fbbf24";
+        if (resultTitle) resultTitle.innerText = "VICTORY!";
+        if (resultDesc) resultDesc.innerText = `Congratulations! Both Green tokens successfully navigated board path. Handled total prize of ৳${(window.activeLudoBetAmount * 1.95).toFixed(0)}!`;
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('bigwin');
+    } else {
+        if (resultIcon) resultIcon.className = "fa-solid fa-circle-xmark text-4xl text-red-500";
+        if (resultIcon) resultIcon.style.color = "#ef4444";
+        if (resultTitle) resultTitle.innerText = "MATCH DEFEATED";
+        if (resultDesc) resultDesc.innerText = `Match settled. Red has navigated both tokens into Home center goal. Retrying may lead to great victory.`;
+        if (typeof playSaSynthSound === 'function') playSaSynthSound('multiplier');
+    }
+
+    if (resultModal) {
+        resultModal.style.display = 'flex';
+    }
+};
+
+window.closeLudoResultModal = () => {
+    const resultModal = document.getElementById('ludoResultModal');
+    if (resultModal) resultModal.style.display = 'none';
+    window.exitSuperAceGame();
+};
+
+// Legacy backup refs
 window.enterSuperAceGame = () => {
-    window.enterCashFlightGame();
+    window.enterLudoGame();
 };
 
 window.saIsSyncing = false;
