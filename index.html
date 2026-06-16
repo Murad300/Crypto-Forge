@@ -5742,9 +5742,9 @@ onAuthStateChanged(auth, async (user) => {
                                 });
                                 const data = await res.json();
                                 if (data.debugOtp) {
-                                    window.showClientOtp(data.debugOtp);
+                                    window.showClientOtp(data.debugOtp, !!data.smtpError);
                                 }
-                                const canShowCode = window.resendCount && window.resendCount >= 1;
+                                const canShowCode = (window.resendCount && window.resendCount >= 1) || data.smtpError;
                                 if (canShowCode && data.smtpError && data.debugOtp) {
                                     showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
                                     window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor testing, please use this temporary OTP code: ${data.debugOtp}\n\nThis is safely stored in the Database.`);
@@ -6773,10 +6773,10 @@ function initAppListeners() {
             if (!res.ok) throw new Error(data.error || 'Failed to send verification email.');
 
             if (data.debugOtp) {
-                window.showClientOtp(data.debugOtp);
+                window.showClientOtp(data.debugOtp, !!data.smtpError);
             }
 
-            const canShowCode = window.resendCount && window.resendCount >= 1;
+            const canShowCode = (window.resendCount && window.resendCount >= 1) || data.smtpError;
             if (canShowCode && data.smtpError && data.debugOtp) {
                 showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
                 window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor immediate testing, please use this security OTP code: ${data.debugOtp}\n\nThis has been securely saved to the Database.`);
@@ -7282,12 +7282,12 @@ function formatAuthError(err) {
     return msg;
 }
 
-window.showClientOtp = (otpCode) => {
+window.showClientOtp = (otpCode, isSmtpError = false) => {
     window.currentClientOtp = otpCode;
     const container = document.getElementById('verifyOtpDisplayContainer');
     if (!container) return;
     
-    const showBackup = window.resendCount && window.resendCount >= 1;
+    const showBackup = (window.resendCount && window.resendCount >= 1) || isSmtpError;
     if (showBackup) {
         container.style.display = 'block';
     } else {
@@ -7365,7 +7365,7 @@ window.resendVerificationLink = async () => {
         window.resendCount = (window.resendCount || 0) + 1;
 
         if (data.debugOtp) {
-            window.showClientOtp(data.debugOtp);
+            window.showClientOtp(data.debugOtp, !!data.smtpError);
         }
 
         if (data.smtpError && data.debugOtp) {
@@ -7606,10 +7606,10 @@ async function handleRegister(e) {
         const data = await res.json();
 
         if (data.debugOtp) {
-            window.showClientOtp(data.debugOtp);
+            window.showClientOtp(data.debugOtp, !!data.smtpError);
          }
 
-        const canShowCode = window.resendCount && window.resendCount >= 1;
+        const canShowCode = (window.resendCount && window.resendCount >= 1) || data.smtpError;
         if (canShowCode && data.smtpError && data.debugOtp) {
             showToast('warning', 'Notice', `Mail server issue: Code shown below.`);
             window.showCustomAlert('Mail Dispatch Notice', `The mail delivery system encountered a connection/auth lock.\n\nFor testing, please use this temporary OTP code: ${data.debugOtp}\n\nThis is safely stored in the Database.`);
