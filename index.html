@@ -4430,6 +4430,15 @@ setTimeout(() => {
 }, 600);
 
 window.serverTimeOffsetMs = 0;
+window.parseSafeDate = (t) => {
+    if (!t) return new Date();
+    if (t instanceof Date) return isNaN(t.getTime()) ? new Date() : t;
+    if (typeof t.toDate === 'function') return t.toDate();
+    if (typeof t.seconds === 'number') return new Date(t.seconds * 1000);
+    if (t.seconds) return new Date(t.seconds * 1000);
+    const d = new Date(t);
+    return isNaN(d.getTime()) ? new Date() : d;
+};
 window.getSyncedNow = () => {
     return new Date(Date.now() + (window.serverTimeOffsetMs || 0));
 };
@@ -4481,7 +4490,7 @@ window.getDhakaDate = (date = new Date()) => {
 };
 
 window.getBDDate = (date = window.getSyncedNow()) => {
-    const d = new Date(date);
+    const d = window.parseSafeDate(date);
     const dhakaTime = new Date(d.getTime() + (6 * 60 * 60 * 1000));
     const y = dhakaTime.getUTCFullYear();
     const m = String(dhakaTime.getUTCMonth() + 1).padStart(2, '0');
@@ -4512,7 +4521,7 @@ window.getBDEndOfDay = (dateStr) => {
 window.calculateDailySegment = (dStr, pkg, myActiveRobots, dailyProfit, now) => {
     const curMidnight = window.getBDMidnight(dStr);
     const curEndOfDay = window.getBDEndOfDay(dStr);
-    const pkgExpires = new Date(pkg.expiresAt);
+    const pkgExpires = window.parseSafeDate(pkg.expiresAt);
 
     // If the day starts after the package has expired, zero profit
     if (curMidnight >= pkgExpires) {
@@ -4528,8 +4537,8 @@ window.calculateDailySegment = (dStr, pkg, myActiveRobots, dailyProfit, now) => 
     // Check if robot was active on this day
     const robot = myActiveRobots && myActiveRobots.find(r => {
         if (r.status !== 'active' || r.isActivated !== true) return false;
-        const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
-        const rCreated = r.createdAt ? new Date(r.createdAt) : null;
+        const rExp = r.expiresAt ? window.parseSafeDate(r.expiresAt) : null;
+        const rCreated = r.createdAt ? window.parseSafeDate(r.createdAt) : null;
         return rExp && rExp > curMidnight && (!rCreated || rCreated <= dayEnd);
     });
     const hasRobot = !!robot;
@@ -4539,16 +4548,16 @@ window.calculateDailySegment = (dStr, pkg, myActiveRobots, dailyProfit, now) => 
 
     if (hasRobot) {
         isRobotStarted = true;
-        const isPkgFirstDay = window.getBDDate(new Date(pkg.purchasedAt)) === dStr;
-        const isRobotFirstDay = robot && robot.createdAt && (window.getBDDate(new Date(robot.createdAt)) === dStr);
+        const isPkgFirstDay = window.getBDDate(window.parseSafeDate(pkg.purchasedAt)) === dStr;
+        const isRobotFirstDay = robot && robot.createdAt && (window.getBDDate(window.parseSafeDate(robot.createdAt)) === dStr);
 
         if (isPkgFirstDay || isRobotFirstDay) {
             if (pkg.lastMiningStartTime && pkg.lastMiningStartDay === dStr) {
-                dayStart = new Date(pkg.lastMiningStartTime);
+                dayStart = window.parseSafeDate(pkg.lastMiningStartTime);
             } else if (isRobotFirstDay && robot.createdAt) {
-                dayStart = new Date(robot.createdAt);
+                dayStart = window.parseSafeDate(robot.createdAt);
             } else {
-                dayStart = new Date(pkg.purchasedAt);
+                dayStart = window.parseSafeDate(pkg.purchasedAt);
             }
         } else {
             dayStart = curMidnight;
@@ -4557,7 +4566,7 @@ window.calculateDailySegment = (dStr, pkg, myActiveRobots, dailyProfit, now) => 
         // Manual session
         const isManualStarted = pkg.lastMiningStartDay === dStr && pkg.lastMiningStartTime;
         if (isManualStarted) {
-            dayStart = new Date(pkg.lastMiningStartTime);
+            dayStart = window.parseSafeDate(pkg.lastMiningStartTime);
         } else {
             dayStart = null;
         }
@@ -5449,15 +5458,55 @@ function listenRealTimeBadges(uid) {
     }, (err) => console.error("Unread Chat Listener Error:", err));
 }
 
-async function showPage(pageId) {
-    // Proactively restore header and footer visibility in case of crash leftovers
-    if (document.body.classList.contains('sa-game-playing')) {
-        document.body.classList.remove('sa-game-playing');
+window.forceResetGameImmersiveSizing = () => {
+    // Reset body class
+    document.body.classList.remove('sa-game-playing');
+    const simpleEarnPage = document.getElementById('simpleEarnPage');
+    if (simpleEarnPage) {
+        simpleEarnPage.classList.remove('sa-game-active');
+        simpleEarnPage.style.padding = '0px';
     }
-    const headerEl = document.querySelector('.app-header');
-    const footerEl = document.querySelector('.app-footer');
-    if (headerEl) headerEl.style.display = 'flex';
-    if (footerEl) footerEl.style.display = 'flex';
+
+    // Reset parent wrapper style to keep layout fixed and tidy
+    const wrapper = document.querySelector('.app-wrapper');
+    if (wrapper) {
+        wrapper.style.maxWidth = '480px';
+        wrapper.style.margin = '10px auto';
+        wrapper.style.borderRadius = '24px';
+        wrapper.style.border = '1px solid var(--border)';
+        wrapper.style.minHeight = '98vh';
+    }
+
+    // Restore app content margins
+    const appContent = document.querySelector('.app-content');
+    if (appContent) {
+        appContent.style.paddingTop = '';
+        appContent.style.paddingBottom = '';
+        appContent.style.paddingLeft = '';
+        appContent.style.paddingRight = '';
+    }
+
+    // Restore Web App's top header, bottom footer, and maintenance notice elements
+    const header = document.querySelector('.app-header');
+    const footer = document.querySelector('.app-footer');
+    if (header) header.style.display = 'flex';
+    if (footer) footer.style.display = 'flex';
+
+    // Simple Earn page headers
+    const simpleEarnHeader = document.querySelector('#simpleEarnPage .deposit-header');
+    if (simpleEarnHeader) {
+        simpleEarnHeader.style.display = 'flex';
+    }
+
+    const maintenanceNotice = document.getElementById('maintenanceNotice');
+    if (maintenanceNotice) {
+        maintenanceNotice.style.display = 'block';
+    }
+};
+
+async function showPage(pageId) {
+    // Proactively reset any game immersive sizing & restore hidden menus instantly
+    window.forceResetGameImmersiveSizing();
 
     if (!currentUserData) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -8361,7 +8410,7 @@ window.renderWorkElements = () => {
     });
 
     const activeRobotGlobal = window.myActiveRobots && window.myActiveRobots.find(r => {
-        const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
+        const rExp = r.expiresAt ? window.parseSafeDate(r.expiresAt) : null;
         return rExp && rExp > window.getSyncedNow();
     });
     const isRobotOn = !!activeRobotGlobal;
@@ -8445,7 +8494,7 @@ window.renderWorkElements = () => {
             ? window.calculateAccruedEarnings(item, window.myActiveRobots || [], now)
             : { totalClaimable: 0, unclaimedCompleted: 0, activeSession: null };
 
-        const isExpired = item.expiresAt ? (new Date(item.expiresAt) <= now) : false;
+        const isExpired = item.expiresAt ? (window.parseSafeDate(item.expiresAt) <= now) : false;
         const totalClaimable = accrual.totalClaimable;
         const isMining = accrual.activeSession && accrual.activeSession.isActive;
         const isIdle = !isMining && totalClaimable === 0 && !isExpired;
@@ -8453,7 +8502,7 @@ window.renderWorkElements = () => {
         if (isIdle) anyReady = true;
 
         const activeRobot = window.myActiveRobots && window.myActiveRobots.find(r => {
-            const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
+            const rExp = r.expiresAt ? window.parseSafeDate(r.expiresAt) : null;
             return !rExp || rExp > now;
         });
 
@@ -9922,7 +9971,7 @@ function createRobotControllerDOM() {
 function updateRobotUI(targetPageId) {
     const now = window.getSyncedNow ? window.getSyncedNow() : new Date();
     const activeRobot = window.myActiveRobots && window.myActiveRobots.find(r => {
-        const rExp = r.expiresAt ? new Date(r.expiresAt) : null;
+        const rExp = r.expiresAt ? window.parseSafeDate(r.expiresAt) : null;
         return r.status === 'active' && (!rExp || rExp > now);
     });
     const isEnabled = !!activeRobot;
@@ -11934,46 +11983,7 @@ window.enterLudoGame = () => {
     }, 1500);
 };
 
-window.exitSuperAceGame = async () => {
-    // If inside a match, check forfeit
-    if (window.activeGameType === "ludo" && document.getElementById('ludoBoardScreen').style.display === 'block') {
-        const confirmExit = confirm("Are you sure? Exiting an active Ludo match counts as a FORFEIT and your bet amount will not be refunded!");
-        if (!confirmExit) return;
-        
-        // Trigger forfeit
-        await window.triggerLudoGameForfeit(false);
-        return;
-    }
-
-    const overlay = document.getElementById('saLoadingOverlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-        overlay.style.opacity = '1';
-        const textEl = document.getElementById('saLoadingOverlayText');
-        if (textEl) textEl.innerText = "Exiting Game...";
-    }
-
-    setTimeout(() => {
-        window.ludoStopTurnTimer();
-        document.body.classList.remove('sa-game-playing');
-        const entryView = document.getElementById('saEntryView');
-        const gameView = document.getElementById('saGameView');
-        window.activeGameType = null;
-
-        if (entryView) entryView.style.display = 'block';
-        if (gameView) gameView.style.display = 'none';
-        
-        const header = document.querySelector('.app-header');
-        const footer = document.querySelector('.app-footer');
-        if (header) header.style.display = 'flex';
-        if (footer) footer.style.display = 'flex';
-
-        if (overlay) overlay.style.display = 'none';
-
-        // Update balance on main page
-        if (typeof updateHeader === 'function') updateHeader();
-    }, 1200);
-};
+// Note: window.exitSuperAceGame is defined in key location at the bottom of index.html for full-stack compatibility and state synchronization.
 
 window.selectLudoBet = (amt) => {
     window.activeLudoBetAmount = amt;
@@ -12930,6 +12940,16 @@ window.initAntiDisconnectShield = () => {
 };
 
 window.exitSuperAceGame = async () => {
+    // If inside a match, check forfeit
+    if (window.activeGameType === "ludo" && document.getElementById('ludoBoardScreen').style.display === 'block') {
+        const confirmExit = confirm("Are you sure? Exiting an active Ludo match counts as a FORFEIT and your bet amount will not be refunded!");
+        if (!confirmExit) return;
+        
+        // Trigger forfeit
+        await window.triggerLudoGameForfeit(false);
+        return;
+    }
+
     if (window.isSaSpinning || window.saIsSlotSpinning) {
         showToast('warning', 'Notice', 'Please wait until the active game/spin finishes before you exit the game.');
         return;
@@ -12965,15 +12985,19 @@ window.exitSuperAceGame = async () => {
         await new Promise(resolve => setTimeout(resolve, paddingTime));
     }
     
-    // Reset full screen classes
-    document.body.classList.remove('sa-game-playing');
-    const simpleEarnPage = document.getElementById('simpleEarnPage');
-    if (simpleEarnPage) {
-        simpleEarnPage.classList.remove('sa-game-active');
+    // Stop and reset Ludo intervals / timers
+    try {
+        if (typeof window.ludoStopTurnTimer === 'function') window.ludoStopTurnTimer();
+    } catch (e) {
+        console.error("ludoStopTurnTimer error:", e);
     }
+    window.ludoIsRolling = false;
+    window.ludoAwaitingTokenMoveSelection = false;
 
-    const entryView = document.getElementById('saEntryView');
-    const gameView = document.getElementById('saGameView');
+    // Reset full screen classes and styles using our robust global helper
+    if (typeof window.forceResetGameImmersiveSizing === 'function') {
+        window.forceResetGameImmersiveSizing();
+    }
     
     window.activeGameType = null;
     window.saAutoActive = false;
@@ -12984,49 +13008,14 @@ window.exitSuperAceGame = async () => {
         window.jdbHeartbeatIntervalId = null;
     }
     
+    const entryView = document.getElementById('saEntryView');
+    const gameView = document.getElementById('saGameView');
     if (entryView) entryView.style.display = 'block';
     if (gameView) gameView.style.display = 'none';
     
     // Hide the internal history box to reset for next launch
     const historyBox = document.getElementById('saInternalHistoryBox');
     if (historyBox) historyBox.style.display = 'none';
-    
-    // Restore Web App's top header, bottom footer border elements, container paddings, and maintenance notice
-    const header = document.querySelector('.app-header');
-    const footer = document.querySelector('.app-footer');
-    const maintenanceNotice = document.getElementById('maintenanceNotice');
-    if (header) header.style.display = 'flex';
-    if (footer) footer.style.display = 'flex';
-    if (maintenanceNotice && window.saSavedNoticeDisplay) {
-        maintenanceNotice.style.display = window.saSavedNoticeDisplay;
-    }
-    
-    // Restore parent wrapper bounds
-    const wrapper = document.querySelector('.app-wrapper');
-    if (wrapper && window.saSavedWrapperStyle) {
-        wrapper.style.maxWidth = window.saSavedWrapperStyle.maxWidth;
-        wrapper.style.margin = window.saSavedWrapperStyle.margin;
-        wrapper.style.borderRadius = window.saSavedWrapperStyle.borderRadius;
-        wrapper.style.border = window.saSavedWrapperStyle.border;
-        wrapper.style.minHeight = window.saSavedWrapperStyle.minHeight;
-    }
-    
-    const appContent = document.querySelector('.app-content');
-    if (appContent) {
-        appContent.style.paddingTop = '';
-        appContent.style.paddingBottom = '';
-        appContent.style.paddingLeft = '';
-        appContent.style.paddingRight = '';
-    }
-
-    // Restore Simple Earn Header and Page Padding elements
-    const simpleEarnHeader = document.querySelector('#simpleEarnPage .deposit-header');
-    if (simpleEarnHeader) {
-        simpleEarnHeader.style.display = 'flex';
-    }
-    if (simpleEarnPage && typeof window.saSavedPagePadding !== 'undefined') {
-        simpleEarnPage.style.padding = window.saSavedPagePadding;
-    }
     
     if (overlay) {
         overlay.style.display = 'none';
