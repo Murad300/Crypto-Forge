@@ -1938,6 +1938,7 @@ expressApp.post("/api/mining/start", async (req, res) => {
 
   const database = ensureDb();
   if (!database) return res.status(503).json({ error: "Database not connected" });
+  await ensureAuthenticatedSystem();
 
   try {
     const now = new Date();
@@ -2106,6 +2107,7 @@ expressApp.post("/api/mining/claim", async (req, res) => {
 
   const database = ensureDb();
   if (!database) return res.status(503).json({ error: "Database not connected" });
+  await ensureAuthenticatedSystem();
 
   try {
     const now = new Date();
@@ -2461,6 +2463,7 @@ expressApp.post("/api/jobs/claim", async (req, res) => {
 
   const database = ensureDb();
   if (!database) return res.status(503).json({ error: "Backend database not connected" });
+  await ensureAuthenticatedSystem();
 
   try {
     const claimRes = await database.runTransaction(async (transaction) => {
@@ -2517,6 +2520,7 @@ expressApp.post("/api/referral/claim", async (req, res) => {
 
   const database = ensureDb();
   if (!database) return res.status(503).json({ error: "Backend database not connected" });
+  await ensureAuthenticatedSystem();
 
   try {
     const claimRes = await database.runTransaction(async (transaction) => {
@@ -2741,6 +2745,7 @@ expressApp.post("/api/send-verify-otp", async (req, res) => {
     if (!database) {
       throw new Error("Firestore DB not initialized.");
     }
+    await ensureAuthenticatedSystem();
     
     const emailKey = email.toLowerCase().trim();
     
@@ -2816,6 +2821,7 @@ expressApp.post("/api/verify-otp", async (req, res) => {
   try {
     const database = ensureDb();
     if (!database) return res.status(503).json({ error: "DB not initialized." });
+    await ensureAuthenticatedSystem();
 
     const emailKey = email.toLowerCase().trim();
     
@@ -2924,6 +2930,7 @@ expressApp.post("/api/forgot-password", async (req, res) => {
   try {
     const database = ensureDb();
     if (!database) return res.status(503).json({ error: "DB not initialized." });
+    await ensureAuthenticatedSystem();
 
     const emailKey = email.toLowerCase().trim();
 
@@ -3001,6 +3008,7 @@ expressApp.post("/api/reset-password", async (req, res) => {
   try {
     const database = ensureDb();
     if (!database) return res.status(503).json({ error: "DB not initialized." });
+    await ensureAuthenticatedSystem();
 
     const emailKey = email.toLowerCase().trim();
 
@@ -3064,6 +3072,7 @@ expressApp.post("/api/auth/update-inapp-password", async (req, res) => {
     if (!database) {
       return res.status(503).json({ error: "Database not initialized" });
     }
+    await ensureAuthenticatedSystem();
     
     const snapshot = await database.collection("users").where("email", "==", email.toLowerCase().trim()).get();
     if (snapshot.empty) {
