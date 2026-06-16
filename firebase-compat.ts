@@ -25,8 +25,8 @@ import path from "path";
 
 // Load configuration
 function getFirebaseConfig() {
-  // 1. Try environment variables, but ignore the default temporary system sandbox project starting with "ais-"
-  if (process.env.FIREBASE_API_KEY && (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PROJECT_ID.startsWith("ais-"))) {
+  // 1. Try environment variables
+  if (process.env.FIREBASE_API_KEY) {
     return {
       apiKey: process.env.FIREBASE_API_KEY,
       authDomain: process.env.FIREBASE_AUTH_DOMAIN || "smart-bd365.firebaseapp.com",
@@ -257,20 +257,80 @@ export class CompatDocumentReference {
   }
 
   async get() {
-    const snap = await getDoc(this._rawDocRef);
-    return new CompatDocumentSnapshot(snap);
+    try {
+      const snap = await getDoc(this._rawDocRef);
+      return new CompatDocumentSnapshot(snap);
+    } catch (err: any) {
+      const msg = err.message || "";
+      if (msg.includes("permission") || msg.includes("denied") || msg.includes("auth") || msg.includes("unauthenticated")) {
+        console.warn(`[Database healing] get() failed due to permission/auth. Healing session...`);
+        try {
+          await authenticateBackendSystem();
+          const snap = await getDoc(this._rawDocRef);
+          return new CompatDocumentSnapshot(snap);
+        } catch (innerErr) {
+          throw err;
+        }
+      }
+      throw err;
+    }
   }
 
   async set(data: any) {
-    await setDoc(this._rawDocRef, data);
+    try {
+      await setDoc(this._rawDocRef, data);
+    } catch (err: any) {
+      const msg = err.message || "";
+      if (msg.includes("permission") || msg.includes("denied") || msg.includes("auth") || msg.includes("unauthenticated")) {
+        console.warn(`[Database healing] set() failed due to permission/auth. Healing session...`);
+        try {
+          await authenticateBackendSystem();
+          await setDoc(this._rawDocRef, data);
+        } catch (innerErr) {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
   }
 
   async update(data: any) {
-    await updateDoc(this._rawDocRef, data);
+    try {
+      await updateDoc(this._rawDocRef, data);
+    } catch (err: any) {
+      const msg = err.message || "";
+      if (msg.includes("permission") || msg.includes("denied") || msg.includes("auth") || msg.includes("unauthenticated")) {
+        console.warn(`[Database healing] update() failed due to permission/auth. Healing session...`);
+        try {
+          await authenticateBackendSystem();
+          await updateDoc(this._rawDocRef, data);
+        } catch (innerErr) {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
   }
 
   async delete() {
-    await deleteDoc(this._rawDocRef);
+    try {
+      await deleteDoc(this._rawDocRef);
+    } catch (err: any) {
+      const msg = err.message || "";
+      if (msg.includes("permission") || msg.includes("denied") || msg.includes("auth") || msg.includes("unauthenticated")) {
+        console.warn(`[Database healing] delete() failed due to permission/auth. Healing session...`);
+        try {
+          await authenticateBackendSystem();
+          await deleteDoc(this._rawDocRef);
+        } catch (innerErr) {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
   }
 
   collection(subColPath: string) {
@@ -347,20 +407,47 @@ export class CompatCollectionReference {
   }
 
   async get() {
-    const colRef = collection(getRawDb(), this.colPath);
-    let q: any = colRef;
-    const constraints = [...this._wheres];
-    if (this._orderBys.length > 0) {
-      constraints.push(...this._orderBys);
+    try {
+      const colRef = collection(getRawDb(), this.colPath);
+      let q: any = colRef;
+      const constraints = [...this._wheres];
+      if (this._orderBys.length > 0) {
+        constraints.push(...this._orderBys);
+      }
+      if (this._limit !== null) {
+        constraints.push(limit(this._limit));
+      }
+      if (constraints.length > 0) {
+        q = query(colRef, ...constraints);
+      }
+      const snap = await getDocs(q);
+      return new CompatQuerySnapshot(snap);
+    } catch (err: any) {
+      const msg = err.message || "";
+      if (msg.includes("permission") || msg.includes("denied") || msg.includes("auth") || msg.includes("unauthenticated")) {
+        console.warn(`[Database healing] collection.get() failed due to permission/auth. Healing session...`);
+        try {
+          await authenticateBackendSystem();
+          const colRef = collection(getRawDb(), this.colPath);
+          let q: any = colRef;
+          const constraints = [...this._wheres];
+          if (this._orderBys.length > 0) {
+            constraints.push(...this._orderBys);
+          }
+          if (this._limit !== null) {
+            constraints.push(limit(this._limit));
+          }
+          if (constraints.length > 0) {
+            q = query(colRef, ...constraints);
+          }
+          const snap = await getDocs(q);
+          return new CompatQuerySnapshot(snap);
+        } catch (innerErr) {
+          throw err;
+        }
+      }
+      throw err;
     }
-    if (this._limit !== null) {
-      constraints.push(limit(this._limit));
-    }
-    if (constraints.length > 0) {
-      q = query(colRef, ...constraints);
-    }
-    const snap = await getDocs(q);
-    return new CompatQuerySnapshot(snap);
   }
 }
 
@@ -449,10 +536,27 @@ export class CompatFirestore {
   }
 
   async runTransaction(callback: (tx: CompatTransaction) => Promise<any>) {
-    return await runTransaction(getRawDb(), async (rawTx) => {
-      const compatTx = new CompatTransaction(rawTx);
-      return await callback(compatTx);
-    });
+    try {
+      return await runTransaction(getRawDb(), async (rawTx) => {
+        const compatTx = new CompatTransaction(rawTx);
+        return await callback(compatTx);
+      });
+    } catch (err: any) {
+      const msg = err.message || "";
+      if (msg.includes("permission") || msg.includes("denied") || msg.includes("auth") || msg.includes("unauthenticated")) {
+        console.warn("[Database healing] Transaction failed due to permission/auth. Healing session and retrying...");
+        try {
+          await authenticateBackendSystem();
+          return await runTransaction(getRawDb(), async (rawTx) => {
+            const compatTx = new CompatTransaction(rawTx);
+            return await callback(compatTx);
+          });
+        } catch (innerErr) {
+          throw err;
+        }
+      }
+      throw err;
+    }
   }
 }
 
