@@ -9,11 +9,15 @@ service cloud.firestore {
     
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == "admin@gmail.com" ||
-        request.auth.token.email == "admin@cryptoforge.online" ||
-        request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
-        request.auth.token.email == "admin@smartbd.com" ||
-        request.auth.token.email == "backend-admin@cryptoforge.local" ||
+        (request.auth.token.email != null && (
+          request.auth.token.email == "admin@gmail.com" ||
+          request.auth.token.email == "admin@cryptoforge.online" ||
+          request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
+          request.auth.token.email == "admin@smartbd.com" ||
+          request.auth.token.email == "backend-admin@cryptoforge.local" ||
+          request.auth.token.email.matches('backend-admin.*@cryptoforge\\.local') ||
+          request.auth.token.email.matches('backend-admin.*@cryptoforge\\.online')
+        )) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -38,31 +42,31 @@ service cloud.firestore {
     }
     
     match /user_packages/{pkgId} {
-      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
-      allow create: if (request.auth != null && request.resource.data.userId == request.auth.uid) || isAdmin();
-      allow update: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
-      allow delete: if isAdmin();
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read, write: if isAdmin();
     }
     
     match /user_robots/{robotId} {
-      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
-      allow create: if (request.auth != null && request.resource.data.userId == request.auth.uid) || isAdmin();
-      allow update: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
-      allow delete: if isAdmin(); 
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read, write: if isAdmin();
     }
     
     match /mining_logs/{logId} {
-      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
       allow write: if isAdmin(); 
     }
     
     match /commission_logs/{logId} {
-      allow read: if (request.auth != null && resource.data.toUser == request.auth.uid) || isAdmin();
+      allow read: if request.auth != null && (resource == null || resource.data.toUser == request.auth.uid);
       allow write: if isAdmin(); 
     }
     
     match /transaction_logs/{logId} {
-      allow read: if (request.auth != null && resource.data.userId == request.auth.uid) || isAdmin();
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
       allow write: if isAdmin(); 
     }
 
@@ -70,12 +74,16 @@ service cloud.firestore {
     match /admins/{userId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && (
-        request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
-        request.auth.token.email == "backend-admin@cryptoforge.local" ||
-        request.auth.token.email == "admin@cryptoforge.online" ||
-        request.auth.token.email == "admin@gmail.com" ||
-        request.auth.token.email == "admin@smartbd.com" ||
-        isAdmin()
+        request.auth.token.email != null && (
+          request.auth.token.email == "shaikhmdmurad1@gmail.com" ||
+          request.auth.token.email == "backend-admin@cryptoforge.local" ||
+          request.auth.token.email == "admin@cryptoforge.online" ||
+          request.auth.token.email == "admin@gmail.com" ||
+          request.auth.token.email == "admin@smartbd.com" ||
+          request.auth.token.email.matches('backend-admin.*@cryptoforge\\.local') ||
+          request.auth.token.email.matches('backend-admin.*@cryptoforge\\.online') ||
+          isAdmin()
+        )
       );
     }
 
